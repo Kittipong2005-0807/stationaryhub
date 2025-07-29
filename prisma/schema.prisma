@@ -1,0 +1,125 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model APPROVALS {
+  APPROVAL_ID    Int          @id(map: "PK__APPROVAL__6B47F41C06E15807") @default(autoincrement())
+  REQUISITION_ID Int
+  APPROVED_BY    Int
+  STATUS         String?      @db.VarChar(50)
+  APPROVED_AT    DateTime?    @default(now(), map: "DF__APPROVALS__APPRO__5070F446") @db.DateTime
+  NOTE           String?      @db.VarChar(1000)
+  USERS          USERS        @relation(fields: [APPROVED_BY], references: [USER_ID], onUpdate: NoAction, map: "FK__APPROVALS__APPRO__52593CB8")
+  REQUISITIONS   REQUISITIONS @relation(fields: [REQUISITION_ID], references: [REQUISITION_ID], onUpdate: NoAction, map: "FK__APPROVALS__REQUI__5165187F")
+}
+
+model EMAIL_LOGS {
+  EMAIL_ID   Int       @id(map: "PK__EMAIL_LO__6BB22C4DBF0B4DFB") @default(autoincrement())
+  TO_USER_ID Int
+  SUBJECT    String?   @db.VarChar(255)
+  BODY       String?   @db.Text
+  SENT_AT    DateTime? @default(now(), map: "DF__EMAIL_LOG__SENT___5AEE82B9") @db.DateTime
+  STATUS     String?   @db.VarChar(50)
+  USERS      USERS     @relation(fields: [TO_USER_ID], references: [USER_ID], onUpdate: NoAction, map: "FK__EMAIL_LOG__TO_US__5CD6CB2B")
+}
+
+model EXPORT_LOGS {
+  EXPORT_ID      Int          @id(map: "PK__EXPORT_L__A3B8D619CDEA586B") @default(autoincrement())
+  REQUISITION_ID Int
+  EXPORTED_BY    Int
+  FILE_TYPE      String?      @db.VarChar(50)
+  EXPORTED_AT    DateTime?    @default(now(), map: "DF__EXPORT_LO__EXPOR__5629CD9C") @db.DateTime
+  USERS          USERS        @relation(fields: [EXPORTED_BY], references: [USER_ID], onUpdate: NoAction, map: "FK__EXPORT_LO__EXPOR__5812160E")
+  REQUISITIONS   REQUISITIONS @relation(fields: [REQUISITION_ID], references: [REQUISITION_ID], onUpdate: NoAction, map: "FK__EXPORT_LO__REQUI__571DF1D5")
+}
+
+model PRODUCT_CATEGORIES {
+  CATEGORY_ID   Int        @id(map: "PK__PRODUCT___E7DA297C64E80E18") @default(autoincrement())
+  CATEGORY_NAME String     @db.VarChar(255)
+  PRODUCTS      PRODUCTS[]
+}
+
+model PRODUCTS {
+  PRODUCT_ID         Int                 @id(map: "PK__PRODUCTS__52B417632D881038") @default(autoincrement())
+  ITEM_ID            String              @db.VarChar(50)
+  PRODUCT_NAME       String              @db.VarChar(255)
+  CATEGORY_ID        Int
+  UNIT_COST          Decimal?            @db.Decimal(18, 2)
+  ORDER_UNIT         String?             @db.VarChar(50)
+  PHOTO_URL          String?             @db.VarChar(500)
+  CREATED_AT         DateTime?           @default(now(), map: "DF__PRODUCTS__CREATE__4316F928") @db.DateTime
+  PRODUCT_CATEGORIES PRODUCT_CATEGORIES  @relation(fields: [CATEGORY_ID], references: [CATEGORY_ID], onUpdate: NoAction, map: "FK__PRODUCTS__CATEGO__440B1D61")
+  REQUISITION_ITEMS  REQUISITION_ITEMS[]
+}
+
+model REQUISITION_ITEMS {
+  ITEM_ID        Int          @id(map: "PK__REQUISIT__ADFD89A09D2ECDD5") @default(autoincrement())
+  REQUISITION_ID Int
+  PRODUCT_ID     Int
+  QUANTITY       Int?
+  UNIT_PRICE     Decimal?     @db.Decimal(18, 2)
+  TOTAL_PRICE    Decimal?     @db.Decimal(29, 2)
+  PRODUCTS       PRODUCTS     @relation(fields: [PRODUCT_ID], references: [PRODUCT_ID], onUpdate: NoAction, map: "FK__REQUISITI__PRODU__4CA06362")
+  REQUISITIONS   REQUISITIONS @relation(fields: [REQUISITION_ID], references: [REQUISITION_ID], onUpdate: NoAction, map: "FK__REQUISITI__REQUI__4BAC3F29")
+}
+
+model REQUISITIONS {
+  REQUISITION_ID    Int                 @id(map: "PK__REQUISIT__7CBC0C8417343B4A") @default(autoincrement())
+  USER_ID           Int
+  STATUS            String?             @db.VarChar(50)
+  SUBMITTED_AT      DateTime?           @default(now(), map: "DF__REQUISITI__SUBMI__47DBAE45") @db.DateTime
+  TOTAL_AMOUNT      Decimal?            @db.Decimal(18, 2)
+  SITE_ID           String?             @db.VarChar(50)
+  ISSUE_NOTE        String?             @db.VarChar(1000)
+  APPROVALS         APPROVALS[]
+  EXPORT_LOGS       EXPORT_LOGS[]
+  REQUISITION_ITEMS REQUISITION_ITEMS[]
+  USERS             USERS               @relation(fields: [USER_ID], references: [USER_ID], onUpdate: NoAction, map: "FK__REQUISITI__USER___48CFD27E")
+  STATUS_HISTORY    STATUS_HISTORY[]
+}
+
+model STATUS_HISTORY {
+  STATUS_ID      Int          @id(map: "PK__STATUS_H__D8827E71F8D80128") @default(autoincrement())
+  REQUISITION_ID Int
+  STATUS         String?      @db.VarChar(50)
+  CHANGED_BY     Int
+  CHANGED_AT     DateTime?    @default(now(), map: "DF__STATUS_HI__CHANG__5FB337D6") @db.DateTime
+  COMMENT        String?      @db.VarChar(1000)
+  USERS          USERS        @relation(fields: [CHANGED_BY], references: [USER_ID], onUpdate: NoAction, map: "FK__STATUS_HI__CHANG__619B8048")
+  REQUISITIONS   REQUISITIONS @relation(fields: [REQUISITION_ID], references: [REQUISITION_ID], onUpdate: NoAction, map: "FK__STATUS_HI__REQUI__60A75C0F")
+}
+
+model USERS {
+  USER_ID        Int              @id(map: "PK__USERS__F3BEEBFF17F9F5BC") @default(autoincrement())
+  USERNAME       String           @db.VarChar(100)
+  PASSWORD       String           @db.VarChar(255)
+  EMAIL          String           @db.VarChar(255)
+  ROLE           String?          @db.VarChar(50)
+  DEPARTMENT     String?          @db.VarChar(100)
+  SITE_ID        String?          @db.VarChar(50)
+  CREATED_AT     DateTime?        @default(now(), map: "DF__USERS__CREATED_A__3F466844") @db.DateTime
+  APPROVALS      APPROVALS[]
+  EMAIL_LOGS     EMAIL_LOGS[]
+  EXPORT_LOGS    EXPORT_LOGS[]
+  REQUISITIONS   REQUISITIONS[]
+  STATUS_HISTORY STATUS_HISTORY[]
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+view UserWithRoles {
+  AdLoginName   String @db.VarChar(50)
+  EmpCode       String @db.VarChar(50)
+  CurrentEmail  String? @db.VarChar(100)
+  FullNameEng   String? @db.VarChar(100)
+  FullNameThai  String? @db.VarChar(100)
+  PostNameEng   String? @db.VarChar(100)
+  CostCenterEng String? @db.VarChar(100)
+
+  @@unique([AdLoginName, EmpCode])
+}
