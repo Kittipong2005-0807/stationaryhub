@@ -63,7 +63,7 @@ export default function OrdersPage() {
                   วันที่สั่งซื้อ: {new Date(order.SUBMITTED_AT).toLocaleString()}
                 </Typography>
                 <Typography variant="body2" className="mb-2">
-                  ยอดรวม: <b>฿{order.TOTAL_AMOUNT.toFixed(2)}</b>
+                ยอดรวม: <b>฿{(Number(order.TOTAL_AMOUNT) || 0).toFixed(2)}</b>
                 </Typography>
                 {order.ISSUE_NOTE && (
                   <Typography variant="body2" className="mb-2 text-gray-600">
