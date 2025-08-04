@@ -121,7 +121,7 @@ export const authOptions: AuthOptions = {
         token.FullNameThai = getUserData?.FullNameThai;
         token.PostNameEng = getUserData?.PostNameEng;
         token.CostCenterEng = getUserData?.CostCenterEng;
-        token.Role = 'USER';
+        token.Role = 'MANAGER';
         // token.Role = getUserData?.Role;
       }
 

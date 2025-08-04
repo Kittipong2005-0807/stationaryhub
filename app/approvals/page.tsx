@@ -24,7 +24,7 @@ import {
   Skeleton,
 } from "@mui/material"
 import { CheckCircle, Cancel, Visibility, Assignment } from "@mui/icons-material"
-const { data: session, status } = useSession()
+import { useAuth } from "@/lib/auth" // หรือที่อยู่จริงของ hook นั้น
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import type { Requisition } from "@/lib/database"
@@ -40,6 +40,7 @@ export default function ApprovalsPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
+  const { data: session, status } = useSession()
 
   useEffect(() => {
     if (!isAuthenticated || (user?.ROLE !== "MANAGER" && user?.ROLE !== "ADMIN")) {
