@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { signIn } from "next-auth/react"
 import { useSearchParams } from 'next/navigation'
+import Link from "next/link"
 
 export default function LoginPage() {
   const searchParams = useSearchParams();

@@ -11,7 +11,7 @@ datasource db {
 model APPROVALS {
   APPROVAL_ID    Int          @id(map: "PK__APPROVAL__6B47F41C06E15807") @default(autoincrement())
   REQUISITION_ID Int
-  APPROVED_BY    Int
+  APPROVED_BY    String       @db.VarChar(50)
   STATUS         String?      @db.VarChar(50)
   APPROVED_AT    DateTime?    @default(now(), map: "DF__APPROVALS__APPRO__5070F446") @db.DateTime
   NOTE           String?      @db.VarChar(1000)
@@ -21,7 +21,7 @@ model APPROVALS {
 
 model EMAIL_LOGS {
   EMAIL_ID   Int       @id(map: "PK__EMAIL_LO__6BB22C4DBF0B4DFB") @default(autoincrement())
-  TO_USER_ID Int
+  TO_USER_ID String    @db.VarChar(50)
   SUBJECT    String?   @db.VarChar(255)
   BODY       String?   @db.Text
   SENT_AT    DateTime? @default(now(), map: "DF__EMAIL_LOG__SENT___5AEE82B9") @db.DateTime
@@ -32,7 +32,7 @@ model EMAIL_LOGS {
 model EXPORT_LOGS {
   EXPORT_ID      Int          @id(map: "PK__EXPORT_L__A3B8D619CDEA586B") @default(autoincrement())
   REQUISITION_ID Int
-  EXPORTED_BY    Int
+  EXPORTED_BY    String       @db.VarChar(50)
   FILE_TYPE      String?      @db.VarChar(50)
   EXPORTED_AT    DateTime?    @default(now(), map: "DF__EXPORT_LO__EXPOR__5629CD9C") @db.DateTime
   USERS          USERS        @relation(fields: [EXPORTED_BY], references: [USER_ID], onUpdate: NoAction, map: "FK__EXPORT_LO__EXPOR__5812160E")
@@ -71,7 +71,7 @@ model REQUISITION_ITEMS {
 
 model REQUISITIONS {
   REQUISITION_ID    Int                 @id(map: "PK__REQUISIT__7CBC0C8417343B4A") @default(autoincrement())
-  USER_ID           Int
+  USER_ID           String              @db.VarChar(50)
   STATUS            String?             @db.VarChar(50)
   SUBMITTED_AT      DateTime?           @default(now(), map: "DF__REQUISITI__SUBMI__47DBAE45") @db.DateTime
   TOTAL_AMOUNT      Decimal?            @db.Decimal(18, 2)
@@ -88,7 +88,7 @@ model STATUS_HISTORY {
   STATUS_ID      Int          @id(map: "PK__STATUS_H__D8827E71F8D80128") @default(autoincrement())
   REQUISITION_ID Int
   STATUS         String?      @db.VarChar(50)
-  CHANGED_BY     Int
+  CHANGED_BY     String       @db.VarChar(50)
   CHANGED_AT     DateTime?    @default(now(), map: "DF__STATUS_HI__CHANG__5FB337D6") @db.DateTime
   COMMENT        String?      @db.VarChar(1000)
   USERS          USERS        @relation(fields: [CHANGED_BY], references: [USER_ID], onUpdate: NoAction, map: "FK__STATUS_HI__CHANG__619B8048")
@@ -96,7 +96,7 @@ model STATUS_HISTORY {
 }
 
 model USERS {
-  USER_ID        Int              @id(map: "PK__USERS__F3BEEBFF17F9F5BC") @default(autoincrement())
+  USER_ID        String           @id(map: "PK__USERS__F3BEEBFF17F9F5BC") @db.VarChar(50)
   USERNAME       String           @db.VarChar(100)
   PASSWORD       String           @db.VarChar(255)
   EMAIL          String           @db.VarChar(255)
@@ -121,5 +121,5 @@ view UserWithRoles {
   PostNameEng   String? @db.VarChar(100)
   CostCenterEng String? @db.VarChar(100)
 
-  @@unique([AdLoginName, EmpCode])
+  @@ignore
 }

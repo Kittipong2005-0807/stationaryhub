@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sendMail } from "@/lib/database"
-import { Requisition, RequisitionItem } from "@/types/requisition"
+//import { Requisition, RequisitionItem } from "@/types/requisition"
+import { useSession } from "next-auth/react"
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,25 +45,42 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
-    const newRequisition = await prisma.requisition.create({ data })
+    let result = {
+      USER_ID: data.USER_ID,
+      STATUS: data.STATUS || "PENDING",
+      TOTAL_AMOUNT: data.TOTAL_AMOUNT,
+      SITE_ID: data.SITE_ID || "1700",
+      ISSUE_NOTE: data.ISSUE_NOTE || "",
+      // REQUISITION_ITEMS: {
+      //   create: data.REQUISITION_ITEMS.map((item: RequisitionItem) => ({
+      //     PRODUCT_ID: item.PRODUCT_ID,
+      //     QUANTITY: item.QUANTITY,
+      //     UNIT_PRICE: item.UNIT_PRICE,
+      //     TOTAL_PRICE: item.TOTAL_PRICE,
+      //   })),
+      // },
+    }
+    console.log("Requisition data:", result)
 
-    // ดึงอีเมลของ user (ถ้ามี USER_ID)
-    let userEmail = null
-    if (data.USER_ID) {
-      const user = await prisma.users.findUnique({
-        where: { USER_ID: data.USER_ID },
-      })
-      userEmail = user?.EMAIL
-    }
-    // ส่งอีเมลแจ้งเตือน
-    if (userEmail) {
-      await sendMail(
-        userEmail,
-        "ยืนยันการสั่งซื้อ/ขอเบิกสำเร็จ",
-        `ระบบได้รับคำสั่งซื้อ/ขอเบิกของคุณแล้ว (เลขที่ ${newRequisition.REQUISITION_ID})`
-      )
-    }
-    return NextResponse.json(newRequisition, { status: 201 })
+    const newRequisition = await prisma.rEQUISITIONS.create({ data: result })
+
+    // // ดึงอีเมลของ user (ถ้ามี USER_ID)
+    // let userEmail = null
+    // if (data.USER_ID) {
+    //   const user = await prisma.userWithRoles.findUnique({
+    //     where: { USER_ID: data.USER_ID },
+    //   })
+    //   userEmail = user?.EMAIL
+    // }
+    // // ส่งอีเมลแจ้งเตือน
+    // if (userEmail) {
+    //   await sendMail(
+    //     userEmail,
+    //     "ยืนยันการสั่งซื้อ/ขอเบิกสำเร็จ",
+    //     `ระบบได้รับคำสั่งซื้อ/ขอเบิกของคุณแล้ว (เลขที่ ${newRequisition.REQUISITION_ID})`
+    //   )
+    // }
+    return NextResponse.json('', { status: 201 })
   } catch (error) {
     return NextResponse.json({ error: "Failed to create requisition" }, { status: 500 })
   }

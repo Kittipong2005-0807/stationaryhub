@@ -5,7 +5,7 @@ import { getToken } from 'next-auth/jwt';
 export async function middleware(request: NextRequest) {
   // ใช้ getToken ของ next-auth เพื่อตรวจสอบโทเค่น
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET }) || null;
-  console.log("token = ", token)
+  //console.log("token = ", token)
   // ถ้าผู้ใช้ล็อกอินแล้ว และกำลังเข้า /login ให้ redirect ไปหน้าหลัก
 
   try {

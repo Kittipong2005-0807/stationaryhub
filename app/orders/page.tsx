@@ -50,7 +50,7 @@ export default function OrdersPage() {
         </Box>
       ) : (
         <Box className="space-y-6 max-w-2xl mx-auto">
-          {orders.map((order) => (
+          {orders?.map((order) => (
             <Card key={order.REQUISITION_ID} className="shadow-md border border-gray-200">
               <CardContent>
                 <Box className="flex justify-between items-center mb-2">

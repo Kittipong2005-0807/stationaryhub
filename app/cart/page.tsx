@@ -34,20 +34,26 @@ export default function CartPage() {
       router.push("/login")
     }
   }, [isAuthenticated, user, router])
-
+  
   const handleSubmitRequisition = async () => {
     if (items.length === 0) return
-
+    console.log(" Cart user data: ", user)
+    // ดึง USER_ID จาก user context (ไม่ hardcode)
     const requisitionData = {
-      items: items.map((item) => ({
+      USER_ID: user?.EmpCode,
+      TOTAL_AMOUNT: getTotalAmount(),
+      ISSUE_NOTE: "Requisition submitted from cart",
+      STATUS: "PENDING",
+      SITE_ID: user?.SITE_ID || "1700",
+      REQUISITION_ITEMS: items.map((item) => ({
         PRODUCT_ID: item.PRODUCT_ID,
         QUANTITY: item.quantity,
         UNIT_PRICE: item.UNIT_COST,
         TOTAL_PRICE: item.UNIT_COST * item.quantity,
       })),
-      TOTAL_AMOUNT: getTotalAmount(),
-      ISSUE_NOTE: "Requisition submitted from cart",
+      // ไม่ต้องส่ง USER_ID ให้ API เพราะ API จะดึงจาก session ฝั่ง server
     }
+    console.log("Cart :  ", requisitionData)
 
     try {
       const res = await fetch("/api/requisitions", {

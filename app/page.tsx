@@ -32,7 +32,7 @@ export default function HomePage() {
   const router = useRouter()
   // สร้างตัวแปร categories จาก products
   const categories: (string | undefined)[] = Array.from(new Set((products ?? []).map((p: Product) => p.CATEGORY_NAME)));
-
+console.log("Test User : ",user)
   useEffect(() => {
     // useEffect: ตรวจสอบ auth และ fetch สินค้า
     console.log("HomePage user:", user);
