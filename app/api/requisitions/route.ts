@@ -75,6 +75,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
+    console.log("Received data:", data)
+    console.log("REQUISITION_ITEMS from request:", data.REQUISITION_ITEMS)
     
     // ดึง EmpCode จาก session หรือ request headers
     const empCode = await getEmpCodeFromSession(request) || data.USER_ID
@@ -109,14 +111,14 @@ export async function POST(request: NextRequest) {
       TOTAL_AMOUNT: data.TOTAL_AMOUNT,
       SITE_ID: data.SITE_ID || "1700",
       ISSUE_NOTE: data.ISSUE_NOTE || "",
-      // REQUISITION_ITEMS: {
-      //   create: data.REQUISITION_ITEMS.map((item: RequisitionItem) => ({
-      //     PRODUCT_ID: item.PRODUCT_ID,
-      //     QUANTITY: item.QUANTITY,
-      //     UNIT_PRICE: item.UNIT_PRICE,
-      //     TOTAL_PRICE: item.TOTAL_PRICE,
-      //   })),
-      // },
+      REQUISITION_ITEMS: {
+        create: data.REQUISITION_ITEMS?.map((item: any) => ({
+          PRODUCT_ID: item.PRODUCT_ID,
+          QUANTITY: item.QUANTITY,
+          UNIT_PRICE: item.UNIT_PRICE,
+          // TOTAL_PRICE จะถูกคำนวณอัตโนมัติโดยฐานข้อมูล
+        })) || [],
+      },
     }
     console.log("Requisition data:", result)
 

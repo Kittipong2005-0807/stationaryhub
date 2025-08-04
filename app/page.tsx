@@ -12,7 +12,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Grid, Typography, TextField, InputAdornment, Box, Chip, Skeleton, Fab } from "@mui/material"
+import { Grid, Typography, TextField, InputAdornment, Box, Chip, Skeleton, Button } from "@mui/material"
 import { Search, Category, ViewModule, ViewList } from "@mui/icons-material"
 import ProductCart from "@/components/ProductCart"
 import { type Product } from "@/lib/database"
@@ -92,107 +92,64 @@ console.log("Test User : ",user)
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
-        {/* Header Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mb-8 text-center flex flex-col items-center"
-        >
-          <Typography variant="h2" className="font-bold text-gray-900 mb-4">
-            🛒 Discover Products
+        {/* Header */}
+        <Box className="mb-6">
+          <Typography variant="h4" className="font-bold text-gray-800 mb-2">
+            🛒 สินค้าทั้งหมด
           </Typography>
-          <Typography variant="h6" className="text-gray-600 max-w-2xl mx-auto">
-            Browse our extensive collection of office supplies and stationery items
+          <Typography variant="body1" className="text-gray-600">
+            เลือกสินค้าที่ต้องการสั่งซื้อ
           </Typography>
-        </motion.div>
+        </Box>
 
-        {/* Search and Filter Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="mb-8"
-        >
-          <Box className="glass-card-strong rounded-3xl p-6 mb-6">
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-              <div className="flex-1 w-full">
-                <TextField
-                  fullWidth
-                  placeholder="Search products, categories..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Search className="text-gray-400" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      ใหญ่ไปครับborderRadius: "20px",
-                      backgroundColor: "rgba(255, 255, 255, 0.8)",
-                      backdropFilter: "blur(10px)",
-                    },
-                  }}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Fab
-                    size="small"
-                    onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-                    className="glass-button"
-                  >
-                    {viewMode === "grid" ? <ViewList /> : <ViewModule />}
-                  </Fab>
-                </motion.div>
-              </div>
-            </div>
+        {/* Search and Filter */}
+        <Box className="mb-6">
+          <Box className="flex flex-col md:flex-row gap-4 items-center mb-4">
+            <TextField
+              fullWidth
+              placeholder="ค้นหาสินค้า..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search className="text-gray-400" />
+                  </InputAdornment>
+                ),
+              }}
+              size="small"
+            />
+            <Button
+              variant="outlined"
+              onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+              startIcon={viewMode === "grid" ? <ViewList /> : <ViewModule />}
+            >
+              {viewMode === "grid" ? "รายการ" : "ตาราง"}
+            </Button>
           </Box>
 
-          {/* Category Filters */}
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }}>
-            <Box className="flex flex-wrap gap-3 justify-center">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Chip
-                  label="All Categories"
-                  onClick={() => setSelectedCategory("")}
-                  color={selectedCategory === "" ? "primary" : "default"}
-                  icon={<Category />}
-                  className={`cursor-pointer font-semibold px-4 py-2 h-12 ${
-                    selectedCategory === ""
-                      ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg"
-                      : "glass-button"
-                  }`}
-                />
-              </motion.div>
-              {categories.map((category: string | undefined) => (
-                <motion.div key={category} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Chip
-                    label={category}
-                    onClick={() => setSelectedCategory(category || "")}
-                    color={selectedCategory === category ? "primary" : "default"}
-                    icon={<Category />}
-                    className={`cursor-pointer font-semibold px-4 py-2 h-12 ${
-                      selectedCategory === category ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg" : "glass-button"
-                    }`}
-                  />
-                </motion.div>
-              ))}
-            </Box>
-          </motion.div>
-        </motion.div>
+          {/* Categories */}
+          <Box className="flex flex-wrap gap-2">
+            <Chip
+              label="ทั้งหมด"
+              onClick={() => setSelectedCategory("")}
+              color={selectedCategory === "" ? "primary" : "default"}
+              size="small"
+            />
+            {categories.map((category: string | undefined) => (
+              <Chip
+                key={category}
+                label={category}
+                onClick={() => setSelectedCategory(category || "")}
+                color={selectedCategory === category ? "primary" : "default"}
+                size="small"
+              />
+            ))}
+          </Box>
+        </Box>
 
-        {/* Product Grid/List */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="grid gap-6"
-        >
+        {/* Products */}
+        <Box>
           {loading ? (
             <Grid container spacing={3}>
               {[...Array(6)].map((_, index) => (
@@ -202,35 +159,24 @@ console.log("Test User : ",user)
               ))}
             </Grid>
           ) : filteredProducts.length === 0 ? (
-            <Typography variant="h6" className="text-center text-gray-600">
-              No products found.
-            </Typography>
+            <Box className="text-center py-16">
+              <Typography variant="h6" className="text-gray-500 mb-2">
+                ไม่พบสินค้า
+              </Typography>
+              <Typography variant="body2" className="text-gray-400">
+                ลองเปลี่ยนคำค้นหาหรือหมวดหมู่
+              </Typography>
+            </Box>
           ) : (
-           
-            <AnimatePresence mode="wait">
-              {viewMode === "grid" ? (
-                <Grid container spacing={3}>
-                  {filteredProducts.map((product) => (
-                     <Grid item xs={12} sm={6} md={4} key={product.PRODUCT_ID}>
-                          <>
-                        
-                     <ProductCart product={product} viewMode={viewMode} />
-                        </>
-                    </Grid>
-                 ))}
+            <Grid container spacing={3}>
+              {filteredProducts.map((product) => (
+                <Grid item xs={12} sm={6} md={4} key={product.PRODUCT_ID}>
+                  <ProductCart product={product} viewMode={viewMode} />
                 </Grid>
-              ) : (
-                <Grid container spacing={3}>
-                  {filteredProducts.map((product) => (
-                    <Grid item xs={12} key={product.PRODUCT_ID}>
-                      { <ProductCart product={product} viewMode={viewMode} /> }
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-            </AnimatePresence>
+              ))}
+            </Grid>
           )}
-        </motion.div>
+        </Box>
       </motion.div>
     </>
   );

@@ -63,18 +63,25 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
   // --- List View (Shopee/Lazada style) ---
   if (viewMode === 'list') {
     return (
-      <Card
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'stretch',
-          minHeight: 220,
-          position: 'relative',
-          boxShadow: '0 2px 8px #eee',
-          borderRadius: 16,
-          margin: 8
-        }}
+      <motion.div
+        whileHover={{ y: -2, scale: 1.005 }}
+        whileTap={{ scale: 0.995 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
       >
+        <Card
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'stretch',
+            minHeight: 220,
+            position: 'relative',
+            boxShadow: '0 2px 8px #eee',
+            borderRadius: 16,
+            margin: 8,
+            transition: 'box-shadow 0.2s ease'
+          }}
+          className="hover:shadow-lg"
+        >
         {/* รูปภาพ */}
         <Box style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <Image
@@ -127,21 +134,22 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             </Box>
           </Box>
         </Box>
-      </Card>
+        </Card>
+      </motion.div>
     )
   }
 
   // --- Grid View (แบบเดิม) ---
   return (
     <motion.div
-      whileHover={{ y: -12, scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.4, type: "spring", stiffness: 300 }}
+      whileHover={{ y: -2, scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       className="h-full"
     >
       <Card
-        className="card-interactive h-full relative overflow-hidden"
-        style={{}}
+        className="card-interactive h-full relative overflow-hidden transition-shadow duration-200 hover:shadow-lg"
+        style={{ borderRadius: 12 }}
       >
         {/* Favorite Button */}
         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="absolute top-4 right-4 z-10">
