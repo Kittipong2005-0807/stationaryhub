@@ -3,6 +3,7 @@
 import React from "react"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useCart } from "@/src/contexts/CartContext"
+import { Bell } from "lucide-react"
 import {
   AppBar,
   Toolbar,
@@ -36,11 +37,21 @@ import {
   Settings,
 } from "@mui/icons-material"
 import { useRouter, usePathname } from "next/navigation"
+import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import LoadingSpinner from "./ui/LoadingSpinner"
 
 interface LayoutProps {
   children: React.ReactNode
+}
+
+interface Notification {
+  EMAIL_ID: number
+  TO_USER_ID: string
+  SUBJECT: string
+  BODY: string
+  STATUS: string
+  SENT_AT: Date
 }
 
 export default function Layout({ children }: LayoutProps) {
@@ -55,12 +66,37 @@ export default function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [isNavigating, setIsNavigating] = React.useState(false)
   const [notificationAnchor, setNotificationAnchor] = React.useState<null | HTMLElement>(null)
-  const [notifications, setNotifications] = React.useState([
-    { id: 1, type: "order", message: "คำสั่งซื้อ #1234 ได้รับการอนุมัติแล้ว", status: "approved", read: false, date: "2024-07-01 10:30" },
-    { id: 2, type: "order", message: "คำสั่งซื้อ #1235 ถูกปฏิเสธ กรุณาตรวจสอบ", status: "rejected", read: false, date: "2024-07-01 09:15" },
-  ])
+  const [notifications, setNotifications] = React.useState<Notification[]>([])
+  const [loadingNotifications, setLoadingNotifications] = React.useState(false)
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const unreadCount = notifications.filter((n) => n.STATUS === 'SENT').length
+
+  // ดึงข้อมูลแจ้งเตือนเมื่อ component โหลด
+  React.useEffect(() => {
+    if (user?.AdLoginName) {
+      fetchNotifications()
+    }
+  }, [user?.AdLoginName])
+
+  const fetchNotifications = async () => {
+    if (!user?.AdLoginName) return
+
+    try {
+      setLoadingNotifications(true)
+      const response = await fetch(`/api/notifications?userId=${user.AdLoginName}`)
+      const data = await response.json()
+
+      if (response.ok) {
+        setNotifications(data.notifications || [])
+      } else {
+        console.error('Error fetching notifications:', data.error)
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+    } finally {
+      setLoadingNotifications(false)
+    }
+  }
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -82,37 +118,65 @@ export default function Layout({ children }: LayoutProps) {
       setIsNavigating(true)
       router.push(path)
       setMobileMenuOpen(false)
+      // ลดเวลา loading ลง
+      setTimeout(() => setIsNavigating(false), 300)
     }
   }
 
   const handleNotificationClick = (event: React.MouseEvent<HTMLElement>) => {
     setNotificationAnchor(event.currentTarget)
   }
+  
   const handleNotificationClose = () => {
     setNotificationAnchor(null)
   }
-  const handleNotificationAction = (n: any) => {
-    setNotifications((prev) => prev.map((item) => item.id === n.id ? { ...item, read: true } : item))
-    setNotificationAnchor(null)
-    if (n.type === "order") {
-      // สมมุติว่า order id อยู่ในข้อความ เช่น #1234
-      const match = n.message.match(/#(\d+)/)
-      if (match) {
-        const orderId = match[1]
-        // ไปหน้ารายละเอียด order (ถ้ามี) หรือไป /orders
-        // router.push(`/orders/${orderId}`) // ถ้ามีหน้าแยก
-        router.push("/orders")
-      } else {
+  
+  const handleNotificationAction = async (notification: Notification) => {
+    try {
+      // Mark as read
+      await fetch(`/api/notifications/${notification.EMAIL_ID}/read`, {
+        method: 'POST'
+      })
+
+      // Update local state
+      setNotifications(prev => 
+        prev.map(n => 
+          n.EMAIL_ID === notification.EMAIL_ID 
+            ? { ...n, STATUS: 'READ' }
+            : n
+        )
+      )
+
+      setNotificationAnchor(null)
+
+      // Navigate based on notification type
+      if (notification.SUBJECT.includes('requisition')) {
         router.push("/orders")
       }
-    } else if (n.type === "news") {
-      // ไปหน้าข่าวสาร (ถ้ามี) หรืออยู่หน้าเดิม
-      // router.push("/news")
+    } catch (error) {
+      console.error('Error handling notification:', error)
+    }
+  }
+
+  const handleDeleteNotification = async (notificationId: number) => {
+    try {
+      await fetch(`/api/notifications/${notificationId}`, {
+        method: 'DELETE'
+      })
+
+      // Remove from local state
+      setNotifications(prev => 
+        prev.filter(n => n.EMAIL_ID !== notificationId)
+      )
+    } catch (error) {
+      console.error('Error deleting notification:', error)
     }
   }
 
   React.useEffect(() => {
-    setIsNavigating(false)
+    // ลดเวลา loading ลง
+    const timer = setTimeout(() => setIsNavigating(false), 200)
+    return () => clearTimeout(timer)
   }, [pathname])
 
   if (!isAuthenticated) {
@@ -145,6 +209,30 @@ export default function Layout({ children }: LayoutProps) {
       default:
         return "👤"
     }
+  }
+
+  const getNotificationIcon = (subject: string) => {
+    if (subject.includes('approved')) return "✅"
+    if (subject.includes('rejected')) return "❌"
+    if (subject.includes('created')) return "📦"
+    return "📋"
+  }
+
+  const getNotificationStatus = (subject: string) => {
+    if (subject.includes('approved')) return "approved"
+    if (subject.includes('rejected')) return "rejected"
+    return "pending"
+  }
+
+  const formatDate = (dateString: string | Date) => {
+    const date = new Date(dateString)
+    return date.toLocaleString('th-TH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   const getNavigationItems = () => {
@@ -184,7 +272,8 @@ export default function Layout({ children }: LayoutProps) {
       {mobile ? (
         <ListItem
           button
-          onClick={() => handleNavigation(item.path)}
+          component={Link}
+          href={item.path}
           className={`rounded-lg mx-2 my-1 ${pathname === item.path ? "bg-blue-50" : ""}`}
         >
           <ListItemIcon>
@@ -198,25 +287,25 @@ export default function Layout({ children }: LayoutProps) {
           />
         </ListItem>
       ) : (
-        <Button
-          variant={pathname === item.path ? "contained" : "text"}
-          onClick={() => handleNavigation(item.path)}
-          startIcon={
-            <Badge badgeContent={item.badge} color="error">
-              <item.icon />
-            </Badge>
-          }
-          size="small"
-        >
-          {item.label}
-        </Button>
+        <Link href={item.path} style={{ textDecoration: 'none' }}>
+          <Button
+            variant={pathname === item.path ? "contained" : "text"}
+            startIcon={
+              <Badge badgeContent={item.badge} color="error">
+                <item.icon />
+              </Badge>
+            }
+            size="small"
+          >
+            {item.label}
+          </Button>
+        </Link>
       )}
     </>
   )
 
   return (
     <div className="min-h-screen">
-
 
       {/* Navigation Loading Overlay */}
       <AnimatePresence>
@@ -254,14 +343,15 @@ export default function Layout({ children }: LayoutProps) {
             )}
 
             {/* Logo */}
-            <Typography 
-              variant="h6" 
-              component="div" 
-              className="font-bold text-gray-800 cursor-pointer"
-              onClick={() => handleNavigation("/")}
-            >
-              🛍️ StationeryHub
-            </Typography>
+                         <Link href="/" style={{ textDecoration: 'none' }}>
+               <Typography 
+                 variant="h6" 
+                 component="div" 
+                 className="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
+               >
+                 🛍️ StationeryHub
+               </Typography>
+             </Link>
 
             <Box sx={{ flexGrow: 1 }} />
 
@@ -279,6 +369,7 @@ export default function Layout({ children }: LayoutProps) {
               aria-label="View notifications"
               onClick={handleNotificationClick}
               size="small"
+              disabled={loadingNotifications}
             >
               <Badge badgeContent={unreadCount} color="error">
                 <NotificationsNone />
@@ -288,36 +379,54 @@ export default function Layout({ children }: LayoutProps) {
               anchorEl={notificationAnchor}
               open={Boolean(notificationAnchor)}
               onClose={handleNotificationClose}
-              PaperProps={{ className: "mt-2 min-w-[320px]" }}
+              PaperProps={{ className: "mt-2 min-w-[320px] max-h-[400px] overflow-y-auto" }}
               transformOrigin={{ horizontal: "right", vertical: "top" }}
               anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
             >
               <Box className="px-4 py-2">
                 <Typography variant="subtitle1" className="font-bold mb-2">รายการแจ้งเตือน</Typography>
-                {notifications.filter(n => n.type === "order").length === 0 && (
-                  <Typography variant="body2" className="text-gray-500">ไม่พบแจ้งเตือน</Typography>
+                
+                {loadingNotifications ? (
+                  <Box className="flex items-center justify-center py-4">
+                    <LoadingSpinner size="sm" text="กำลังโหลด..." />
+                  </Box>
+                ) : notifications.length === 0 ? (
+                  <Typography variant="body2" className="text-gray-500 py-4 text-center">
+                    ไม่พบแจ้งเตือน
+                  </Typography>
+                ) : (
+                  notifications.map((notification) => (
+                    <MenuItem
+                      key={notification.EMAIL_ID}
+                      onClick={() => handleNotificationAction(notification)}
+                      className={`rounded-lg my-1 px-3 py-2 hover:bg-blue-50 cursor-pointer ${
+                        notification.STATUS === 'READ' ? "opacity-60" : ""
+                      }`}
+                    >
+                      <Box className="flex-shrink-0 mt-1">
+                        {getNotificationIcon(notification.SUBJECT)}
+                      </Box>
+                      <Box className="flex-1">
+                        <Typography variant="body2" className="mb-1 font-medium text-gray-800">
+                          {notification.BODY}
+                        </Typography>
+                        <Typography variant="caption" className="text-gray-400">
+                          {formatDate(notification.SENT_AT)}
+                        </Typography>
+                      </Box>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteNotification(notification.EMAIL_ID)
+                        }}
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        <Close fontSize="small" />
+                      </IconButton>
+                    </MenuItem>
+                  ))
                 )}
-                {notifications.filter(n => n.type === "order").map((n) => (
-                  <MenuItem
-                    key={n.id}
-                    onClick={() => handleNotificationAction(n)}
-                    className={`rounded-lg my-1 px-3 py-2 hover:bg-blue-50 cursor-pointer ${n.read ? "opacity-60" : ""}`}
-                  >
-                    <Box className="flex-shrink-0 mt-1">
-                      {n.status === "approved" && <span className="text-green-600">✅</span>}
-                      {n.status === "rejected" && <span className="text-red-500">❌</span>}
-                      {n.status !== "approved" && n.status !== "rejected" && <span className="text-blue-500">📦</span>}
-                    </Box>
-                    <Box className="flex-1">
-                      <Typography variant="body2" className="mb-1 font-medium text-gray-800">
-                        {n.message}
-                      </Typography>
-                      <Typography variant="caption" className="text-gray-400">
-                        {n.date}
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                ))}
               </Box>
             </Menu>
 
@@ -336,7 +445,7 @@ export default function Layout({ children }: LayoutProps) {
               {!isMobile && (
                 <Box>
                   <Typography variant="body2" className="font-medium text-gray-800">
-                    {user?.USERNAME}
+                    {user?.FullNameThai || user?.FullNameEng || user?.USERNAME || user?.AdLoginName || user?.name || 'User'}
                   </Typography>
                   <Chip
                     label={user?.ROLE}
@@ -345,6 +454,18 @@ export default function Layout({ children }: LayoutProps) {
                     className="h-4 text-xs"
                   />
                 </Box>
+              )}
+              <Link href="/notifications" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <IconButton color="inherit" sx={{ ml: 1 }}>
+                  <Bell />
+                </IconButton>
+              </Link>
+              {user?.ROLE === 'DEV' && (
+                <Link href="/test-notifications" style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <IconButton color="inherit" sx={{ ml: 1 }}>
+                    <Bell className="text-orange-600" />
+                  </IconButton>
+                </Link>
               )}
             </Box>
 

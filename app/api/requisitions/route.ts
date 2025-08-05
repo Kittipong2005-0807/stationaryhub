@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma"
 import { sendMail } from "@/lib/database"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
+import { ApprovalService } from "@/lib/approval-service"
+import { OrgCode3Service } from "@/lib/orgcode3-service"
+import { NotificationService } from "@/lib/notification-service"
 
 // ฟังก์ชันดึง EmpCode จาก session
 async function getEmpCodeFromSession(request: NextRequest) {
@@ -34,38 +37,21 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const mine = searchParams.get("mine")
+    
     if (mine === "1") {
-      // TODO: ดึง user id จาก session จริง ๆ
-      // const userId = 1 // mock user id (ควรแก้เป็น auth จริง)
       // ดึง EmpCode จาก session
       const empCode = await getEmpCodeFromSession(request)
       if (!empCode) {
         return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
       }
       
-      const requisitions = await prisma.rEQUISITIONS.findMany({
-        where: { USER_ID: empCode },
-        orderBy: { SUBMITTED_AT: "desc" },
-        include: {
-          REQUISITION_ITEMS: {
-            include: { PRODUCTS: { select: { PRODUCT_NAME: true } } },
-          },
-        },
-      })
-      // map รายการสินค้าให้แสดงชื่อสินค้า
-      const result = requisitions.map((r: any) => ({
-        ...r,
-        REQUISITION_ITEMS: r.REQUISITION_ITEMS?.map((item: any) => ({
-          PRODUCT_NAME: item.PRODUCTS?.PRODUCT_NAME || "",
-          QUANTITY: item.QUANTITY,
-          UNIT_PRICE: item.UNIT_PRICE,
-          TOTAL_PRICE: item.TOTAL_PRICE,
-        })),
-      }))
+      // ใช้ ApprovalService เพื่อดึงข้อมูล requisitions ของ user
+      const result = await ApprovalService.getUserRequisitionsWithStatus(empCode)
       return NextResponse.json(result)
     } else {
-      const requisitions = await prisma.rEQUISITIONS.findMany()
-      return NextResponse.json(requisitions)
+      // ใช้ ApprovalService เพื่อดึงข้อมูล requisitions ทั้งหมด
+      const result = await ApprovalService.getAllRequisitionsWithStatus()
+      return NextResponse.json(result)
     }
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch requisitions" }, { status: 500 })
@@ -76,7 +62,29 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
     console.log("Received data:", data)
-    console.log("REQUISITION_ITEMS from request:", data.REQUISITION_ITEMS)
+    
+    // ถ้ามี requisitionId แสดงว่าเป็นการสร้าง requisition items
+    if (data.requisitionId) {
+      console.log("Creating requisition items for ID:", data.requisitionId)
+      
+      if (data.REQUISITION_ITEMS && Array.isArray(data.REQUISITION_ITEMS)) {
+        for (const item of data.REQUISITION_ITEMS) {
+          await prisma.rEQUISITION_ITEMS.create({
+            data: {
+              REQUISITION_ID: data.requisitionId,
+              PRODUCT_ID: item.PRODUCT_ID,
+              QUANTITY: item.QUANTITY,
+              UNIT_PRICE: item.UNIT_PRICE,
+            }
+          })
+        }
+      }
+      
+      return NextResponse.json({ success: true }, { status: 201 })
+    }
+    
+    // กรณีสร้าง requisition ใหม่ (จะใช้ OrgCode3Service แทน)
+    console.log("Creating new requisition with OrgCode3Service")
     
     // ดึง EmpCode จาก session หรือ request headers
     const empCode = await getEmpCodeFromSession(request) || data.USER_ID
@@ -95,9 +103,9 @@ export async function POST(request: NextRequest) {
       user = await prisma.uSERS.create({
         data: {
           USER_ID: empCode,
-          USERNAME: empCode, // ใช้ EmpCode เป็น username
-          PASSWORD: 'default_password', // ต้องเปลี่ยนเป็น password ที่ปลอดภัย
-          EMAIL: data.USER_ID || '', // ใช้ email จาก request ถ้ามี
+          USERNAME: empCode,
+          PASSWORD: 'default_password',
+          EMAIL: data.USER_ID || '',
           ROLE: 'USER',
           DEPARTMENT: 'General',
           SITE_ID: data.SITE_ID || "1700"
@@ -105,43 +113,40 @@ export async function POST(request: NextRequest) {
       })
     }
     
-    let result = {
-      USER_ID: user.USER_ID,
-      STATUS: data.STATUS || "PENDING",
-      TOTAL_AMOUNT: data.TOTAL_AMOUNT,
-      SITE_ID: data.SITE_ID || "1700",
-      ISSUE_NOTE: data.ISSUE_NOTE || "",
-      REQUISITION_ITEMS: {
-        create: data.REQUISITION_ITEMS?.map((item: any) => ({
-          PRODUCT_ID: item.PRODUCT_ID,
-          QUANTITY: item.QUANTITY,
-          UNIT_PRICE: item.UNIT_PRICE,
-          // TOTAL_PRICE จะถูกคำนวณอัตโนมัติโดยฐานข้อมูล
-        })) || [],
-      },
+    // ใช้ OrgCode3Service เพื่อสร้าง requisition พร้อม orgcode3
+    const requisitionId = await OrgCode3Service.createRequisitionWithOrgCode3(
+      user.USER_ID,
+      parseFloat(data.TOTAL_AMOUNT?.toString() || '0'),
+      data.ISSUE_NOTE || "",
+      data.SITE_ID || "1700"
+    )
+
+    if (!requisitionId) {
+      return NextResponse.json({ error: "Failed to create requisition" }, { status: 500 })
     }
-    console.log("Requisition data:", result)
 
-    const newRequisition = await prisma.rEQUISITIONS.create({ data: result })
+    // สร้าง requisition items
+    if (data.REQUISITION_ITEMS && Array.isArray(data.REQUISITION_ITEMS)) {
+      for (const item of data.REQUISITION_ITEMS) {
+        await prisma.rEQUISITION_ITEMS.create({
+          data: {
+            REQUISITION_ID: requisitionId,
+            PRODUCT_ID: item.PRODUCT_ID,
+            QUANTITY: item.QUANTITY,
+            UNIT_PRICE: item.UNIT_PRICE,
+          }
+        })
+      }
+    }
 
-    // // ดึงอีเมลของ user (ถ้ามี USER_ID)
-    // let userEmail = null
-    // if (data.USER_ID) {
-    //   const user = await prisma.userWithRoles.findUnique({
-    //     where: { USER_ID: data.USER_ID },
-    //   })
-    //   userEmail = user?.EMAIL
-    // }
-    // // ส่งอีเมลแจ้งเตือน
-    // if (userEmail) {
-    //   await sendMail(
-    //     userEmail,
-    //     "ยืนยันการสั่งซื้อ/ขอเบิกสำเร็จ",
-    //     `ระบบได้รับคำสั่งซื้อ/ขอเบิกของคุณแล้ว (เลขที่ ${newRequisition.REQUISITION_ID})`
-    //   )
-    // }
-    return NextResponse.json('', { status: 201 })
+    // ส่งการแจ้งเตือนเมื่อสร้าง requisition ใหม่
+    if (requisitionId) {
+      await NotificationService.notifyRequisitionCreated(requisitionId, user.USER_ID)
+    }
+
+    return NextResponse.json({ requisitionId }, { status: 201 })
   } catch (error) {
+    console.error("Error in requisitions API:", error)
     return NextResponse.json({ error: "Failed to create requisition" }, { status: 500 })
   }
 }

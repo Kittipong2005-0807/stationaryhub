@@ -106,23 +106,53 @@ export const authOptions: AuthOptions = {
 
         console.log('🧠 JWT Callback: User object from authorize():', user);
 
-        const getUserData = await prisma.userWithRoles.findFirst({
-          where: {
-            AdLoginName: user.name || '',
-            CurrentEmail: user.email || '',
-          },
-        });
+        const getUserData = await prisma.$queryRaw`
+          SELECT * FROM userWithRoles 
+          WHERE AdLoginName = ${user.name || ''} 
+          AND CurrentEmail = ${user.email || ''}
+        `;
 
         // console.log('🧠 Fetched user from DB (userWithRoles):', getUserData);
 
-        token.AdLoginName = getUserData?.AdLoginName;
-        token.EmpCode = getUserData?.EmpCode;
-        token.FullNameEng = getUserData?.FullNameEng;
-        token.FullNameThai = getUserData?.FullNameThai;
-        token.PostNameEng = getUserData?.PostNameEng;
-        token.CostCenterEng = getUserData?.CostCenterEng;
-        token.Role = 'MANAGER';
-        // token.Role = getUserData?.Role;
+        const userData = Array.isArray(getUserData) ? getUserData[0] : getUserData;
+        token.AdLoginName = userData?.AdLoginName;
+        token.EmpCode = userData?.EmpCode;
+        token.FullNameEng = userData?.FullNameEng;
+        token.FullNameThai = userData?.FullNameThai;
+        token.PostNameEng = userData?.PostNameEng;
+        token.CostCenterEng = userData?.CostCenterEng;
+        token.orgcode3 = userData?.orgcode3;
+        
+        // กำหนด Role จากฐานข้อมูล USERS
+        let userRole = 'USER'; // default role
+        
+        try {
+          // ดึงข้อมูล Role จากตาราง USERS โดยตรง
+          const userFromDB = await prisma.$queryRaw`
+            SELECT ROLE FROM USERS WHERE USER_ID = ${user.name || ''}
+          `;
+          
+          if (userFromDB && Array.isArray(userFromDB) && userFromDB.length > 0) {
+            userRole = userFromDB[0].ROLE || 'USER';
+          } else {
+            // ถ้าไม่พบในฐานข้อมูล ให้ใช้เงื่อนไขพิเศษ
+            if (user.name === '9C154') {
+              userRole = 'DEV';
+            } else if (user.email === 'mujg-hkwfhm6dsohksojvp@ube.co.th') {
+              userRole = 'ADMIN';
+            }
+          }
+        } catch (error) {
+          console.log('Error fetching user role from DB:', error);
+          // fallback to hardcoded roles
+          if (user.name === '9C154') {
+            userRole = 'DEV';
+          } else if (user.email === 'mujg-hkwfhm6dsohksojvp@ube.co.th') {
+            userRole = 'ADMIN';
+          }
+        }
+        
+        token.Role = userRole;
       }
 
       return token;
@@ -139,7 +169,8 @@ export const authOptions: AuthOptions = {
           FullNameThai: token.FullNameThai,
           PostNameEng: token.PostNameEng,
           CostCenterEng: token.CostCenterEng,
-          ROLE: token.Role
+          ROLE: token.Role,
+          orgcode3: token.orgcode3
         },
       };
 

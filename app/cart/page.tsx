@@ -21,6 +21,7 @@ import { Delete, Add, Remove, ShoppingCart } from "@mui/icons-material"
 import { useCart } from "@/src/contexts/CartContext"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { motion } from "framer-motion"
 import Image from "next/image"
 
@@ -38,34 +39,60 @@ export default function CartPage() {
   const handleSubmitRequisition = async () => {
     if (items.length === 0) return
     console.log(" Cart user data: ", user)
-    // ดึง USER_ID จาก user context (ไม่ hardcode)
+    
+    // ใช้ OrgCode3Service เพื่อสร้าง requisition พร้อม orgcode3
     const requisitionData = {
-      USER_ID: user?.EmpCode,
-      TOTAL_AMOUNT: getTotalAmount(),
-      ISSUE_NOTE: "Requisition submitted from cart",
-      STATUS: "PENDING",
-      SITE_ID: user?.SITE_ID || "1700",
+      action: "createRequisition",
+      userId: user?.AdLoginName || user?.EmpCode,
+      totalAmount: getTotalAmount(),
+      issueNote: "Requisition submitted from cart",
+      siteId: user?.SITE_ID || "1700",
       REQUISITION_ITEMS: items.map((item) => ({
         PRODUCT_ID: item.PRODUCT_ID,
         QUANTITY: item.quantity,
         UNIT_PRICE: item.UNIT_COST,
         TOTAL_PRICE: item.UNIT_COST * item.quantity,
       })),
-      // ไม่ต้องส่ง USER_ID ให้ API เพราะ API จะดึงจาก session ฝั่ง server
     }
     console.log("Cart :  ", requisitionData)
 
     try {
-      const res = await fetch("/api/requisitions", {
+      // ใช้ API orgcode3 เพื่อสร้าง requisition พร้อม orgcode3
+      const res = await fetch("/api/orgcode3", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requisitionData),
       })
-      if (!res.ok) throw new Error("Failed to submit requisition")
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || "Failed to submit requisition")
+      }
+      
+      const result = await res.json()
+      console.log("Requisition created with ID:", result.requisitionId)
+      
+      // สร้าง requisition items
+      if (result.requisitionId && requisitionData.REQUISITION_ITEMS.length > 0) {
+        const itemsRes = await fetch("/api/requisitions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...requisitionData,
+            requisitionId: result.requisitionId
+          }),
+        })
+        
+        if (!itemsRes.ok) {
+          console.warn("Failed to create requisition items")
+        }
+      }
+      
       alert("Requisition submitted successfully!")
       clearCart()
       router.push("/orders")
     } catch (err) {
+      console.error("Error submitting requisition:", err)
       alert("เกิดข้อผิดพลาดในการส่งใบเบิก กรุณาลองใหม่")
     }
   }
@@ -84,13 +111,14 @@ export default function CartPage() {
         <Typography variant="body1" className="text-gray-500 mb-6">
           Add some products to get started
         </Typography>
-        <Button
-          variant="contained"
-          onClick={() => router.push("/")}
-          className="bg-gradient-to-r from-blue-500 to-purple-600"
-        >
-          Browse Products
-        </Button>
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <Button
+            variant="contained"
+            className="bg-gradient-to-r from-blue-500 to-purple-600"
+          >
+            Browse Products
+          </Button>
+        </Link>
       </motion.div>
     )
   }

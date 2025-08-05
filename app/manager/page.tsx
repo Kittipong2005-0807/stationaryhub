@@ -33,6 +33,7 @@ import {
 } from "@mui/icons-material"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { motion } from "framer-motion"
 import type { Requisition } from "@/lib/database"
 
@@ -178,7 +179,7 @@ export default function ManagerDashboard() {
       description: "Process pending requisitions",
       icon: Assignment,
       color: "from-blue-500 to-purple-600",
-      action: () => router.push("/approvals"),
+      href: "/approvals",
       count: stats.pendingApprovals,
     },
     {
@@ -186,7 +187,7 @@ export default function ManagerDashboard() {
       description: "Browse available inventory",
       icon: Timeline,
       color: "from-green-500 to-teal-600",
-      action: () => router.push("/"),
+      href: "/",
       count: null,
     },
     {
@@ -226,7 +227,7 @@ export default function ManagerDashboard() {
                 👨‍💼 Manager Dashboard
               </Typography>
               <Typography variant="h6" className="text-gray-600">
-                Welcome back, {user?.USERNAME}! You have {stats.pendingApprovals} requisitions awaiting your approval.
+                Welcome back, {user?.USERNAME || 'User'}! You have {stats.pendingApprovals || 0} requisitions awaiting your approval.
               </Typography>
             </div>
 
@@ -333,16 +334,15 @@ export default function ManagerDashboard() {
 
                   <div className="space-y-4">
                     {quickActions.map((action, index) => (
-                      <motion.div
-                        key={action.title}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.7 + index * 0.1 }}
-                        whileHover={{ scale: 1.02, x: 5 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={action.action}
-                        className="glass-button rounded-2xl p-4 cursor-pointer group"
-                      >
+                      <Link key={action.title} href={action.href || "#"} style={{ textDecoration: 'none' }}>
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.7 + index * 0.1 }}
+                          whileHover={{ scale: 1.02, x: 5 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="glass-button rounded-2xl p-4 cursor-pointer group"
+                        >
                         <div className="flex items-center gap-4">
                           <div
                             className={`w-12 h-12 rounded-xl bg-gradient-to-r ${action.color} flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300`}
@@ -369,7 +369,8 @@ export default function ManagerDashboard() {
                           <div className="text-gray-400 group-hover:text-gray-600 transition-colors">→</div>
                         </div>
                       </motion.div>
-                    ))}
+                    </Link>
+                  ))}
                   </div>
                 </CardContent>
               </Card>
@@ -522,7 +523,7 @@ export default function ManagerDashboard() {
                   </div>
                 ))}
               </div>
-            ) : (/* equisitions ||  */[])?.filter((r) => r.STATUS === "PENDING").length === 0 ? (
+            ) : (requisitions || [])?.filter((r) => r.STATUS === "PENDING").length === 0 ? (
               <div className="text-center py-12">
                 <motion.div
                   animate={{ rotate: [0, 10, -10, 0] }}
@@ -586,7 +587,7 @@ export default function ManagerDashboard() {
                           </TableCell>
                           <TableCell>
                             <Typography variant="h6" className="font-bold text-green-600">
-                              ฿{requisition.TOTAL_AMOUNT.toFixed(2)}
+                              ฿{(parseFloat(requisition.TOTAL_AMOUNT?.toString() || '0') || 0).toFixed(2)}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -598,7 +599,7 @@ export default function ManagerDashboard() {
                                     ? "Medium"
                                     : "Low"
                               }
-                              color={getPriorityColor(requisition.TOTAL_AMOUNT) as any}
+                              color={getPriorityColor(requisition.TOTAL_AMOUNT) as "error" | "warning" | "success" | "default"}
                               size="small"
                               className="font-semibold"
                             />
