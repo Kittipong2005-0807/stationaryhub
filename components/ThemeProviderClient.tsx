@@ -3,7 +3,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
 import { Inter } from "next/font/google"
 import { ReactNode } from "react"
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider } from "next-auth/react"
 
 const inter = Inter({ subsets: ["latin"] })
 

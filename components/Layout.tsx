@@ -35,11 +35,12 @@ import {
   Close,
   Person,
   Settings,
+  User,
 } from "@mui/icons-material"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import LoadingSpinner from "./ui/LoadingSpinner"
+import LoadingSpinner from "@/components/ui/LoadingSpinner"
 
 interface LayoutProps {
   children: React.ReactNode
@@ -494,6 +495,13 @@ export default function Layout({ children }: LayoutProps) {
                   </Typography>
                 </Box>
               </MenuItem>
+
+              <Link href="/user-profile" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <MenuItem onClick={handleClose} className="rounded-xl mx-2 my-1">
+                  <User sx={{ mr: 2 }} />
+                  ข้อมูลผู้ใช้
+                </MenuItem>
+              </Link>
 
               <MenuItem onClick={handleClose} className="rounded-xl mx-2 my-1">
                 {/* <Settings sx={{ mr: 2 }} />

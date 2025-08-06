@@ -12,7 +12,7 @@ async function getEmpCodeFromSession(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     // ใช้ AdLoginName จาก session โดยตรง
-    const adLoginName = (session?.user as any)?.AdLoginName
+    const adLoginName = (session?.user as { AdLoginName?: string })?.AdLoginName
     
     if (!adLoginName) return null
     
