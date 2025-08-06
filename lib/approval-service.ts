@@ -234,8 +234,16 @@ export class ApprovalService {
    */
   static async createApproval(approvalData: ApprovalData): Promise<ApprovalResult> {
     try {
-      // ใช้ transaction เพื่อให้แน่ใจว่าข้อมูลถูกบันทึกทั้งสองตาราง
+      // ใช้ transaction เพื่อให้แน่ใจว่าข้อมูลถูกบันทึกทั้งสามตาราง
       const result = await prisma.$transaction(async (tx) => {
+        // อัพเดทสถานะในตาราง REQUISITIONS
+        await tx.rEQUISITIONS.update({
+          where: { REQUISITION_ID: approvalData.REQUISITION_ID },
+          data: { 
+            STATUS: approvalData.STATUS
+          }
+        })
+
         // สร้าง record ในตาราง APPROVALS
         const approval = await tx.aPPROVALS.create({
           data: {

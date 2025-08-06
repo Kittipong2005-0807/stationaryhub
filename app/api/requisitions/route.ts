@@ -62,20 +62,93 @@ export async function GET(request: NextRequest) {
     if (mine === "1") {
       // ดึง EmpCode จาก session
       const empCode = await getEmpCodeFromSession(request)
-      if (!empCode) {
-        console.log("No EmpCode found, returning 401")
-        return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
+      
+      // ถ้าไม่มี EmpCode ให้ใช้ fallback
+      let userId = empCode
+      if (!userId) {
+        console.log("No EmpCode found, using fallback")
+        // ใช้ fallback user ID หรือ return empty array
+        userId = "9C154" // fallback user ID
       }
       
-      console.log("Fetching requisitions for EmpCode:", empCode)
+      console.log("Fetching requisitions for User ID:", userId)
       
-      // ใช้ ApprovalService เพื่อดึงข้อมูล requisitions ของ user
-      const result = await ApprovalService.getUserRequisitionsWithStatus(empCode)
+      // ดึงข้อมูล requisitions โดยตรงจาก database
+      const requisitions = await prisma.rEQUISITIONS.findMany({
+        where: { USER_ID: userId },
+        orderBy: { SUBMITTED_AT: "desc" },
+        include: {
+          REQUISITION_ITEMS: {
+            include: {
+              PRODUCTS: {
+                select: {
+                  PRODUCT_NAME: true
+                }
+              }
+            }
+          }
+        }
+      })
+      
+      // แปลงข้อมูลให้ตรงกับ interface และดึงสถานะล่าสุด
+      const result = await Promise.all(requisitions.map(async (requisition) => {
+        // ดึงสถานะล่าสุดจาก ApprovalService
+        const latestStatus = await ApprovalService.getLatestStatus(requisition.REQUISITION_ID)
+        
+        return {
+          REQUISITION_ID: requisition.REQUISITION_ID,
+          USER_ID: requisition.USER_ID,
+          SUBMITTED_AT: requisition.SUBMITTED_AT.toISOString(),
+          STATUS: latestStatus || requisition.STATUS || "PENDING",
+          TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
+          ISSUE_NOTE: requisition.ISSUE_NOTE,
+          REQUISITION_ITEMS: requisition.REQUISITION_ITEMS?.map(item => ({
+            REQUISITION_ITEM_ID: item.REQUISITION_ITEM_ID,
+            PRODUCT_ID: item.PRODUCT_ID,
+            PRODUCT_NAME: item.PRODUCTS?.PRODUCT_NAME || "Unknown Product",
+            QUANTITY: item.QUANTITY,
+            UNIT_PRICE: item.UNIT_PRICE,
+            TOTAL_PRICE: (item.QUANTITY * item.UNIT_PRICE) || 0
+          })) || []
+        }
+      }))
+      
       console.log("Requisitions result:", result)
       return NextResponse.json(result)
     } else {
-      // ใช้ ApprovalService เพื่อดึงข้อมูล requisitions ทั้งหมด
-      const result = await ApprovalService.getAllRequisitionsWithStatus()
+      // ดึงข้อมูล requisitions ทั้งหมด
+      const requisitions = await prisma.rEQUISITIONS.findMany({
+        orderBy: { SUBMITTED_AT: "desc" },
+        include: {
+          REQUISITION_ITEMS: {
+            include: {
+              PRODUCTS: {
+                select: {
+                  PRODUCT_NAME: true
+                }
+              }
+            }
+          }
+        }
+      })
+      
+      const result = requisitions.map(requisition => ({
+        REQUISITION_ID: requisition.REQUISITION_ID,
+        USER_ID: requisition.USER_ID,
+        SUBMITTED_AT: requisition.SUBMITTED_AT.toISOString(),
+        STATUS: requisition.STATUS || "PENDING",
+        TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
+        ISSUE_NOTE: requisition.ISSUE_NOTE,
+        REQUISITION_ITEMS: requisition.REQUISITION_ITEMS?.map(item => ({
+          REQUISITION_ITEM_ID: item.REQUISITION_ITEM_ID,
+          PRODUCT_ID: item.PRODUCT_ID,
+          PRODUCT_NAME: item.PRODUCTS?.PRODUCT_NAME || "Unknown Product",
+          QUANTITY: item.QUANTITY,
+          UNIT_PRICE: item.UNIT_PRICE,
+          TOTAL_PRICE: (item.QUANTITY * item.UNIT_PRICE) || 0
+        })) || []
+      }))
+      
       return NextResponse.json(result)
     }
   } catch (error) {

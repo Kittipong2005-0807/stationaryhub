@@ -124,7 +124,6 @@ export class OrgCode3Service {
         FROM REQUISITIONS r
         JOIN USERS u ON r.USER_ID = u.USER_ID
         WHERE r.ORGCODE3 = ${managerOrgCode3}
-        AND r.STATUS = 'PENDING'
         ORDER BY r.SUBMITTED_AT DESC
       `
       

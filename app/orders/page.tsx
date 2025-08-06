@@ -12,7 +12,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Alert
 } from "@mui/material"
 import { Refresh as RefreshIcon, Visibility as VisibilityIcon } from "@mui/icons-material"
 import { useAuth } from "@/src/contexts/AuthContext"
@@ -43,8 +44,11 @@ export default function OrdersPage() {
   const router = useRouter()
   const [orders, setOrders] = useState<Requisition[]>([])
   const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [selectedOrder, setSelectedOrder] = useState<Requisition | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   useEffect(() => {
     if (!isAuthenticated || user?.ROLE !== "USER") {
@@ -52,41 +56,72 @@ export default function OrdersPage() {
       return
     }
     
-    const fetchOrders = () => {
-      setLoading(true)
-      fetch("/api/requisitions?mine=1")
-        .then((res) => res.json())
-        .then((data) => {
-          console.log("Orders data:", data)
-          // ตรวจสอบว่า data เป็น array หรือไม่
+    const fetchOrders = async (isInitialLoad = false) => {
+      try {
+        if (isInitialLoad) {
+          setLoading(true)
+        } else {
+          setUpdating(true)
+        }
+        setError(null)
+        
+        console.log("Fetching orders...")
+        const response = await fetch("/api/requisitions?mine=1")
+        const data = await response.json()
+        
+        console.log("Orders API response:", response.status, data)
+        
+        if (response.ok) {
           if (Array.isArray(data)) {
             if (data.length > 0) {
               console.log("First order details:", data[0])
               console.log("REQUISITION_ITEMS:", data[0].REQUISITION_ITEMS)
             }
             setOrders(data)
+            setLastUpdated(new Date())
           } else {
             console.log("Data is not an array, setting empty array")
             setOrders([])
+            setLastUpdated(new Date())
           }
+        } else {
+          console.error("API error:", data)
+          setError(data.error || "ไม่สามารถดึงข้อมูลได้")
+          setOrders([])
+        }
+      } catch (error) {
+        console.error("Error fetching orders:", error)
+        setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
+        setOrders([])
+      } finally {
+        if (isInitialLoad) {
           setLoading(false)
-        })
-        .catch((error) => {
-          console.error("Error fetching orders:", error)
-          setOrders([]) // ตั้งค่าเป็น array ว่างเมื่อเกิด error
-          setLoading(false)
-        })
+        } else {
+          setUpdating(false)
+        }
+      }
     }
 
     // ดึงข้อมูลครั้งแรก
-    fetchOrders()
+    fetchOrders(true)
 
-    // อัพเดทข้อมูลทุก 30 วินาที
-    const interval = setInterval(fetchOrders, 30000)
+    // อัพเดทข้อมูลทุก 10 วินาที
+    const interval = setInterval(() => fetchOrders(false), 10000)
 
     // Cleanup interval เมื่อ component unmount
     return () => clearInterval(interval)
   }, [isAuthenticated, user, router])
+
+  // อัพเดทข้อมูลเมื่อ focus กลับมาที่หน้า
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log("Page focused, refreshing orders...")
+      fetchOrders(false)
+    }
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [])
 
   const handleViewDetails = (order: Requisition) => {
     setSelectedOrder(order)
@@ -98,26 +133,62 @@ export default function OrdersPage() {
     setSelectedOrder(null)
   }
 
-  const handleRefresh = () => {
-    setLoading(true)
-    fetch("/api/requisitions?mine=1")
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("Orders data refreshed:", data)
-        // ตรวจสอบว่า data เป็น array หรือไม่
+  const handleRefresh = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      console.log("Refreshing orders...")
+      const response = await fetch("/api/requisitions?mine=1")
+      const data = await response.json()
+      
+      console.log("Orders refresh response:", response.status, data)
+      
+      if (response.ok) {
         if (Array.isArray(data)) {
           setOrders(data)
+          setLastUpdated(new Date())
         } else {
           console.log("Refreshed data is not an array, setting empty array")
           setOrders([])
+          setLastUpdated(new Date())
         }
-        setLoading(false)
-      })
-      .catch((error) => {
-        console.error("Error refreshing orders:", error)
-        setOrders([]) // ตั้งค่าเป็น array ว่างเมื่อเกิด error
-        setLoading(false)
-      })
+      } else {
+        console.error("API error:", data)
+        setError(data.error || "ไม่สามารถดึงข้อมูลได้")
+      }
+    } catch (error) {
+      console.error("Error refreshing orders:", error)
+      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toUpperCase()) {
+      case "APPROVED":
+        return "success"
+      case "PENDING":
+        return "warning"
+      case "REJECTED":
+        return "error"
+      default:
+        return "default"
+    }
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status?.toUpperCase()) {
+      case "APPROVED":
+        return "อนุมัติแล้ว"
+      case "PENDING":
+        return "รออนุมัติ"
+      case "REJECTED":
+        return "ไม่อนุมัติ"
+      default:
+        return status || "รออนุมัติ"
+    }
   }
 
   if (!isAuthenticated || user?.ROLE !== "USER") return null
@@ -135,8 +206,32 @@ export default function OrdersPage() {
           disabled={loading}
           startIcon={<RefreshIcon className={loading ? "animate-spin" : ""} />}
         >
-          {loading ? "กำลังโหลด..." : "อัพเดท"}
+          {loading ? "กำลังโหลด..." : updating ? "กำลังอัพเดท..." : "อัพเดท"}
         </Button>
+      </Box>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" className="mb-4">
+          {error}
+        </Alert>
+      )}
+
+      {/* Debug Info */}
+      <Box className="mb-4 p-3 bg-blue-50 rounded">
+        <Typography variant="body2" className="text-blue-700">
+          🔍 Debug: พบคำสั่งซื้อ {orders.length} รายการ
+          {lastUpdated && (
+            <span className="ml-2 text-xs">
+              (อัพเดทล่าสุด: {lastUpdated.toLocaleTimeString('th-TH')})
+            </span>
+          )}
+          {updating && (
+            <span className="ml-2 text-xs text-orange-600">
+              🔄 กำลังอัพเดทอัตโนมัติ...
+            </span>
+          )}
+        </Typography>
       </Box>
 
       {loading ? (
@@ -148,9 +243,15 @@ export default function OrdersPage() {
           <Typography variant="h6" className="text-gray-500 mb-2">
             ไม่พบประวัติคำสั่งซื้อ
           </Typography>
-          <Typography variant="body2" className="text-gray-400">
+          <Typography variant="body2" className="text-gray-400 mb-4">
             เริ่มต้นการสั่งซื้อสินค้าจากหน้าแรก
           </Typography>
+          <Button 
+            variant="outlined" 
+            onClick={() => window.location.href = "/test-data"}
+          >
+            สร้างข้อมูลทดสอบ
+          </Button>
         </Box>
       ) : (
         <Box className="space-y-4">
@@ -163,12 +264,18 @@ export default function OrdersPage() {
                       Order #{order.REQUISITION_ID}
                     </Typography>
                     <Typography variant="body2" className="text-gray-500">
-                      {new Date(order.SUBMITTED_AT).toLocaleDateString()}
+                      {new Date(order.SUBMITTED_AT).toLocaleDateString('th-TH', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </Typography>
                   </Box>
                   <Chip 
-                    label={order.STATUS} 
-                    color={order.STATUS === "APPROVED" ? "success" : order.STATUS === "PENDING" ? "warning" : "default"}
+                    label={getStatusText(order.STATUS)} 
+                    color={getStatusColor(order.STATUS) as "success" | "warning" | "error" | "default"}
                     size="small"
                   />
                 </Box>
@@ -220,14 +327,22 @@ export default function OrdersPage() {
                 <Box className="flex justify-between items-center mb-2">
                   <Typography variant="body2" className="text-gray-600">สถานะ:</Typography>
                   <Chip 
-                    label={selectedOrder.STATUS} 
-                    color={selectedOrder.STATUS === "APPROVED" ? "success" : selectedOrder.STATUS === "PENDING" ? "warning" : "default"}
+                    label={getStatusText(selectedOrder.STATUS)} 
+                    color={getStatusColor(selectedOrder.STATUS) as "success" | "warning" | "error" | "default"}
                     size="small"
                   />
                 </Box>
                 <Box className="flex justify-between items-center mb-2">
                   <Typography variant="body2" className="text-gray-600">วันที่:</Typography>
-                  <Typography variant="body2">{new Date(selectedOrder.SUBMITTED_AT).toLocaleDateString()}</Typography>
+                  <Typography variant="body2">
+                    {new Date(selectedOrder.SUBMITTED_AT).toLocaleDateString('th-TH', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </Typography>
                 </Box>
                 <Box className="flex justify-between items-center mb-2">
                   <Typography variant="body2" className="text-gray-600">ยอดรวม:</Typography>

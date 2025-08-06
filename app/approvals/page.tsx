@@ -82,7 +82,7 @@ export default function ApprovalsPage() {
   const handleSubmitAction = async () => {
     if (!selectedRequisition) return
     setSubmitting(true)
-
+// console.log("selectedRequisition", selectedRequisition);
     try {
       const response = await fetch(`/api/requisitions/${selectedRequisition.REQUISITION_ID}/approve`, {
         method: "POST",
@@ -96,11 +96,11 @@ export default function ApprovalsPage() {
       })
 
       if (response.ok) {
-        // อัปเดตสถานะใน UI โดยดึงข้อมูลใหม่จาก API
-        const response = await fetch("/api/requisitions")
+        // อัปเดตสถานะใน UI โดยดึงข้อมูลใหม่จาก API orgcode3
+        const response = await fetch(`/api/orgcode3?action=getRequisitionsForManager&userId=${user?.AdLoginName}`)
         if (response.ok) {
-          const updatedRequisitions = await response.json()
-          setRequisitions(updatedRequisitions)
+          const data = await response.json()
+          setRequisitions(data.requisitions || [])
         }
         setDialogOpen(false)
         alert(`Requisition ${actionType === "approve" ? "approved" : "rejected"} successfully!`)

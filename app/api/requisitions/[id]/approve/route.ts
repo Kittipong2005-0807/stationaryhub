@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next/auth"
+import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
 import { ApprovalService } from "@/lib/approval-service"
 import { RoleManagementService, Permission } from "@/lib/role-management"
