@@ -1,40 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Stationary Hub - ระบบจัดการเบิกจ่ายวัสดุสิ้นเปลือง
 
-## Getting Started
+## 🚀 การติดตั้ง
 
-First, run the development server:
-
+### 1. ติดตั้ง Dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. ตั้งค่า Environment Variables
+สร้างไฟล์ `.env.local` และเพิ่ม:
+```env
+# LDAP Configuration
+LDAP_URI=ldap://your-ldap-server:389
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+# NextAuth Configuration
+NEXTAUTH_SECRET=your-secret-key-here
+NEXTAUTH_URL=http://localhost:3001
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+# Database Configuration
+DATABASE_URL="sqlserver://localhost:1433;database=StationeryDB;user=your_username;password=your_password;trustServerCertificate=true"
+```
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+### 3. รัน Database Migration
+```bash
+npx prisma generate
+npx prisma db push
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. รัน Development Server
+```bash
+npm run dev
+```
 
-## Learn More
+## 🔐 การ Authentication
 
-To learn more about Next.js, take a look at the following resources:
+ระบบใช้ LDAP Authentication ผ่าน NextAuth.js
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+### รูปแบบการ Bind ที่รองรับ:
+- `username@ube.co.th` (userPrincipalName)
+- `username` (Simple)
+- `CN=username,OU=Users,DC=ube,DC=co,DC=th` (Distinguished Name)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📊 ฟีเจอร์หลัก
 
-## Deploy on Vercel
+### 1. **ระบบ Authentication**
+- ✅ LDAP Authentication
+- ✅ Session Management
+- ✅ Role-based Access Control
+- ✅ User Profile Management
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 2. **ระบบจัดการสินค้า**
+- ✅ ดูรายการสินค้า
+- ✅ ค้นหาและกรองสินค้า
+- ✅ เพิ่มสินค้าลงตะกร้า
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+### 3. **ระบบจัดการคำขอ**
+- ✅ สร้างคำขอเบิกจ่าย
+- ✅ อนุมัติคำขอ
+- ✅ ติดตามสถานะ
+
+### 4. **ระบบจัดการผู้ใช้**
+- ✅ จัดการ Role และ Permission
+- ✅ ดูประวัติการใช้งาน
+- ✅ จัดการข้อมูลผู้ใช้
+
+## 🛠️ เทคโนโลยีที่ใช้
+
+- **Frontend**: Next.js 14, React, TypeScript
+- **UI Framework**: Material-UI (MUI)
+- **Authentication**: NextAuth.js
+- **Database**: SQL Server, Prisma ORM
+- **LDAP**: ldapjs
+- **Styling**: Tailwind CSS
+
+## 📁 โครงสร้างโปรเจค
+
+```
+├── app/                    # Next.js App Router
+│   ├── api/               # API Routes
+│   ├── login/             # หน้า Login
+│   ├── admin/             # หน้า Admin
+│   ├── manager/           # หน้า Manager
+│   └── page.tsx           # หน้าหลัก
+├── lib/                   # Utilities และ Configurations
+│   ├── authOptions.ts     # NextAuth Configuration
+│   ├── prisma.ts          # Database Connection
+│   └── ...
+├── components/            # React Components
+├── prisma/               # Database Schema
+└── scripts/              # Database Scripts
+```
+
+## 🔧 การแก้ไขปัญหา
+
+### LDAP Authentication Issues
+1. ตรวจสอบ LDAP_URI ใน .env.local
+2. ตรวจสอบ username และ password
+3. ตรวจสอบการเชื่อมต่อ network
+
+### Database Issues
+1. ตรวจสอบ DATABASE_URL
+2. รัน `npx prisma generate`
+3. ตรวจสอบ database schema
+
+## 📞 การติดต่อ
+
+หากมีปัญหาหรือคำถาม กรุณาติดต่อทีมพัฒนา

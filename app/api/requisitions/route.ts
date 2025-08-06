@@ -14,7 +14,12 @@ async function getEmpCodeFromSession(request: NextRequest) {
     // ใช้ AdLoginName จาก session โดยตรง
     const adLoginName = (session?.user as { AdLoginName?: string })?.AdLoginName
     
-    if (!adLoginName) return null
+    if (!adLoginName) {
+      console.log("No AdLoginName found in session")
+      return null
+    }
+    
+    console.log("Looking up EmpCode for AdLoginName:", adLoginName)
     
     // ดึงข้อมูลจาก view UserWithRoles โดยใช้ AdLoginName
     const userWithRole = await prisma.$queryRaw`
@@ -22,13 +27,29 @@ async function getEmpCodeFromSession(request: NextRequest) {
       WHERE AdLoginName = ${adLoginName}
     `
     
+    console.log("UserWithRoles query result:", userWithRole)
+    
     if (userWithRole && Array.isArray(userWithRole) && userWithRole.length > 0) {
-      return userWithRole[0].EmpCode
+      const empCode = userWithRole[0].EmpCode
+      console.log("Found EmpCode:", empCode)
+      return empCode
     }
     
+    console.log("No EmpCode found for AdLoginName:", adLoginName)
     return null
   } catch (error) {
     console.error("Error getting EmpCode from session:", error)
+    // ถ้าเกิด database error ให้ใช้ fallback
+    try {
+      const session = await getServerSession(authOptions)
+      const adLoginName = (session?.user as { AdLoginName?: string })?.AdLoginName
+      if (adLoginName) {
+        console.log("Using AdLoginName as fallback EmpCode:", adLoginName)
+        return adLoginName
+      }
+    } catch (fallbackError) {
+      console.error("Fallback error:", fallbackError)
+    }
     return null
   }
 }
@@ -42,11 +63,15 @@ export async function GET(request: NextRequest) {
       // ดึง EmpCode จาก session
       const empCode = await getEmpCodeFromSession(request)
       if (!empCode) {
+        console.log("No EmpCode found, returning 401")
         return NextResponse.json({ error: "User not authenticated" }, { status: 401 })
       }
       
+      console.log("Fetching requisitions for EmpCode:", empCode)
+      
       // ใช้ ApprovalService เพื่อดึงข้อมูล requisitions ของ user
       const result = await ApprovalService.getUserRequisitionsWithStatus(empCode)
+      console.log("Requisitions result:", result)
       return NextResponse.json(result)
     } else {
       // ใช้ ApprovalService เพื่อดึงข้อมูล requisitions ทั้งหมด
@@ -54,7 +79,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(result)
     }
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch requisitions" }, { status: 500 })
+    console.error("Error in GET /api/requisitions:", error)
+    return NextResponse.json({ 
+      error: "Failed to fetch requisitions",
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 })
   }
 }
 
@@ -98,39 +127,27 @@ export async function POST(request: NextRequest) {
       where: { USER_ID: empCode }
     })
     
-    // ถ้าไม่มี user ให้สร้างใหม่
     if (!user) {
-      user = await prisma.uSERS.create({
-        data: {
-          USER_ID: empCode,
-          USERNAME: empCode,
-          PASSWORD: 'default_password',
-          EMAIL: data.USER_ID || '',
-          ROLE: 'USER',
-          DEPARTMENT: 'General',
-          SITE_ID: data.SITE_ID || "1700"
-        }
-      })
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
     
-    // ใช้ OrgCode3Service เพื่อสร้าง requisition พร้อม orgcode3
-    const requisitionId = await OrgCode3Service.createRequisitionWithOrgCode3(
-      user.USER_ID,
-      parseFloat(data.TOTAL_AMOUNT?.toString() || '0'),
-      data.ISSUE_NOTE || "",
-      data.SITE_ID || "1700"
-    )
-
-    if (!requisitionId) {
-      return NextResponse.json({ error: "Failed to create requisition" }, { status: 500 })
-    }
-
+    // สร้าง requisition ใหม่
+    const requisition = await prisma.rEQUISITIONS.create({
+      data: {
+        USER_ID: empCode,
+        SUBMITTED_AT: new Date(),
+        STATUS: "PENDING",
+        TOTAL_AMOUNT: data.TOTAL_AMOUNT || 0,
+        ISSUE_NOTE: data.ISSUE_NOTE || null,
+      }
+    })
+    
     // สร้าง requisition items
     if (data.REQUISITION_ITEMS && Array.isArray(data.REQUISITION_ITEMS)) {
       for (const item of data.REQUISITION_ITEMS) {
         await prisma.rEQUISITION_ITEMS.create({
           data: {
-            REQUISITION_ID: requisitionId,
+            REQUISITION_ID: requisition.REQUISITION_ID,
             PRODUCT_ID: item.PRODUCT_ID,
             QUANTITY: item.QUANTITY,
             UNIT_PRICE: item.UNIT_PRICE,
@@ -138,15 +155,24 @@ export async function POST(request: NextRequest) {
         })
       }
     }
-
-    // ส่งการแจ้งเตือนเมื่อสร้าง requisition ใหม่
-    if (requisitionId) {
-      await NotificationService.notifyRequisitionCreated(requisitionId, user.USER_ID)
+    
+    // ส่ง notification
+    try {
+      await NotificationService.sendRequisitionNotification(requisition.REQUISITION_ID, empCode)
+    } catch (notificationError) {
+      console.error("Notification error:", notificationError)
     }
-
-    return NextResponse.json({ requisitionId }, { status: 201 })
+    
+    return NextResponse.json({ 
+      success: true, 
+      requisitionId: requisition.REQUISITION_ID 
+    }, { status: 201 })
+    
   } catch (error) {
-    console.error("Error in requisitions API:", error)
-    return NextResponse.json({ error: "Failed to create requisition" }, { status: 500 })
+    console.error("Error in POST /api/requisitions:", error)
+    return NextResponse.json({ 
+      error: "Failed to create requisition",
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 })
   }
 }

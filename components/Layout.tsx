@@ -35,7 +35,6 @@ import {
   Close,
   Person,
   Settings,
-  User,
 } from "@mui/icons-material"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
@@ -498,7 +497,7 @@ export default function Layout({ children }: LayoutProps) {
 
               <Link href="/user-profile" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <MenuItem onClick={handleClose} className="rounded-xl mx-2 my-1">
-                  <User sx={{ mr: 2 }} />
+                  <Person sx={{ mr: 2 }} />
                   ข้อมูลผู้ใช้
                 </MenuItem>
               </Link>
