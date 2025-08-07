@@ -221,47 +221,48 @@ export default function AdminDashboard() {
   ]
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.6 }}
-      className="max-w-7xl mx-auto"
-    >
-      {/* Floating Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-10 w-40 h-40 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-full floating blur-3xl"></div>
-        <div className="absolute bottom-20 left-10 w-32 h-32 bg-gradient-to-r from-pink-400/10 to-red-400/10 rounded-full floating-delayed blur-3xl"></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 w-full">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="w-full"
+      >
+        {/* Floating Background Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 right-10 w-40 h-40 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-full floating blur-3xl"></div>
+          <div className="absolute bottom-20 left-10 w-32 h-32 bg-gradient-to-r from-pink-400/10 to-red-400/10 rounded-full floating-delayed blur-3xl"></div>
+        </div>
 
       {/* Header Section */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mb-8"
+        className="w-full px-6 py-6"
       >
-        <div className="glass-card-strong rounded-3xl p-8 mb-8 max-w-6xl mx-auto">
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-2xl">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
             <div className="mb-4 md:mb-0 text-left">
-              <Typography variant="h2" className="font-bold text-gray-900 mb-2">
+              <Typography variant="h3" className="font-bold text-white mb-2">
                 🛠️ Admin Dashboard
               </Typography>
-              <Typography variant="h6" className="text-gray-600">
+              <Typography variant="h6" className="text-blue-100">
                 Welcome back, {user?.FullNameThai || user?.FullNameEng || user?.USERNAME || user?.AdLoginName || user?.name || 'User'}! Here's what's happening today.
               </Typography>
             </div>
 
             <div className="flex items-center gap-4 justify-center">
-              <div className="glass-button rounded-2xl p-4">
+              <div className="bg-white/10 border-white/30 rounded-2xl p-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="bg-gradient-to-r from-green-500 to-teal-600">
                     <Speed />
                   </Avatar>
                   <div>
-                    <Typography variant="body2" className="text-gray-600">
+                    <Typography variant="body2" className="text-white/80">
                       System Status
                     </Typography>
-                    <Typography variant="h6" className="font-bold text-green-600">
+                    <Typography variant="h6" className="font-bold text-white">
                       All Systems Operational
                     </Typography>
                   </div>
@@ -277,7 +278,7 @@ export default function AdminDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="mb-8 max-w-6xl mx-auto"
+        className="w-full px-6 mb-6"
       >
         <Grid container spacing={3} justifyContent="center">
           {statCards.map((stat, index) => (
@@ -339,8 +340,8 @@ export default function AdminDashboard() {
       </motion.div>
 
       {/* Quick Actions & Analytics */}
-      <div className="flex justify-center w-full mb-8">
-        <Grid container spacing={4} style={{ maxWidth: '1200px' }}>
+      <div className="w-full px-6 mb-6">
+        <Grid container spacing={4}>
           {/* Quick Actions */}
           <Grid item xs={12} lg={6}>
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }}>
@@ -488,7 +489,7 @@ export default function AdminDashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8 }}
-        className="max-w-6xl mx-auto"
+        className="w-full px-6 mb-6"
       >
         <Card className="modern-card">
           <CardContent className="p-6">
@@ -626,6 +627,7 @@ export default function AdminDashboard() {
           <Typography>Export as Excel</Typography>
         </MenuItem>
       </Menu>
-    </motion.div>
-  )
-}
+        </motion.div>
+      </div>
+    )
+  }

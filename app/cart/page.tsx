@@ -152,7 +152,7 @@ export default function CartPage() {
         <Link href="/" style={{ textDecoration: 'none' }}>
           <Button
             variant="contained"
-            className="bg-gradient-to-r from-blue-500 to-purple-600"
+            className="btn-gradient-primary"
           >
             Browse Products
           </Button>
@@ -172,7 +172,7 @@ export default function CartPage() {
         </Typography>
       </Box>
 
-      <Card className="bg-white/80 backdrop-blur-md shadow-lg border border-white/20">
+      <Card className="glass-card">
         <CardContent>
           <TableContainer>
             <Table>
@@ -276,7 +276,7 @@ export default function CartPage() {
                   variant="contained"
                   size="large"
                   onClick={handleSubmitRequisition}
-                  className="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700"
+                  className="btn-gradient-success"
                   style={{ minWidth: 180 }}
                 >
                   Submit Requisition

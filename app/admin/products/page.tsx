@@ -233,14 +233,14 @@ export default function ProductManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen w-full bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="container mx-auto px-6 py-8"
+          className="w-full px-6 py-6"
         >
           <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-2xl">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
@@ -288,7 +288,7 @@ export default function ProductManagementPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="container mx-auto px-6 mb-6"
+          className="w-full px-6 mb-6"
         >
           <Card className="bg-white/95 backdrop-blur-md shadow-lg border border-white/20">
             <CardContent className="p-6">
@@ -334,7 +334,7 @@ export default function ProductManagementPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="container mx-auto px-6 mb-8"
+          className="w-full px-6 mb-8"
         >
           <Card className="bg-white/95 backdrop-blur-md shadow-xl border border-white/20 overflow-hidden">
             <CardContent className="p-0">

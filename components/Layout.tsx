@@ -545,7 +545,7 @@ export default function Layout({ children }: LayoutProps) {
         </Box>
       </Drawer>
 
-             <main className="container mx-auto px-4 py-6">
+             <main className="w-full px-4 py-4">
          {children}
        </main>
     </div>

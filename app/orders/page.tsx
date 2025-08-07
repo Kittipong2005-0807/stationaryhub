@@ -19,6 +19,7 @@ import { Refresh as RefreshIcon, Visibility as VisibilityIcon } from "@mui/icons
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
+import React from "react"
 
 interface RequisitionItem {
   REQUISITION_ITEM_ID: string
@@ -50,7 +51,7 @@ export default function OrdersPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  const fetchOrders = async (isInitialLoad = false) => {
+  const fetchOrders = React.useCallback(async (isInitialLoad = false) => {
     try {
       if (isInitialLoad) {
         setLoading(true)
@@ -60,7 +61,12 @@ export default function OrdersPage() {
       setError(null)
       
       console.log("Fetching orders...")
-      const response = await fetch("/api/requisitions?mine=1")
+      const response = await fetch("/api/requisitions?mine=1", {
+        // เพิ่ม cache headers
+        headers: {
+          'Cache-Control': 'max-age=60' // cache 1 นาที
+        }
+      })
       const data = await response.json()
       
       console.log("Orders API response:", response.status, data)
@@ -94,7 +100,7 @@ export default function OrdersPage() {
         setUpdating(false)
       }
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (!isAuthenticated || user?.ROLE !== "USER") {
@@ -105,22 +111,31 @@ export default function OrdersPage() {
     // ดึงข้อมูลครั้งแรก
     fetchOrders(true)
 
-    // อัพเดทข้อมูลทุก 10 วินาที
-    const interval = setInterval(() => fetchOrders(false), 10000)
+    // อัพเดทข้อมูลทุก 30 วินาที (แทน 10 วินาที)
+    const interval = setInterval(() => fetchOrders(false), 30000)
 
     // Cleanup interval เมื่อ component unmount
     return () => clearInterval(interval)
-  }, [isAuthenticated, user, router])
+  }, [isAuthenticated, user, router, fetchOrders])
 
-  // อัพเดทข้อมูลเมื่อ focus กลับมาที่หน้า
+  // อัพเดทข้อมูลเมื่อ focus กลับมาที่หน้า (ลดความถี่)
   useEffect(() => {
+    let focusTimeout: NodeJS.Timeout
+    
     const handleFocus = () => {
-      console.log("Page focused, refreshing orders...")
-      fetchOrders(false)
+      // เพิ่ม debounce เพื่อป้องกันการ fetch ซ้ำ
+      clearTimeout(focusTimeout)
+      focusTimeout = setTimeout(() => {
+        console.log("Page focused, refreshing orders...")
+        fetchOrders(false)
+      }, 2000) // รอ 2 วินาทีก่อน fetch
     }
 
     window.addEventListener('focus', handleFocus)
-    return () => window.removeEventListener('focus', handleFocus)
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      clearTimeout(focusTimeout)
+    }
   }, [fetchOrders])
 
   const handleViewDetails = (order: Requisition) => {
@@ -212,13 +227,13 @@ export default function OrdersPage() {
 
       {/* Error Alert */}
       {error && (
-        <Alert severity="error" className="mb-4">
+        <Alert severity="error" className="mb-4 glass-card">
           {error}
         </Alert>
       )}
 
       {/* Debug Info */}
-      <Box className="mb-4 p-3 bg-blue-50 rounded">
+      <Box className="mb-4 p-3 glass-card rounded">
         <Typography variant="body2" className="text-blue-700">
           🔍 Debug: พบคำสั่งซื้อ {orders.length} รายการ
           {lastUpdated && (
@@ -256,7 +271,7 @@ export default function OrdersPage() {
       ) : (
         <Box className="space-y-4">
           {orders.map((order) => (
-            <Card key={order.REQUISITION_ID} className="shadow-sm border hover:shadow-md transition-shadow">
+            <Card key={order.REQUISITION_ID} className="glass-card">
               <CardContent className="p-4">
                 <Box className="flex justify-between items-start mb-3">
                   <Box>

@@ -96,6 +96,9 @@ export class NotificationService {
         )
       }
 
+      // แจ้งเตือน Admin ว่ามีการอนุมัติคำขอ
+      await this.notifyAdmins(requisitionId, approvedBy)
+
     } catch (error) {
       console.error('Error notifying requisition approved:', error)
     }
@@ -179,6 +182,48 @@ export class NotificationService {
 
     } catch (error) {
       console.error('Error notifying managers:', error)
+    }
+  }
+
+  /**
+   * แจ้งเตือน Admin ว่ามีการอนุมัติคำขอ
+   */
+  static async notifyAdmins(requisitionId: number, approvedBy: string) {
+    try {
+      // ดึงข้อมูล requisition และ user
+      const requisition = await prisma.rEQUISITIONS.findUnique({
+        where: { REQUISITION_ID: requisitionId },
+        include: { USERS: true }
+      })
+
+      if (!requisition) return
+
+      // หา Admin ทั้งหมด
+      const admins = await prisma.$queryRaw<{ USER_ID: string, EMAIL: string, FullNameThai: string }[]>`
+        SELECT USER_ID, EMAIL, FullNameThai
+        FROM USERS 
+        WHERE ROLE IN ('ADMIN', 'SUPER_ADMIN', 'DEV')
+      `
+
+      // ส่งอีเมลแจ้งเตือน admins
+      for (const admin of admins) {
+        if (admin.EMAIL) {
+          await this.sendEmail(
+            admin.EMAIL,
+            'มีการอนุมัติคำขอเบิกใหม่',
+            this.createEmailTemplate('requisition_approved_admin', {
+              requisitionId,
+              approvedBy,
+              requesterName: requisition.USERS?.FullNameThai || requisition.USERS?.FullNameEng || requisition.USER_ID,
+              totalAmount: requisition.TOTAL_AMOUNT,
+              submittedAt: requisition.SUBMITTED_AT
+            })
+          )
+        }
+      }
+
+    } catch (error) {
+      console.error('Error notifying admins:', error)
     }
   }
 
@@ -309,6 +354,19 @@ export class NotificationService {
           <p><strong>จากผู้ใช้:</strong> ${data.userId}</p>
           <p>กรุณาเข้าสู่ระบบเพื่อตรวจสอบและดำเนินการ</p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/approvals" class="button">ดูคำขอเบิก</a>
+        `
+
+      case 'requisition_approved_admin':
+        return `
+          <h2>✅ มีการอนุมัติคำขอเบิกใหม่</h2>
+          <p>Manager ได้อนุมัติคำขอเบิกใหม่แล้ว</p>
+          <p><strong>เลขที่คำขอ:</strong> ${data.requisitionId}</p>
+          <p><strong>ผู้ขอ:</strong> ${data.requesterName}</p>
+          <p><strong>อนุมัติโดย:</strong> ${data.approvedBy}</p>
+          <p><strong>จำนวนเงิน:</strong> ฿${data.totalAmount?.toFixed(2)}</p>
+          <p><strong>วันที่ส่งคำขอ:</strong> ${new Date(data.submittedAt).toLocaleDateString('th-TH')}</p>
+          <p>คุณสามารถติดตามรายงานได้ในระบบ</p>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin" class="button">ดูรายงาน</a>
         `
 
       default:

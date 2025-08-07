@@ -80,7 +80,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             margin: 8,
             transition: 'box-shadow 0.2s ease'
           }}
-          className="hover:shadow-lg"
+          className="glass-card hover:shadow-lg"
         >
         {/* รูปภาพ */}
         <Box style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -148,7 +148,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
       className="h-full"
     >
       <Card
-        className="card-interactive h-full relative overflow-hidden transition-shadow duration-200 hover:shadow-lg"
+        className="glass-card h-full relative overflow-hidden transition-shadow duration-200 hover:shadow-lg"
         style={{ borderRadius: 12 }}
       >
         {/* Favorite Button */}

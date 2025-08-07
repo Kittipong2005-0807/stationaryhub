@@ -53,7 +53,12 @@ console.log("Test User : ",user)
     // Only fetch products if authenticated and USER role
     if (user?.ROLE === "USER") {
       setLoading(true);
-      fetch("/api/products")
+      fetch("/api/products", {
+        // เพิ่ม cache headers
+        headers: {
+          'Cache-Control': 'max-age=300' // cache 5 นาที
+        }
+      })
         .then((res) => {
           console.log("API /api/products status:", res.status);
           return res.json();
