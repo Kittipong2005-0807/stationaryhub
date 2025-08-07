@@ -135,16 +135,24 @@ export class RoleManagementService {
    */
   static async hasPermission(userId: string, permission: Permission): Promise<boolean> {
     try {
+      console.log("🔍 hasPermission called with userId:", userId, "permission:", permission)
+      
       const user = await prisma.uSERS.findUnique({
         where: { USER_ID: userId }
       })
       
+      console.log("🔍 Found user in USERS table:", user)
+      
       if (!user || !user.ROLE) {
+        console.log("❌ User not found or no ROLE")
         return false
       }
       
       const userRole = user.ROLE as UserRole
       const permissions = RolePermissions[userRole] || []
+      
+      console.log("🔍 User role:", userRole, "permissions:", permissions)
+      console.log("🔍 Has permission:", permission, "result:", permissions.includes(permission))
       
       return permissions.includes(permission)
     } catch (error) {
@@ -198,14 +206,20 @@ export class RoleManagementService {
    */
   static async getUserRole(userId: string): Promise<UserRole | null> {
     try {
+      console.log("🔍 getUserRole called with userId:", userId)
+      
       const user = await prisma.uSERS.findUnique({
         where: { USER_ID: userId }
       })
       
+      console.log("🔍 Found user for role check:", user)
+      
       if (!user || !user.ROLE) {
+        console.log("❌ User not found or no ROLE for getUserRole")
         return null
       }
       
+      console.log("🔍 User role:", user.ROLE)
       return user.ROLE as UserRole
     } catch (error) {
       console.error("Error getting user role:", error)
@@ -324,7 +338,10 @@ export class RoleManagementService {
    * ตรวจสอบ Permission สำหรับการอนุมัติ
    */
   static async canApproveRequisition(userId: string): Promise<boolean> {
-    return this.hasPermission(userId, Permission.APPROVE_REQUISITION)
+    console.log("🔍 canApproveRequisition called with userId:", userId)
+    const result = await this.hasPermission(userId, Permission.APPROVE_REQUISITION)
+    console.log("🔍 canApproveRequisition result:", result)
+    return result
   }
   
   /**

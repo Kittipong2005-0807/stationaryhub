@@ -61,6 +61,12 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!isAuthenticated || user?.ROLE !== "ADMIN") {
+      console.log("🔍 Admin access check:", { 
+        isAuthenticated, 
+        userRole: user?.ROLE, 
+        userId: user?.USER_ID,
+        empCode: user?.EmpCode 
+      })
       router.push("/login")
       return
     }

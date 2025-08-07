@@ -34,6 +34,8 @@ interface Requisition {
   SITE_ID: string
   ISSUE_NOTE: string
   REQUISITION_ITEMS: RequisitionItem[]
+  APPROVALS?: unknown[]
+  STATUS_HISTORY?: unknown[]
 }
 
 export default function ApprovalsPage() {
@@ -47,7 +49,7 @@ export default function ApprovalsPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const router = useRouter()
   const { data: session } = useSession()
-  const user = session?.user as any
+  const user = session?.user as unknown as { EmpCode?: string; USER_ID?: string; AdLoginName?: string; ROLE?: string }
   const isAuthenticated = !!session
 
   useEffect(() => {
@@ -57,19 +59,52 @@ export default function ApprovalsPage() {
     }
 
     setLoading(true)
-    // ใช้ API orgcode3 เพื่อดึง requisitions ที่ Manager สามารถอนุมัติได้
-    fetch(`/api/orgcode3?action=getRequisitionsForManager&userId=${user?.AdLoginName}`)
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("Fetched requisitions for manager:", data)
-        setRequisitions(data.requisitions || [])
-        setLoading(false)
+    
+    // แยก API call ตาม Role
+    if (user?.ROLE === "ADMIN") {
+      // Admin เห็นแค่ requisitions ที่ Manager approve แล้ว
+      console.log("Admin user data:", { 
+        EmpCode: user?.EmpCode, 
+        USER_ID: user?.USER_ID, 
+        AdLoginName: user?.AdLoginName,
+        ROLE: user?.ROLE
       })
-      .catch((error) => {
-        console.error("Error fetching requisitions:", error)
-        alert("โหลดข้อมูล requisitions ไม่สำเร็จ")
-        setLoading(false)
+      
+      fetch(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("Fetched approved requisitions for admin:", data)
+          setRequisitions(data.requisitions || [])
+          setLoading(false)
+        })
+        .catch((error) => {
+          console.error("Error fetching approved requisitions:", error)
+          alert("โหลดข้อมูล requisitions ไม่สำเร็จ")
+          setLoading(false)
+        })
+    } else {
+      // Manager เห็น requisitions ที่อยู่ใน SITE_ID เดียวกัน
+      const managerUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName
+      console.log("Manager user data:", { 
+        EmpCode: user?.EmpCode, 
+        USER_ID: user?.USER_ID, 
+        AdLoginName: user?.AdLoginName,
+        managerUserId 
       })
+      
+      fetch(`/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("Fetched requisitions for manager:", data)
+          setRequisitions(data.requisitions || [])
+          setLoading(false)
+        })
+        .catch((error) => {
+          console.error("Error fetching requisitions:", error)
+          alert("โหลดข้อมูล requisitions ไม่สำเร็จ")
+          setLoading(false)
+        })
+    }
   }, [isAuthenticated, user, router])
 
   const handleAction = (requisition: Requisition, action: "approve" | "reject") => {
@@ -97,7 +132,8 @@ export default function ApprovalsPage() {
 
       if (response.ok) {
         // อัปเดตสถานะใน UI โดยดึงข้อมูลใหม่จาก API orgcode3
-        const response = await fetch(`/api/orgcode3?action=getRequisitionsForManager&userId=${user?.AdLoginName}`)
+        const managerUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName
+        const response = await fetch(`/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
         if (response.ok) {
           const data = await response.json()
           setRequisitions(data.requisitions || [])
@@ -603,7 +639,7 @@ export default function ApprovalsPage() {
                         Records: {selectedRequisition?.APPROVALS?.length || 0}
                       </p>
                       <p className="text-sm text-gray-600">
-                        Latest: {selectedRequisition?.APPROVALS?.[0]?.STATUS || "None"}
+                        Latest: {(selectedRequisition?.APPROVALS?.[0] as { STATUS?: string })?.STATUS || "None"}
                       </p>
                     </div>
                     <div className="p-4 bg-white rounded-lg border">
@@ -612,7 +648,7 @@ export default function ApprovalsPage() {
                         Records: {selectedRequisition?.STATUS_HISTORY?.length || 0}
                       </p>
                       <p className="text-sm text-gray-600">
-                        Latest: {selectedRequisition?.STATUS_HISTORY?.[0]?.STATUS || "None"}
+                        Latest: {(selectedRequisition?.STATUS_HISTORY?.[0] as { STATUS?: string })?.STATUS || "None"}
                       </p>
                     </div>
                   </div>
@@ -677,7 +713,7 @@ export default function ApprovalsPage() {
                       <span className="text-2xl">📦</span>
                     </div>
                     <h4 className="text-lg font-semibold text-gray-600 mb-2">No items found</h4>
-                    <p className="text-gray-500">This requisition doesn't have any items or the data hasn't been loaded properly.</p>
+                    <p className="text-gray-500">This requisition does not have any items or the data has not been loaded properly.</p>
                   </div>
                 )}
               </div>

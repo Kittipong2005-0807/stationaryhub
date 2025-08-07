@@ -58,13 +58,14 @@ export class OrgCode3Service {
       const orgcode3 = userData[0].orgcode3
       console.log("Found orgcode3:", orgcode3)
       return orgcode3
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching user SITE_ID:', error)
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack
-      })
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack
+        })
+      }
       return null
     }
   }
@@ -146,13 +147,14 @@ export class OrgCode3Service {
       console.log("Retrieved requisition ID:", requisitionId)
       
       return requisitionId && requisitionId.length > 0 ? requisitionId[0].REQUISITION_ID : null
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error creating requisition with SITE_ID:', error)
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack
-      })
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack
+        })
+      }
       return null
     }
   }
@@ -160,16 +162,21 @@ export class OrgCode3Service {
   /**
    * ดึง Requisitions ที่ Manager สามารถอนุมัติได้ (มี SITE_ID เดียวกัน)
    */
-  static async getRequisitionsForManager(managerUserId: string): Promise<any[]> {
+  static async getRequisitionsForManager(managerUserId: string): Promise<unknown[]> {
     try {
+      console.log("🔍 getRequisitionsForManager called with managerUserId:", managerUserId)
+      
       // ดึง SITE_ID ของ manager
       const managerSiteId = await this.getUserSiteId(managerUserId)
+      console.log("🔍 Manager SITE_ID:", managerSiteId)
       
       if (!managerSiteId) {
+        console.log("❌ No SITE_ID found for manager, returning empty array")
         return []
       }
 
       // ดึง requisitions ที่มี SITE_ID เดียวกัน
+      console.log("🔍 Querying requisitions with SITE_ID:", managerSiteId)
       const requisitions = await prisma.$queryRaw`
         SELECT 
           r.REQUISITION_ID,
@@ -187,7 +194,8 @@ export class OrgCode3Service {
         ORDER BY r.SUBMITTED_AT DESC
       `
       
-      return requisitions || []
+      console.log("🔍 Found requisitions:", requisitions)
+      return Array.isArray(requisitions) ? requisitions : []
     } catch (error) {
       console.error('Error fetching requisitions for manager:', error)
       return []
@@ -230,7 +238,7 @@ export class OrgCode3Service {
   /**
    * ดึงสถิติการใช้งาน SITE_ID
    */
-  static async getSiteIdStats(): Promise<any> {
+  static async getSiteIdStats(): Promise<unknown> {
     try {
       // ดึงสถิติผู้ใช้
       const userStats = await prisma.$queryRaw<{ total: number, withSiteId: number }[]>`
@@ -275,6 +283,31 @@ export class OrgCode3Service {
         requisitionsWithSiteId: 0,
         siteIdList: []
       }
+    }
+  }
+
+  static async getApprovedRequisitionsForAdmin(): Promise<unknown[]> {
+    try {
+      console.log("🔍 getApprovedRequisitionsForAdmin called")
+      
+      // ดึง requisitions ที่มี STATUS = 'APPROVED' (Manager approve แล้ว)
+      const requisitions = await prisma.$queryRaw`
+        SELECT
+          r.REQUISITION_ID, r.USER_ID, r.STATUS, r.SUBMITTED_AT, r.TOTAL_AMOUNT, r.SITE_ID, r.ISSUE_NOTE, u.USERNAME, u.DEPARTMENT
+        FROM REQUISITIONS r
+        JOIN USERS u ON r.USER_ID = u.USER_ID
+        WHERE r.STATUS = 'APPROVED'
+        ORDER BY r.SUBMITTED_AT DESC
+      `
+      
+      console.log("🔍 Found approved requisitions:", requisitions)
+      return Array.isArray(requisitions) ? requisitions : []
+    } catch (error: unknown) {
+      console.error('Error fetching approved requisitions for admin:', error)
+      if (error instanceof Error) { 
+        console.error('Error details:', { message: error.message, stack: error.stack }) 
+      }
+      return []
     }
   }
 } 

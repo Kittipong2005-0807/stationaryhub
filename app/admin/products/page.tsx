@@ -24,70 +24,112 @@ import FormControl from "@mui/material/FormControl"
 import InputLabel from "@mui/material/InputLabel"
 import Select from "@mui/material/Select"
 import MenuItem from "@mui/material/MenuItem"
-import { Add, Edit, Delete, Inventory, Image as ImageIcon } from "@mui/icons-material"
+import { Add, Edit, Delete, Inventory, Image as ImageIcon, Refresh, Search, FilterList } from "@mui/icons-material"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { type Product } from "@/lib/database"
 import Image from "next/image"
+
+// Interface สำหรับ Product ตามฐานข้อมูลจริง
+interface Product {
+  PRODUCT_ID: number
+  ITEM_ID?: string
+  PRODUCT_NAME: string
+  CATEGORY_ID: number
+  UNIT_COST?: number
+  ORDER_UNIT?: string
+  PHOTO_URL?: string
+  CREATED_AT?: string
+  PRODUCT_CATEGORIES?: {
+    CATEGORY_ID: number
+    CATEGORY_NAME: string
+  }
+}
+
+// Interface สำหรับ Category
+interface Category {
+  CATEGORY_ID: number
+  CATEGORY_NAME: string
+}
 
 export default function ProductManagementPage() {
   const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [formData, setFormData] = useState({
+    ITEM_ID: "",
     PRODUCT_NAME: "",
     CATEGORY_ID: 1,
-    STOCK_TYPE: "CONSUMABLE",
-    STOCK_QUANTITY: 0,
     UNIT_COST: 0,
     ORDER_UNIT: "PIECE",
     PHOTO_URL: "",
   })
   const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<number | "all">("all")
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
 
-  const categories = [
-    { id: 1, name: "Office Supplies" },
-    { id: 2, name: "Stationery" },
-    { id: 3, name: "Electronics" },
-    { id: 4, name: "Furniture" },
-    { id: 5, name: "Cleaning Supplies" },
-  ]
+  // ดึงข้อมูลสินค้าและหมวดหมู่
+  const fetchData = async () => {
+    try {
+      setRefreshing(true)
+      
+      // ดึงข้อมูลสินค้า
+      const productsResponse = await fetch("/api/products")
+      if (productsResponse.ok) {
+        const productsData = await productsResponse.json()
+        setProducts(productsData)
+      }
+
+      // ดึงข้อมูลหมวดหมู่
+      const categoriesResponse = await fetch("/api/categories")
+      if (categoriesResponse.ok) {
+        const categoriesData = await categoriesResponse.json()
+        setCategories(categoriesData)
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error)
+      alert("Failed to load data")
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   useEffect(() => {
     if (!isAuthenticated || user?.ROLE !== "ADMIN") {
+      console.log("🔍 Admin products access check:", { 
+        isAuthenticated, 
+        userRole: user?.ROLE, 
+        userId: user?.USER_ID,
+        empCode: user?.EmpCode 
+      })
       router.push("/login")
       return
     }
 
-    // ดึงข้อมูลสินค้าจาก API
-    fetch("/api/products")
-      .then((res) => res.json())
-      .then((data) => setProducts(data))
-      .catch(() => alert("โหลดข้อมูลสินค้าไม่สำเร็จ"))
+    fetchData()
   }, [isAuthenticated, user, router])
 
   const handleOpenDialog = (product?: Product) => {
     if (product) {
       setEditingProduct(product)
       setFormData({
+        ITEM_ID: product.ITEM_ID || "",
         PRODUCT_NAME: product.PRODUCT_NAME,
         CATEGORY_ID: product.CATEGORY_ID,
-        STOCK_TYPE: product.STOCK_TYPE,
-        STOCK_QUANTITY: product.STOCK_QUANTITY,
-        UNIT_COST: product.UNIT_COST,
-        ORDER_UNIT: product.ORDER_UNIT, // เพิ่มบรรทัดนี้
-        PHOTO_URL: product.PHOTO_URL,
+        UNIT_COST: product.UNIT_COST || 0,
+        ORDER_UNIT: product.ORDER_UNIT || "PIECE",
+        PHOTO_URL: product.PHOTO_URL || "",
       })
     } else {
       setEditingProduct(null)
       setFormData({
+        ITEM_ID: "",
         PRODUCT_NAME: "",
         CATEGORY_ID: 1,
-        STOCK_TYPE: "CONSUMABLE",
-        STOCK_QUANTITY: 0,
         UNIT_COST: 0,
         ORDER_UNIT: "PIECE",
         PHOTO_URL: "",
@@ -102,48 +144,80 @@ export default function ProductManagementPage() {
   }
 
   const handleSubmit = async () => {
+    if (!formData.PRODUCT_NAME.trim()) {
+      alert("Please enter product name")
+      return
+    }
+
     setLoading(true)
 
     try {
-      if (editingProduct) {
-        // Update existing product
-        const updatedProducts = products.map((p) =>
-          p.PRODUCT_ID === editingProduct.PRODUCT_ID
-            ? {
-                ...p,
-                ...formData,
-                CATEGORY_NAME: categories.find((c) => c.id === formData.CATEGORY_ID)?.name || "",
-              }
-            : p,
-        )
-        setProducts(updatedProducts)
-      } else {
-        // Add new product
-        const newProduct: Product = {
-          PRODUCT_ID: Math.max(...products.map((p) => p.PRODUCT_ID)) + 1,
-          ...formData,
-          CATEGORY_NAME: categories.find((c) => c.id === formData.CATEGORY_ID)?.name || "",
-          CREATED_AT: new Date().toISOString(),
-        }
-        setProducts([...products, newProduct])
-      }
+      const url = editingProduct 
+        ? `/api/products/${editingProduct.PRODUCT_ID}` 
+        : "/api/products"
+      
+      const method = editingProduct ? "PUT" : "POST"
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
 
-      handleCloseDialog()
-      alert(`Product ${editingProduct ? "updated" : "created"} successfully!`)
+      if (response.ok) {
+        const result = await response.json()
+        alert(`Product ${editingProduct ? "updated" : "created"} successfully!`)
+        handleCloseDialog()
+        fetchData() // รีเฟรชข้อมูล
+      } else {
+        const errorData = await response.json()
+        alert(`Error: ${errorData.error || "Failed to save data"}`)
+      }
     } catch (error) {
-      alert("Failed to save product. Please try again.")
+      console.error("Error saving product:", error)
+      alert("Error saving product")
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (productId: number) => {
-    if (confirm("Are you sure you want to delete this product?")) {
-      const updatedProducts = products.filter((p) => p.PRODUCT_ID !== productId)
-      setProducts(updatedProducts)
-      alert("Product deleted successfully!")
+    if (!confirm("Are you sure you want to delete this product?")) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/products/${productId}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        alert("Product deleted successfully!")
+        fetchData() // รีเฟรชข้อมูล
+      } else {
+        const errorData = await response.json()
+        alert(`Error: ${errorData.error || "Failed to delete product"}`)
+      }
+    } catch (error) {
+      console.error("Error deleting product:", error)
+      alert("Error deleting product")
     }
   }
+
+  const getCategoryName = (categoryId: number) => {
+    const category = categories.find(c => c.CATEGORY_ID === categoryId)
+    return category?.CATEGORY_NAME || "Unknown"
+  }
+
+  // Filter products based on search and category
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.PRODUCT_NAME.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (product.ITEM_ID && product.ITEM_ID.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesCategory = selectedCategory === "all" || product.CATEGORY_ID === selectedCategory
+    return matchesSearch && matchesCategory
+  })
 
   if (!isAuthenticated || user?.ROLE !== "ADMIN") {
     return (
@@ -159,226 +233,327 @@ export default function ProductManagementPage() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="mb-8"
-      >
-        <div className="glass-card-strong rounded-3xl p-8 mb-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
-            <div className="mb-4 md:mb-0">
-              <Typography variant="h2" className="font-bold text-gray-900 mb-2">
-                📦 Product Management
-              </Typography>
-              <Typography variant="h6" className="text-gray-600">
-                Add, edit, and manage your product inventory with ease
-              </Typography>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+        {/* Header Section */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="container mx-auto px-6 py-8"
+        >
+          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-2xl">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="flex-1">
+                <Typography variant="h3" className="font-bold text-white mb-2">
+                  📦 Product Management
+                </Typography>
+                <Typography variant="h6" className="text-blue-100">
+                  Manage your product inventory with ease
+                </Typography>
+              </div>
 
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => handleOpenDialog()}
-                className="btn-modern rounded-2xl px-6 py-3 font-bold shadow-lg bg-gradient-to-r from-indigo-400 to-purple-500 hover:from-purple-500 hover:to-indigo-400 text-white"
-              >
-                Add New Product
-              </Button>
-            </motion.div>
-          </div>
-        </div>
-      </motion.div>
-
-      <Card className="bg-white/80 backdrop-blur-md shadow-lg border border-white/20">
-        <CardContent>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Image</TableCell>
-                  <TableCell>Product Name</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell>Stock</TableCell>
-                  <TableCell>Unit Cost</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {products.map((product, index) => (
-                  <motion.tr
-                    key={product.PRODUCT_ID}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Refresh />}
+                    onClick={fetchData}
+                    disabled={refreshing}
+                    className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                    size="medium"
                   >
-                    <TableCell>
-                      <Image
-                        src={product.PHOTO_URL || "/placeholder.svg"}
-                        alt={product.PRODUCT_NAME}
-                        width={50}
-                        height={50}
-                        className="rounded-lg object-cover"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="subtitle1" className="font-semibold">
-                        {product.PRODUCT_NAME}
-                      </Typography>
-                      <Typography variant="body2" className="text-gray-500">
-                        Unit: {product.ORDER_UNIT}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={product.CATEGORY_NAME} size="small" className="bg-blue-100 text-blue-800" />
-                    </TableCell>
-                    <TableCell>
-                      <Typography
-                        className={`font-semibold ${
-                          product.STOCK_QUANTITY > 10 ? "text-green-600" : "text-orange-600"
-                        }`}
+                    {refreshing ? "Loading..." : "Refresh"}
+                  </Button>
+                </motion.div>
+
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={() => handleOpenDialog()}
+                    className="bg-white text-blue-600 hover:bg-gray-100 font-bold shadow-lg"
+                    size="medium"
+                  >
+                    Add New Product
+                  </Button>
+                </motion.div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Search and Filter Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="container mx-auto px-6 mb-6"
+        >
+          <Card className="bg-white/95 backdrop-blur-md shadow-lg border border-white/20">
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row gap-4 items-center">
+                <div className="flex-1 w-full">
+                  <TextField
+                    fullWidth
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    InputProps={{
+                      startAdornment: <Search className="text-gray-400 mr-2" />,
+                    }}
+                    className="bg-white/50"
+                    size="medium"
+                  />
+                </div>
+                <div className="w-full lg:w-64">
+                  <FormControl fullWidth size="medium">
+                    <InputLabel>Category Filter</InputLabel>
+                    <Select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value as number | "all")}
+                      label="Category Filter"
+                      startAdornment={<FilterList className="text-gray-400 mr-2" />}
+                    >
+                      <MenuItem value="all">All Categories</MenuItem>
+                      {categories.map((category) => (
+                        <MenuItem key={category.CATEGORY_ID} value={category.CATEGORY_ID}>
+                          {category.CATEGORY_NAME}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Products Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="container mx-auto px-6 mb-8"
+        >
+          <Card className="bg-white/95 backdrop-blur-md shadow-xl border border-white/20 overflow-hidden">
+            <CardContent className="p-0">
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow className="bg-gradient-to-r from-gray-50 to-blue-50">
+                      <TableCell className="font-bold text-gray-700 py-4">Image</TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">Item ID</TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">Product Name</TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">Category</TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">Unit Price</TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">Unit</TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">Created Date</TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredProducts.map((product, index) => (
+                      <motion.tr
+                        key={product.PRODUCT_ID}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="hover:bg-blue-50/50 transition-colors"
                       >
-                        {product.STOCK_QUANTITY}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography className="font-bold text-green-600">฿{(parseFloat(product.UNIT_COST?.toString() || '0') || 0).toFixed(2)}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={product.STOCK_TYPE}
-                        size="small"
-                        color={product.STOCK_TYPE === "DURABLE" ? "primary" : "secondary"}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box className="flex gap-1">
-                        <IconButton size="small" color="primary" onClick={() => handleOpenDialog(product)}>
-                          <Edit />
-                        </IconButton>
-                        <IconButton size="small" color="error" onClick={() => handleDelete(product.PRODUCT_ID)}>
-                          <Delete />
-                        </IconButton>
-                      </Box>
-                    </TableCell>
-                  </motion.tr>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                        <TableCell className="py-3">
+                          {product.PHOTO_URL ? (
+                            <Image
+                              src={product.PHOTO_URL}
+                              alt={product.PRODUCT_NAME}
+                              width={45}
+                              height={45}
+                              className="rounded-lg object-cover shadow-md"
+                            />
+                          ) : (
+                            <Box className="w-11 h-11 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center shadow-md">
+                              <ImageIcon className="text-gray-400" />
+                            </Box>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium text-gray-600 py-3">
+                          {product.ITEM_ID || "-"}
+                        </TableCell>
+                        <TableCell className="font-semibold text-gray-800 py-3">
+                          {product.PRODUCT_NAME}
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <Chip 
+                            label={getCategoryName(product.CATEGORY_ID)}
+                            color="primary"
+                            size="small"
+                            className="bg-gradient-to-r from-blue-500 to-purple-500 text-white"
+                          />
+                        </TableCell>
+                        <TableCell className="font-semibold text-green-600 py-3">
+                          {product.UNIT_COST ? `$${product.UNIT_COST.toLocaleString()}` : "-"}
+                        </TableCell>
+                        <TableCell className="text-gray-600 py-3">
+                          {product.ORDER_UNIT || "-"}
+                        </TableCell>
+                        <TableCell className="text-gray-600 py-3">
+                          {product.CREATED_AT 
+                            ? new Date(product.CREATED_AT).toLocaleDateString('en-US')
+                            : "-"
+                          }
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <div className="flex gap-2">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenDialog(product)}
+                              className="text-blue-600 hover:bg-blue-100 transition-colors"
+                            >
+                              <Edit />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDelete(product.PRODUCT_ID)}
+                              className="text-red-600 hover:bg-red-100 transition-colors"
+                            >
+                              <Delete />
+                            </IconButton>
+                          </div>
+                        </TableCell>
+                      </motion.tr>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-          {products.length === 0 && (
-            <Box className="text-center py-20">
-              <Inventory className="text-6xl text-gray-400 mb-4" />
-              <Typography variant="h5" className="text-gray-500 mb-2">
-                No products found
-              </Typography>
-              <Typography variant="body1" className="text-gray-400">
-                Add your first product to get started
-              </Typography>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
+              {filteredProducts.length === 0 && (
+                <Box className="text-center py-16">
+                  <Inventory className="text-gray-300 text-7xl mb-6" />
+                  <Typography variant="h5" className="text-gray-500 mb-3">
+                    {searchTerm || selectedCategory !== "all" ? "No products found" : "No products in system"}
+                  </Typography>
+                  <Typography variant="body1" className="text-gray-400">
+                    {searchTerm || selectedCategory !== "all" 
+                      ? "Try adjusting your search or filter criteria" 
+                      : "Click 'Add New Product' to get started"
+                    }
+                  </Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
-      {/* Add/Edit Product Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={3} className="mt-2">
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Product Name"
-                value={formData.PRODUCT_NAME}
-                onChange={(e) => setFormData({ ...formData, PRODUCT_NAME: e.target.value })}
-                required
-              />
+        {/* Add/Edit Product Dialog */}
+        <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+          <DialogTitle className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+            <Typography variant="h6" className="font-bold">
+              {editingProduct ? "Edit Product" : "Add New Product"}
+            </Typography>
+          </DialogTitle>
+          <DialogContent className="pt-6">
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Item ID"
+                  value={formData.ITEM_ID}
+                  onChange={(e) => setFormData({ ...formData, ITEM_ID: e.target.value })}
+                  placeholder="P001"
+                  variant="outlined"
+                  size="medium"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Product Name *"
+                  value={formData.PRODUCT_NAME}
+                  onChange={(e) => setFormData({ ...formData, PRODUCT_NAME: e.target.value })}
+                  placeholder="Product name"
+                  required
+                  variant="outlined"
+                  size="medium"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="medium">
+                  <InputLabel>Category</InputLabel>
+                  <Select
+                    value={formData.CATEGORY_ID}
+                    onChange={(e) => setFormData({ ...formData, CATEGORY_ID: e.target.value as number })}
+                    label="Category"
+                  >
+                    {categories.map((category) => (
+                      <MenuItem key={category.CATEGORY_ID} value={category.CATEGORY_ID}>
+                        {category.CATEGORY_NAME}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Unit Price"
+                  type="number"
+                  value={formData.UNIT_COST}
+                  onChange={(e) => setFormData({ ...formData, UNIT_COST: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                  variant="outlined"
+                  size="medium"
+                  InputProps={{
+                    startAdornment: <span className="text-gray-500 mr-2">$</span>,
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="medium">
+                  <InputLabel>Unit</InputLabel>
+                  <Select
+                    value={formData.ORDER_UNIT}
+                    onChange={(e) => setFormData({ ...formData, ORDER_UNIT: e.target.value })}
+                    label="Unit"
+                  >
+                    <MenuItem value="PIECE">Piece</MenuItem>
+                    <MenuItem value="BOX">Box</MenuItem>
+                    <MenuItem value="PACK">Pack</MenuItem>
+                    <MenuItem value="REAM">Ream</MenuItem>
+                    <MenuItem value="ROLL">Roll</MenuItem>
+                    <MenuItem value="SET">Set</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Image URL"
+                  value={formData.PHOTO_URL}
+                  onChange={(e) => setFormData({ ...formData, PHOTO_URL: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                  helperText="Enter product image URL (optional)"
+                  variant="outlined"
+                  size="medium"
+                />
+              </Grid>
             </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
-                <Select
-                  value={formData.CATEGORY_ID}
-                  onChange={(e) => setFormData({ ...formData, CATEGORY_ID: e.target.value as number })}
-                  label="Category"
-                >
-                  {categories.map((category) => (
-                    <MenuItem key={category.id} value={category.id}>
-                      {category.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Stock Type</InputLabel>
-                <Select
-                  value={formData.STOCK_TYPE}
-                  onChange={(e) => setFormData({ ...formData, STOCK_TYPE: e.target.value })}
-                  label="Stock Type"
-                >
-                  <MenuItem value="CONSUMABLE">Consumable</MenuItem>
-                  <MenuItem value="DURABLE">Durable</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Order Unit"
-                value={formData.ORDER_UNIT}
-                onChange={(e) => setFormData({ ...formData, ORDER_UNIT: e.target.value })}
-                placeholder="e.g., PIECE, REAM, BOX"
-                required
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Stock Quantity"
-                type="number"
-                value={formData.STOCK_QUANTITY}
-                onChange={(e) => setFormData({ ...formData, STOCK_QUANTITY: Number.parseInt(e.target.value) || 0 })}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Unit Cost"
-                type="number"
-                value={formData.UNIT_COST}
-                onChange={(e) => setFormData({ ...formData, UNIT_COST: Number.parseFloat(e.target.value) || 0 })}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Photo URL"
-                value={formData.PHOTO_URL}
-                onChange={(e) => setFormData({ ...formData, PHOTO_URL: e.target.value })}
-                placeholder="https://example.com/image.jpg"
-                InputProps={{
-                  startAdornment: <ImageIcon className="mr-2 text-gray-400" />, 
-                }}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} disabled={loading}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} variant="contained" disabled={loading}>
-            {loading ? "Saving..." : editingProduct ? "Update" : "Create"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </motion.div>
+          </DialogContent>
+          <DialogActions className="p-6 bg-gray-50">
+            <Button onClick={handleCloseDialog} color="inherit" variant="outlined" size="medium">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              variant="contained"
+              disabled={loading || !formData.PRODUCT_NAME.trim()}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold"
+              size="medium"
+            >
+              {loading ? "Saving..." : (editingProduct ? "Update" : "Add Product")}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </motion.div>
+    </div>
   )
 }
