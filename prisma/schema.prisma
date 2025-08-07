@@ -77,7 +77,6 @@ model REQUISITIONS {
   TOTAL_AMOUNT      Decimal?            @db.Decimal(18, 2)
   SITE_ID           String?             @db.VarChar(50)
   ISSUE_NOTE        String?             @db.VarChar(1000)
-  ORGCODE3          String?             @db.VarChar(50)
   APPROVALS         APPROVALS[]
   EXPORT_LOGS       EXPORT_LOGS[]
   REQUISITION_ITEMS REQUISITION_ITEMS[]
@@ -104,7 +103,6 @@ model USERS {
   ROLE           String?          @db.VarChar(50)
   DEPARTMENT     String?          @db.VarChar(100)
   SITE_ID        String?          @db.VarChar(50)
-  ORGCODE3       String?          @db.VarChar(50)
   CREATED_AT     DateTime?        @default(now(), map: "DF__USERS__CREATED_A__3F466844") @db.DateTime
   APPROVALS      APPROVALS[]
   EMAIL_LOGS     EMAIL_LOGS[]

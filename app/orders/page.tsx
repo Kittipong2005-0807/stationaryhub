@@ -50,58 +50,58 @@ export default function OrdersPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
+  const fetchOrders = async (isInitialLoad = false) => {
+    try {
+      if (isInitialLoad) {
+        setLoading(true)
+      } else {
+        setUpdating(true)
+      }
+      setError(null)
+      
+      console.log("Fetching orders...")
+      const response = await fetch("/api/requisitions?mine=1")
+      const data = await response.json()
+      
+      console.log("Orders API response:", response.status, data)
+      
+      if (response.ok) {
+        if (Array.isArray(data)) {
+          if (data.length > 0) {
+            console.log("First order details:", data[0])
+            console.log("REQUISITION_ITEMS:", data[0].REQUISITION_ITEMS)
+          }
+          setOrders(data)
+          setLastUpdated(new Date())
+        } else {
+          console.log("Data is not an array, setting empty array")
+          setOrders([])
+          setLastUpdated(new Date())
+        }
+      } else {
+        console.error("API error:", data)
+        setError(data.error || "ไม่สามารถดึงข้อมูลได้")
+        setOrders([])
+      }
+    } catch (error) {
+      console.error("Error fetching orders:", error)
+      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
+      setOrders([])
+    } finally {
+      if (isInitialLoad) {
+        setLoading(false)
+      } else {
+        setUpdating(false)
+      }
+    }
+  }
+
   useEffect(() => {
     if (!isAuthenticated || user?.ROLE !== "USER") {
       router.push("/login")
       return
     }
     
-    const fetchOrders = async (isInitialLoad = false) => {
-      try {
-        if (isInitialLoad) {
-          setLoading(true)
-        } else {
-          setUpdating(true)
-        }
-        setError(null)
-        
-        console.log("Fetching orders...")
-        const response = await fetch("/api/requisitions?mine=1")
-        const data = await response.json()
-        
-        console.log("Orders API response:", response.status, data)
-        
-        if (response.ok) {
-          if (Array.isArray(data)) {
-            if (data.length > 0) {
-              console.log("First order details:", data[0])
-              console.log("REQUISITION_ITEMS:", data[0].REQUISITION_ITEMS)
-            }
-            setOrders(data)
-            setLastUpdated(new Date())
-          } else {
-            console.log("Data is not an array, setting empty array")
-            setOrders([])
-            setLastUpdated(new Date())
-          }
-        } else {
-          console.error("API error:", data)
-          setError(data.error || "ไม่สามารถดึงข้อมูลได้")
-          setOrders([])
-        }
-      } catch (error) {
-        console.error("Error fetching orders:", error)
-        setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
-        setOrders([])
-      } finally {
-        if (isInitialLoad) {
-          setLoading(false)
-        } else {
-          setUpdating(false)
-        }
-      }
-    }
-
     // ดึงข้อมูลครั้งแรก
     fetchOrders(true)
 
@@ -121,7 +121,7 @@ export default function OrdersPage() {
 
     window.addEventListener('focus', handleFocus)
     return () => window.removeEventListener('focus', handleFocus)
-  }, [])
+  }, [fetchOrders])
 
   const handleViewDetails = (order: Requisition) => {
     setSelectedOrder(order)

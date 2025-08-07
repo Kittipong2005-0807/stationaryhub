@@ -65,7 +65,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {typeof window !== "undefined" &&
         createPortal(
-          <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
+          <div className="fixed top-4 left-4 z-50 space-y-2 max-w-sm">
             <AnimatePresence>
               {toasts.map((toast) => (
                 <Toast key={toast.id} {...toast} />

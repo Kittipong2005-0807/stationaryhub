@@ -9,18 +9,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { motion } from "framer-motion"
 import { Users, Building2, UserCheck, AlertTriangle, CheckCircle } from "lucide-react"
 
-interface OrgCode3User {
+interface SiteIdUser {
   USER_ID: string
   USERNAME: string
   ROLE: string
-  ORGCODE3: string
+  SITE_ID: string
   DEPARTMENT?: string
 }
 
 export default function OrgCode3InfoPage() {
   const { user } = useAuth()
-  const [userOrgCode3, setUserOrgCode3] = useState<string | null>(null)
-  const [availableManagers, setAvailableManagers] = useState<OrgCode3User[]>([])
+  const [userSiteId, setUserSiteId] = useState<string | null>(null)
+  const [availableManagers, setAvailableManagers] = useState<SiteIdUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -35,23 +35,23 @@ export default function OrgCode3InfoPage() {
       setLoading(true)
       setError("")
 
-      // ดึง orgcode3 ของ user
-      const orgCode3Response = await fetch(`/api/orgcode3?action=getUserOrgCode3&userId=${user?.AdLoginName}`)
-      const orgCode3Data = await orgCode3Response.json()
+      // ดึง SITE_ID ของ user
+      const siteIdResponse = await fetch(`/api/orgcode3?action=getUserSiteId&userId=${user?.AdLoginName}`)
+      const siteIdData = await siteIdResponse.json()
       
-      if (orgCode3Data.orgcode3) {
-        setUserOrgCode3(orgCode3Data.orgcode3)
+      if (siteIdData.siteId) {
+        setUserSiteId(siteIdData.siteId)
         
-        // ดึงรายการ Manager ที่มี orgcode3 เดียวกัน
+        // ดึงรายการ Manager ที่มี SITE_ID เดียวกัน
         const managersResponse = await fetch(`/api/orgcode3?action=getAvailableManagers&userId=${user?.AdLoginName}`)
         const managersData = await managersResponse.json()
         setAvailableManagers(managersData.managers || [])
       } else {
-        setError("ไม่พบข้อมูล orgcode3 สำหรับผู้ใช้นี้")
+        setError("ไม่พบข้อมูล SITE_ID สำหรับผู้ใช้นี้")
       }
     } catch (error) {
       setError("เกิดข้อผิดพลาดในการดึงข้อมูล")
-      console.error("Error fetching orgcode3 info:", error)
+      console.error("Error fetching SITE_ID info:", error)
     } finally {
       setLoading(false)
     }
@@ -117,7 +117,7 @@ export default function OrgCode3InfoPage() {
             </div>
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                ข้อมูลแผนก (OrgCode3)
+                ข้อมูลแผนก (SITE_ID)
               </h1>
               <p className="text-gray-600 mt-2">
                 ข้อมูลแผนกและ Manager ที่เกี่ยวข้อง
@@ -167,12 +167,12 @@ export default function OrgCode3InfoPage() {
                   <Badge variant="outline">{user?.CostCenterEng || "ไม่ระบุ"}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">OrgCode3:</span>
+                  <span className="text-gray-600">SITE_ID:</span>
                   <div className="flex items-center gap-2">
-                    {userOrgCode3 ? (
+                    {userSiteId ? (
                       <>
                         <Badge variant="default" className="bg-green-100 text-green-800">
-                          {userOrgCode3}
+                          {userSiteId}
                         </Badge>
                         <CheckCircle className="h-4 w-4 text-green-600" />
                       </>

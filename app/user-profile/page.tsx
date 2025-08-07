@@ -180,8 +180,8 @@ export default function UserProfilePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600">OrgCode3:</span>
-                <span className="font-semibold text-gray-800">{user.orgcode3 || 'N/A'}</span>
+                <span className="text-sm font-medium text-gray-600">SITE_ID:</span>
+                <span className="font-semibold text-gray-800">{user.SITE_ID || 'N/A'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">Authentication:</span>

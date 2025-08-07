@@ -40,13 +40,13 @@ export default function CartPage() {
     if (items.length === 0) return
     console.log(" Cart user data: ", user)
     
-    // ใช้ OrgCode3Service เพื่อสร้าง requisition พร้อม orgcode3
+    // ใช้ OrgCode3Service เพื่อสร้าง requisition พร้อม SITE_ID
     const requisitionData = {
       action: "createRequisition",
-      userId: user?.AdLoginName || user?.EmpCode,
+      userId: user?.EmpCode || user?.USER_ID || user?.AdLoginName, // ใช้ EmpCode เป็นหลัก
       totalAmount: getTotalAmount(),
       issueNote: "Requisition submitted from cart",
-      siteId: user?.SITE_ID || "1700",
+      siteId: user?.SITE_ID || user?.orgcode3 || null, // ใช้ SITE_ID หรือ orgcode3 จาก session
       REQUISITION_ITEMS: items.map((item) => ({
         PRODUCT_ID: item.PRODUCT_ID,
         QUANTITY: item.quantity,
@@ -54,7 +54,43 @@ export default function CartPage() {
         TOTAL_PRICE: item.UNIT_COST * item.quantity,
       })),
     }
-    console.log("Cart :  ", requisitionData)
+    
+    // แสดง userId ที่จะใช้
+    console.log("EmpCode from session:", user?.EmpCode)
+    console.log("USER_ID from session:", user?.USER_ID)
+    console.log("AdLoginName from session:", user?.AdLoginName)
+    console.log("Final userId to be used:", requisitionData.userId)
+    console.log("Cart data being sent:", requisitionData)
+    console.log("User data from session:", { 
+      USER_ID: user?.USER_ID,
+      AdLoginName: user?.AdLoginName, 
+      EmpCode: user?.EmpCode, 
+      SITE_ID: user?.SITE_ID,
+      ROLE: user?.ROLE,
+      EMAIL: user?.EMAIL,
+      USERNAME: user?.USERNAME,
+      orgcode3: user?.orgcode3
+    })
+    
+    // แสดงข้อมูล session ทั้งหมด
+    console.log("Full session user object:", user)
+    
+    // แสดง userId ที่จะใช้
+    const finalUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName
+    console.log("Final userId to be used:", finalUserId)
+    
+    // ตรวจสอบว่าข้อมูลครบหรือไม่
+    if (!user?.EmpCode) {
+      console.error("EmpCode is missing from session")
+      alert("ข้อมูลผู้ใช้ไม่ครบถ้วน กรุณาเข้าสู่ระบบใหม่")
+      return
+    }
+    
+    if (getTotalAmount() <= 0) {
+      console.error("Total amount is zero or negative")
+      alert("จำนวนเงินรวมต้องมากกว่า 0")
+      return
+    }
 
     try {
       // ใช้ API orgcode3 เพื่อสร้าง requisition พร้อม orgcode3
@@ -64,8 +100,10 @@ export default function CartPage() {
         body: JSON.stringify(requisitionData),
       })
       
+      console.log("API response status:", res.status)
       if (!res.ok) {
         const errorData = await res.json()
+        console.error("API error:", errorData)
         throw new Error(errorData.error || "Failed to submit requisition")
       }
       

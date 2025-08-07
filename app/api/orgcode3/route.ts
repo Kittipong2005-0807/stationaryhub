@@ -15,22 +15,22 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get("userId")
 
     switch (action) {
-      case "getUserOrgCode3":
+      case "getUserSiteId":
         if (!userId) {
           return NextResponse.json({ error: "User ID is required" }, { status: 400 })
         }
-        const orgcode3 = await OrgCode3Service.getUserOrgCode3(userId)
-        return NextResponse.json({ orgcode3 })
+        const siteId = await OrgCode3Service.getUserSiteId(userId)
+        return NextResponse.json({ siteId })
 
-      case "getManagersByOrgCode3":
+      case "getManagersBySiteId":
         if (!userId) {
           return NextResponse.json({ error: "User ID is required" }, { status: 400 })
         }
-        const userOrgCode3 = await OrgCode3Service.getUserOrgCode3(userId)
-        if (!userOrgCode3) {
+        const userSiteId = await OrgCode3Service.getUserSiteId(userId)
+        if (!userSiteId) {
           return NextResponse.json({ managers: [] })
         }
-        const managers = await OrgCode3Service.getManagersByOrgCode3(userOrgCode3)
+        const managers = await OrgCode3Service.getManagersBySiteId(userSiteId)
         return NextResponse.json({ managers })
 
       case "getAvailableManagers":
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ requisitions })
 
       case "getStats":
-        const stats = await OrgCode3Service.getOrgCode3Stats()
+        const stats = await OrgCode3Service.getSiteIdStats()
         return NextResponse.json(stats)
 
       default:
@@ -67,27 +67,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { action, userId, orgcode3, totalAmount, issueNote, siteId } = await request.json()
+    const { action, userId, siteId, totalAmount, issueNote, REQUISITION_ITEMS } = await request.json()
+    
+    console.log("API orgcode3 POST request:", { action, userId, siteId, totalAmount, issueNote })
 
     switch (action) {
-      case "updateUserOrgCode3":
-        if (!userId || !orgcode3) {
-          return NextResponse.json({ error: "User ID and orgcode3 are required" }, { status: 400 })
+      case "updateUserSiteId":
+        if (!userId || !siteId) {
+          return NextResponse.json({ error: "User ID and siteId are required" }, { status: 400 })
         }
-        const success = await OrgCode3Service.updateUserOrgCode3(userId, orgcode3)
+        const success = await OrgCode3Service.updateUserSiteId(userId, siteId)
         return NextResponse.json({ success })
 
       case "createRequisition":
         if (!userId || !totalAmount) {
+          console.error("Missing required fields:", { userId, totalAmount })
           return NextResponse.json({ error: "User ID and total amount are required" }, { status: 400 })
         }
-        const requisitionId = await OrgCode3Service.createRequisitionWithOrgCode3(
-          userId,
-          totalAmount,
-          issueNote,
-          siteId
-        )
-        return NextResponse.json({ requisitionId })
+        console.log("Creating requisition for user:", userId)
+        console.log("Request data:", { userId, totalAmount, issueNote, siteId })
+        
+        try {
+          const requisitionId = await OrgCode3Service.createRequisitionWithSiteId(
+            userId,
+            totalAmount,
+            issueNote,
+            siteId
+          )
+          console.log("Requisition created with ID:", requisitionId)
+          
+          if (!requisitionId) {
+            console.error("Failed to create requisition - no ID returned")
+            return NextResponse.json({ error: "Failed to create requisition" }, { status: 500 })
+          }
+          
+          return NextResponse.json({ requisitionId })
+        } catch (error) {
+          console.error("Error in createRequisition:", error)
+          return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+        }
 
       case "checkUserManagerRelationship":
         if (!userId) {

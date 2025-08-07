@@ -9,30 +9,30 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { motion } from "framer-motion"
 import { Database, Users, FileText, CheckCircle, AlertTriangle, RefreshCw } from "lucide-react"
 
-interface OrgCode3Stats {
+interface SiteIdStats {
   totalUsers: number
-  usersWithOrgCode3: number
+  usersWithSiteId: number
   totalRequisitions: number
-  requisitionsWithOrgCode3: number
-  orgCode3List: string[]
+  requisitionsWithSiteId: number
+  siteIdList: string[]
 }
 
-export default function OrgCode3StatusPage() {
+export default function SiteIdStatusPage() {
   const { user } = useAuth()
-  const [stats, setStats] = useState<OrgCode3Stats | null>(null)
+  const [stats, setStats] = useState<SiteIdStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
-    fetchOrgCode3Stats()
+    fetchSiteIdStats()
   }, [])
 
-  const fetchOrgCode3Stats = async () => {
+  const fetchSiteIdStats = async () => {
     try {
       setLoading(true)
       setError("")
 
-      // ดึงข้อมูลสถิติ orgcode3
+      // ดึงข้อมูลสถิติ SITE_ID
       const response = await fetch("/api/orgcode3?action=getStats")
       const data = await response.json()
       
@@ -43,7 +43,7 @@ export default function OrgCode3StatusPage() {
       }
     } catch (error) {
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
-      console.error("Error fetching orgcode3 stats:", error)
+      console.error("Error fetching SITE_ID stats:", error)
     } finally {
       setLoading(false)
     }
@@ -83,10 +83,10 @@ export default function OrgCode3StatusPage() {
             </div>
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-                สถานะระบบ OrgCode3
+                สถานะระบบ SITE_ID
               </h1>
               <p className="text-gray-600 mt-2">
-                ข้อมูลการใช้งานระบบ OrgCode3 ในระบบ
+                ข้อมูลการใช้งานระบบ SITE_ID ในระบบ
               </p>
             </div>
           </motion.div>
@@ -127,15 +127,15 @@ export default function OrgCode3StatusPage() {
                       <span className="font-bold">{stats.totalUsers}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">มี OrgCode3:</span>
+                      <span className="text-gray-600">มี SITE_ID:</span>
                       <Badge variant="default" className="bg-green-100 text-green-800">
-                        {stats.usersWithOrgCode3}
+                        {stats.usersWithSiteId}
                       </Badge>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">ไม่มี OrgCode3:</span>
+                      <span className="text-gray-600">ไม่มี SITE_ID:</span>
                       <Badge variant="destructive">
-                        {stats.totalUsers - stats.usersWithOrgCode3}
+                        {stats.totalUsers - stats.usersWithSiteId}
                       </Badge>
                     </div>
                   </div>
@@ -163,15 +163,15 @@ export default function OrgCode3StatusPage() {
                       <span className="font-bold">{stats.totalRequisitions}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">มี OrgCode3:</span>
+                      <span className="text-gray-600">มี SITE_ID:</span>
                       <Badge variant="default" className="bg-green-100 text-green-800">
-                        {stats.requisitionsWithOrgCode3}
+                        {stats.requisitionsWithSiteId}
                       </Badge>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">ไม่มี OrgCode3:</span>
+                      <span className="text-gray-600">ไม่มี SITE_ID:</span>
                       <Badge variant="destructive">
-                        {stats.totalRequisitions - stats.requisitionsWithOrgCode3}
+                        {stats.totalRequisitions - stats.requisitionsWithSiteId}
                       </Badge>
                     </div>
                   </div>
@@ -197,13 +197,13 @@ export default function OrgCode3StatusPage() {
                     <div className="flex justify-between">
                       <span className="text-gray-600">ผู้ใช้:</span>
                       <Badge variant="default" className="bg-blue-100 text-blue-800">
-                        {stats.totalUsers > 0 ? Math.round((stats.usersWithOrgCode3 / stats.totalUsers) * 100) : 0}%
+                        {stats.totalUsers > 0 ? Math.round((stats.usersWithSiteId / stats.totalUsers) * 100) : 0}%
                       </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">คำขอ:</span>
                       <Badge variant="default" className="bg-green-100 text-green-800">
-                        {stats.totalRequisitions > 0 ? Math.round((stats.requisitionsWithOrgCode3 / stats.totalRequisitions) * 100) : 0}%
+                        {stats.totalRequisitions > 0 ? Math.round((stats.requisitionsWithSiteId / stats.totalRequisitions) * 100) : 0}%
                       </Badge>
                     </div>
                   </div>
@@ -211,7 +211,7 @@ export default function OrgCode3StatusPage() {
               </Card>
             </motion.div>
 
-            {/* OrgCode3 Count */}
+            {/* SITE_ID Count */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -228,11 +228,11 @@ export default function OrgCode3StatusPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-600">จำนวนแผนก:</span>
-                      <span className="font-bold">{stats.orgCode3List.length}</span>
+                      <span className="font-bold">{stats.siteIdList.length}</span>
                     </div>
                     <div className="text-xs text-gray-500">
-                      {stats.orgCode3List.slice(0, 3).join(", ")}
-                      {stats.orgCode3List.length > 3 && "..."}
+                      {stats.siteIdList.slice(0, 3).join(", ")}
+                      {stats.siteIdList.length > 3 && "..."}
                     </div>
                   </div>
                 </CardContent>
@@ -249,7 +249,7 @@ export default function OrgCode3StatusPage() {
           className="flex justify-center gap-4"
         >
           <Button
-            onClick={fetchOrgCode3Stats}
+            onClick={fetchSiteIdStats}
             variant="outline"
             className="glass-button rounded-xl"
           >
