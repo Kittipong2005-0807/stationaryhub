@@ -98,6 +98,44 @@
   backdrop-filter: blur(30px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 32px;
+
+/* Toast Notification Styles */
+.notification-toast {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+  padding: 16px !important;
+  min-width: 320px !important;
+  max-width: 400px !important;
+}
+
+/* Force white background for toast */
+.notification-toast * {
+  background: transparent !important;
+}
+
+.notification-toast > div {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Additional toast styling to ensure white background */
+.notification-toast {
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+.notification-toast::before,
+.notification-toast::after {
+  background: #ffffff !important;
+}
+
+/* Override any existing background styles */
+[class*="notification-toast"] {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }

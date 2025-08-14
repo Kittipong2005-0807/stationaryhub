@@ -54,6 +54,16 @@ export default function Toast({ id, type, title, message, duration = 5000, onClo
       exit={{ opacity: 0, x: 300, scale: 0.8 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="notification-toast relative"
+      style={{
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        borderRadius: '16px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+        padding: '16px',
+        minWidth: '320px',
+        maxWidth: '400px'
+      }}
     >
       {/* Progress bar */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-gray-200 rounded-t-lg overflow-hidden">
