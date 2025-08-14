@@ -1,54 +1,45 @@
-// Products API Route (PUT/DELETE) สำหรับสินค้าเฉพาะ
+// Products API Route (PUT/DELETE) for specific products
 // 1. ตรวจสอบ session และสิทธิ์ ADMIN
 // 2. อัปเดตหรือลบสินค้าตาม PRODUCT_ID
-// 3. ส่งผลลัพธ์กลับ
+// 3. ส่งผลลัพธ์กลับในรูปแบบ JSON
 
-'use server'
-
-import { type NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
-import { getServerSession } from "next-auth/next"
+import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
+import { prisma } from "@/lib/prisma"
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // ตรวจสอบ session ผู้ใช้งาน
-  const session = await getServerSession(authOptions)
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  // ตรวจสอบสิทธิ์ ADMIN
-  const user = session.user as any
-  if (user?.ROLE !== "ADMIN") {
-    return NextResponse.json({ error: "Access denied. Admin role required." }, { status: 403 })
-  }
-
   try {
+    // Check user session
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Check ADMIN role
+    const user = session.user as any
+    if (user?.ROLE !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Access denied. Admin role required." },
+        { status: 403 }
+      )
+    }
+
     const productId = parseInt(params.id)
-    if (isNaN(productId)) {
-      return NextResponse.json({ error: "Invalid product ID" }, { status: 400 })
-    }
+    const updateData = await request.json()
 
-    const productData = await request.json()
-    
-    // ตรวจสอบข้อมูลที่จำเป็น
-    if (!productData.PRODUCT_NAME) {
-      return NextResponse.json({ error: "Product name is required" }, { status: 400 })
-    }
-
-    // อัปเดตสินค้า
+    // Update product
     const updatedProduct = await prisma.pRODUCTS.update({
       where: { PRODUCT_ID: productId },
       data: {
-        ITEM_ID: productData.ITEM_ID || null,
-        PRODUCT_NAME: productData.PRODUCT_NAME,
-        CATEGORY_ID: productData.CATEGORY_ID || 1,
-        UNIT_COST: productData.UNIT_COST ? parseFloat(productData.UNIT_COST) : null,
-        ORDER_UNIT: productData.ORDER_UNIT || "PIECE",
-        PHOTO_URL: productData.PHOTO_URL || null,
+        PRODUCT_NAME: updateData.PRODUCT_NAME,
+        CATEGORY_ID: updateData.CATEGORY_ID,
+        UNIT_COST: updateData.UNIT_COST ? parseFloat(updateData.UNIT_COST) : null,
+        ORDER_UNIT: updateData.ORDER_UNIT,
+        PHOTO_URL: updateData.PHOTO_URL,
       },
       include: {
         PRODUCT_CATEGORIES: true,
@@ -58,7 +49,10 @@ export async function PUT(
     return NextResponse.json(updatedProduct)
   } catch (error) {
     console.error("Error updating product:", error)
-    return NextResponse.json({ error: "Failed to update product" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Failed to update product" },
+      { status: 500 }
+    )
   }
 }
 
@@ -66,42 +60,48 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // ตรวจสอบ session ผู้ใช้งาน
-  const session = await getServerSession(authOptions)
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  // ตรวจสอบสิทธิ์ ADMIN
-  const user = session.user as any
-  if (user?.ROLE !== "ADMIN") {
-    return NextResponse.json({ error: "Access denied. Admin role required." }, { status: 403 })
-  }
-
   try {
-    const productId = parseInt(params.id)
-    if (isNaN(productId)) {
-      return NextResponse.json({ error: "Invalid product ID" }, { status: 400 })
+    // Check user session
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // ตรวจสอบว่าสินค้ามีอยู่ในระบบหรือไม่
+    // Check ADMIN role
+    const user = session.user as any
+    if (user?.ROLE !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Access denied. Admin role required." },
+        { status: 403 }
+      )
+    }
+
+    const productId = parseInt(params.id)
+
+    // Check if product exists
     const existingProduct = await prisma.pRODUCTS.findUnique({
       where: { PRODUCT_ID: productId },
     })
 
     if (!existingProduct) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 })
+      return NextResponse.json(
+        { error: "Product not found" },
+        { status: 404 }
+      )
     }
 
-    // ลบสินค้า
+    // Delete product
     await prisma.pRODUCTS.delete({
       where: { PRODUCT_ID: productId },
     })
 
-    return NextResponse.json({ message: "Product deleted successfully" })
+    return NextResponse.json({ success: true, message: "Product deleted successfully" })
   } catch (error) {
     console.error("Error deleting product:", error)
-    return NextResponse.json({ error: "Failed to delete product" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Failed to delete product" },
+      { status: 500 }
+    )
   }
 }
 

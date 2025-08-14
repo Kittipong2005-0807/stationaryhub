@@ -15,9 +15,9 @@ export async function DELETE(
 
     const notificationId = parseInt(params.id)
 
-    // ลบการแจ้งเตือน
+    // Delete notification
     await prisma.eMAIL_LOGS.delete({
-      where: { EMAIL_ID: notificationId }
+      where: { EMAIL_ID: notificationId },
     })
 
     return NextResponse.json({ success: true })

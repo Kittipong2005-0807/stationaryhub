@@ -487,10 +487,10 @@ export default function Layout({ children }: LayoutProps) {
                     {user?.USERNAME}
                   </Typography>
                   <Typography variant="body2" className="text-gray-500">
-                    {user?.EMAIL}
+                    {user && (user as any).EMAIL ? (user as any).EMAIL : 'N/A'}
                   </Typography>
                   <Typography variant="caption" className="text-gray-400">
-                    {user?.DEPARTMENT} • {user?.SITE_ID}
+                    {user && (user as any).DEPARTMENT ? (user as any).DEPARTMENT : 'N/A'} • {user && (user as any).SITE_ID ? (user as any).SITE_ID : 'N/A'}
                   </Typography>
                 </Box>
               </MenuItem>

@@ -98,17 +98,17 @@ export async function GET(request: NextRequest) {
         return {
           REQUISITION_ID: requisition.REQUISITION_ID,
           USER_ID: requisition.USER_ID,
-          SUBMITTED_AT: requisition.SUBMITTED_AT.toISOString(),
+          SUBMITTED_AT: requisition.SUBMITTED_AT?.toISOString() || new Date().toISOString(),
           STATUS: latestStatus || requisition.STATUS || "PENDING",
           TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
           ISSUE_NOTE: requisition.ISSUE_NOTE,
           REQUISITION_ITEMS: requisition.REQUISITION_ITEMS?.map(item => ({
-            REQUISITION_ITEM_ID: item.REQUISITION_ITEM_ID,
+            REQUISITION_ITEM_ID: item.ITEM_ID,
             PRODUCT_ID: item.PRODUCT_ID,
             PRODUCT_NAME: item.PRODUCTS?.PRODUCT_NAME || "Unknown Product",
-            QUANTITY: item.QUANTITY,
-            UNIT_PRICE: item.UNIT_PRICE,
-            TOTAL_PRICE: (item.QUANTITY * item.UNIT_PRICE) || 0
+            QUANTITY: item.QUANTITY || 0,
+            UNIT_PRICE: Number(item.UNIT_PRICE) || 0,
+            TOTAL_PRICE: ((item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0)) || 0
           })) || []
         }
       }))
@@ -135,17 +135,17 @@ export async function GET(request: NextRequest) {
       const result = requisitions.map(requisition => ({
         REQUISITION_ID: requisition.REQUISITION_ID,
         USER_ID: requisition.USER_ID,
-        SUBMITTED_AT: requisition.SUBMITTED_AT.toISOString(),
+        SUBMITTED_AT: requisition.SUBMITTED_AT?.toISOString() || new Date().toISOString(),
         STATUS: requisition.STATUS || "PENDING",
         TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
         ISSUE_NOTE: requisition.ISSUE_NOTE,
         REQUISITION_ITEMS: requisition.REQUISITION_ITEMS?.map(item => ({
-          REQUISITION_ITEM_ID: item.REQUISITION_ITEM_ID,
+          REQUISITION_ITEM_ID: item.ITEM_ID,
           PRODUCT_ID: item.PRODUCT_ID,
           PRODUCT_NAME: item.PRODUCTS?.PRODUCT_NAME || "Unknown Product",
-          QUANTITY: item.QUANTITY,
-          UNIT_PRICE: item.UNIT_PRICE,
-          TOTAL_PRICE: (item.QUANTITY * item.UNIT_PRICE) || 0
+          QUANTITY: item.QUANTITY || 0,
+          UNIT_PRICE: Number(item.UNIT_PRICE) || 0,
+          TOTAL_PRICE: ((item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0)) || 0
         })) || []
       }))
       
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
     
     // ส่ง notification
     try {
-      await NotificationService.sendRequisitionNotification(requisition.REQUISITION_ID, empCode)
+      await NotificationService.notifyRequisitionCreated(requisition.REQUISITION_ID, empCode)
     } catch (notificationError) {
       console.error("Notification error:", notificationError)
     }

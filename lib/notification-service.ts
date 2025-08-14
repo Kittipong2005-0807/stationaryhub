@@ -214,7 +214,7 @@ export class NotificationService {
             this.createEmailTemplate('requisition_approved_admin', {
               requisitionId,
               approvedBy,
-              requesterName: requisition.USERS?.FullNameThai || requisition.USERS?.FullNameEng || requisition.USER_ID,
+              requesterName: (requisition.USERS as any)?.FullNameThai || (requisition.USERS as any)?.FullNameEng || requisition.USER_ID,
               totalAmount: requisition.TOTAL_AMOUNT,
               submittedAt: requisition.SUBMITTED_AT
             })
@@ -251,7 +251,7 @@ export class NotificationService {
    */
   private static async sendEmail(to: string, subject: string, html: string) {
     try {
-      const transporter = nodemailer.createTransporter({
+      const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: Number(process.env.SMTP_PORT) || 587,
         secure: false,
@@ -364,7 +364,7 @@ export class NotificationService {
           <p><strong>ผู้ขอ:</strong> ${data.requesterName}</p>
           <p><strong>อนุมัติโดย:</strong> ${data.approvedBy}</p>
           <p><strong>จำนวนเงิน:</strong> ฿${data.totalAmount?.toFixed(2)}</p>
-          <p><strong>วันที่ส่งคำขอ:</strong> ${new Date(data.submittedAt).toLocaleDateString('th-TH')}</p>
+          <p><strong>วันที่ส่งคำขอ:</strong> ${new Date(data.submittedAt).toLocaleDateString('th-TH')} ${new Date(data.submittedAt).toLocaleTimeString('th-TH', { hour12: false })}</p>
           <p>คุณสามารถติดตามรายงานได้ในระบบ</p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin" class="button">ดูรายงาน</a>
         `

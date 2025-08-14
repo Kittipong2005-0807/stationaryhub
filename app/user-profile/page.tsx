@@ -109,7 +109,7 @@ export default function UserProfilePage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">Site ID:</span>
-                <span className="font-semibold text-gray-800">{user.SITE_ID || 'N/A'}</span>
+                <span className="font-semibold text-gray-800">{user && (user as any).SITE_ID ? (user as any).SITE_ID : 'N/A'}</span>
               </div>
             </CardContent>
           </Card>
@@ -125,19 +125,19 @@ export default function UserProfilePage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">Email:</span>
-                <span className="font-semibold text-gray-800">{user.EMAIL || user.CurrentEmail || 'N/A'}</span>
+                <span className="font-semibold text-gray-800">{user && (user as any).EMAIL ? (user as any).EMAIL : (user && (user as any).CurrentEmail ? (user as any).CurrentEmail : 'N/A')}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">Department:</span>
-                <span className="font-semibold text-gray-800">{user.DEPARTMENT || 'N/A'}</span>
+                <span className="font-semibold text-gray-800">{user && (user as any).DEPARTMENT ? (user as any).DEPARTMENT : 'N/A'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">Position:</span>
-                <span className="font-semibold text-gray-800">{user.PostNameEng || 'N/A'}</span>
+                <span className="font-semibold text-gray-800">{user && (user as any).PostNameEng ? (user as any).PostNameEng : 'N/A'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">Cost Center:</span>
-                <span className="font-semibold text-gray-800">{user.CostCenterEng || 'N/A'}</span>
+                <span className="font-semibold text-gray-800">{user && (user as any).CostCenterEng ? (user as any).CostCenterEng : 'N/A'}</span>
               </div>
             </CardContent>
           </Card>
@@ -153,19 +153,19 @@ export default function UserProfilePage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">AdLoginName:</span>
-                <span className="font-semibold text-gray-800">{user.AdLoginName || 'N/A'}</span>
+                <span className="font-semibold text-gray-800">{user && (user as any).AdLoginName ? (user as any).AdLoginName : 'N/A'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">EmpCode:</span>
-                <span className="font-semibold text-gray-800">{user.EmpCode || 'N/A'}</span>
+                <span className="font-semibold text-gray-800">{user && (user as any).EmpCode ? (user as any).EmpCode : 'N/A'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">Full Name (Thai):</span>
-                <span className="font-semibold text-gray-800">{user.FullNameThai || 'N/A'}</span>
+                <span className="font-semibold text-gray-800">{user && (user as any).FullNameThai ? (user as any).FullNameThai : 'N/A'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">Full Name (Eng):</span>
-                <span className="font-semibold text-gray-800">{user.FullNameEng || 'N/A'}</span>
+                <span className="font-semibold text-gray-800">{user && (user as any).FullNameEng ? (user as any).FullNameEng : 'N/A'}</span>
               </div>
             </CardContent>
           </Card>
@@ -181,7 +181,7 @@ export default function UserProfilePage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">SITE_ID:</span>
-                <span className="font-semibold text-gray-800">{user.SITE_ID || 'N/A'}</span>
+                <span className="font-semibold text-gray-800">{user && (user as any).SITE_ID ? (user as any).SITE_ID : 'N/A'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600">Authentication:</span>

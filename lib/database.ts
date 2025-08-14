@@ -87,15 +87,15 @@ export async function getProducts() {
   })
 }
 
-export async function getRequisitions(userId?: number, role?: string) {
+export async function getRequisitions(userId?: string, role?: string) {
   if (role === 'USER' && userId) {
     return await prisma.rEQUISITIONS.findMany({
       where: { USER_ID: userId },
-      include: { user: true, items: true }
+      include: { USERS: true, REQUISITION_ITEMS: true }
     })
   }
   return await prisma.rEQUISITIONS.findMany({
-    include: { user: true, items: true }
+    include: { USERS: true, REQUISITION_ITEMS: true }
   })
 }
 
@@ -109,7 +109,7 @@ export async function createRequisition(requisitionData: any) {
       TOTAL_AMOUNT: requisitionData.TOTAL_AMOUNT,
       SITE_ID: requisitionData.SITE_ID,
       ISSUE_NOTE: requisitionData.ISSUE_NOTE,
-      items: {
+      REQUISITION_ITEMS: {
         create: requisitionData.items?.map((item: any) => ({
           PRODUCT_ID: item.PRODUCT_ID,
           QUANTITY: item.QUANTITY,
@@ -118,7 +118,7 @@ export async function createRequisition(requisitionData: any) {
         })) || []
       }
     },
-    include: { items: true }
+    include: { REQUISITION_ITEMS: true }
   })
 }
 

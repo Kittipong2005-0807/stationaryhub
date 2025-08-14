@@ -276,15 +276,15 @@ export const authOptions: AuthOptions = {
               token.USERNAME = userFromDB.USERNAME;
               token.EMAIL = userFromDB.EMAIL;
               token.DEPARTMENT = userFromDB.DEPARTMENT;
-              token.ROLE = userFromDB.ROLE; // ใช้ ROLE จาก USERS table
+              token.ROLE = userFromDB.ROLE; // Use ROLE from USERS table
               token.SITE_ID = userFromDB.SITE_ID;
-              token.EmpCode = user.id; // เพิ่ม EmpCode ใน token
+              token.EmpCode = user.id; // Add EmpCode to token
               
               console.log('✅ Token populated from USERS table:', {
                 USERNAME: token.USERNAME,
                 EMAIL: token.EMAIL,
                 DEPARTMENT: token.DEPARTMENT,
-                ROLE: token.ROLE, // ROLE จาก USERS table
+                ROLE: token.ROLE, // ROLE from USERS table
                 EmpCode: token.EmpCode
               });
             } else {
@@ -293,12 +293,12 @@ export const authOptions: AuthOptions = {
               token.USERNAME = (user as ExtendedUser).fullName || user.name;
               token.EMAIL = user.email;
               token.DEPARTMENT = (user as ExtendedUser).department || 'General';
-              token.ROLE = 'USER'; // จะถูกอัปเดตจาก userWithRoles view ด้านล่าง
-              token.SITE_ID = null; // จะถูกอัปเดตจาก userWithRoles view ด้านล่าง
-              token.EmpCode = user.id; // เพิ่ม EmpCode ใน token
+              token.ROLE = 'USER'; // Will be updated from userWithRoles view below
+              token.SITE_ID = null; // Will be updated from userWithRoles view below
+              token.EmpCode = user.id; // Add EmpCode to token
             }
 
-            // ดึงข้อมูลเพิ่มเติมจาก userWithRoles view
+            // Fetch additional data from userWithRoles view
             try {
               const getUserData = await prisma.$queryRaw`
                 SELECT * FROM userWithRoles 
@@ -317,13 +317,13 @@ export const authOptions: AuthOptions = {
                 token.CostCenterEng = userData.CostCenterEng;
                 token.orgcode3 = userData.orgcode3;
                 
-                // อัปเดต SITE_ID จาก orgcode3
+                // Update SITE_ID from orgcode3
                 if (userData.orgcode3) {
                   token.SITE_ID = userData.orgcode3.toString();
                   console.log('✅ Updated SITE_ID from orgcode3:', token.SITE_ID);
                 }
                 
-                // อัปเดต ROLE จาก PostNameEng - ปิดการใช้งานชั่วคราว
+                // Update ROLE from PostNameEng - temporarily disabled
                 /*
                 if (userData.PostNameEng) {
                   const postName = userData.PostNameEng.toString();
@@ -340,14 +340,14 @@ export const authOptions: AuthOptions = {
                 console.log('✅ Token populated from userWithRoles view');
               } else {
                 console.log('⚠️ User not found in userWithRoles view for:', user.name);
-                // Fallback: ใช้ข้อมูลจาก user object ที่ได้จาก authorize
+                // Fallback: use data from user object from authorize
                 token.AdLoginName = user.name;
                 token.FullNameEng = (user as ExtendedUser).fullName || user.name;
                 token.FullNameThai = (user as ExtendedUser).fullName || user.name;
               }
             } catch (error) {
               console.error('❌ Error querying userWithRoles view:', error);
-              // Fallback: ใช้ข้อมูลจาก user object ที่ได้จาก authorize
+              // Fallback: use data from user object from authorize
               token.AdLoginName = user.name;
               token.FullNameEng = (user as ExtendedUser).fullName || user.name;
               token.FullNameThai = (user as ExtendedUser).fullName || user.name;
@@ -359,24 +359,12 @@ export const authOptions: AuthOptions = {
             token.EMAIL = user.email;
             token.DEPARTMENT = (user as ExtendedUser).department || 'General';
             token.ROLE = 'USER'; // default role when error occurs
-            token.SITE_ID = null; // จะถูกอัปเดตจาก userWithRoles view ถ้าพบ
+            token.SITE_ID = null; // Will be updated from userWithRoles view if found
             token.AdLoginName = user.name;
-            token.EmpCode = user.id; // เพิ่ม EmpCode ใน token
+            token.EmpCode = user.id; // Add EmpCode to token
             token.FullNameEng = (user as ExtendedUser).fullName || user.name;
             token.FullNameThai = (user as ExtendedUser).fullName || user.name;
           }
-        } else {
-          console.log('⚠️ Prisma not available in JWT callback, using fallback values');
-          // Fallback values when prisma is not available
-          token.USERNAME = (user as ExtendedUser).fullName || user.name;
-          token.EMAIL = user.email;
-          token.DEPARTMENT = (user as ExtendedUser).department || 'General';
-          token.ROLE = 'USER'; // default role when prisma is not available
-          token.SITE_ID = null; // default value when prisma is not available
-          token.AdLoginName = user.name;
-          token.EmpCode = user.id; // เพิ่ม EmpCode ใน token
-          token.FullNameEng = (user as ExtendedUser).fullName || user.name;
-          token.FullNameThai = (user as ExtendedUser).fullName || user.name;
         }
       }
 

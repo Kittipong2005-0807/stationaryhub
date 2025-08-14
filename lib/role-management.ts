@@ -67,7 +67,7 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.VIEW_APPROVAL_HISTORY,
     Permission.VIEW_PRODUCTS,
     Permission.VIEW_USERS,
-    Permission.EDIT_USER, // ให้ Manager สามารถแก้ไขข้อมูลผู้ใช้ได้
+    Permission.EDIT_USER, // Allow Manager to edit user data
     Permission.VIEW_REPORTS,
     Permission.GENERATE_REPORTS,
     Permission.EXPORT_DATA,

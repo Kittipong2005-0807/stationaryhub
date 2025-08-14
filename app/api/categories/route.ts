@@ -5,31 +5,29 @@
 // 4. ส่งข้อมูลหมวดหมู่กลับในรูปแบบ JSON
 // 5. ถ้าเกิด error ขณะดึงข้อมูล ตอบ Failed to fetch categories (500)
 
-'use server'
-
-import { type NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
-import { getServerSession } from "next-auth/next"
+import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
+import { prisma } from "@/lib/prisma"
 
 export async function GET(request: NextRequest) {
-  // ตรวจสอบ session ผู้ใช้งาน
+  // Check user session
   const session = await getServerSession(authOptions)
   if (!session) {
-    // ถ้าไม่มี session (ยังไม่ได้ login) ตอบ Unauthorized
+    // If no session (not logged in) return Unauthorized
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   try {
-    // ดึงข้อมูลหมวดหมู่จากฐานข้อมูล
+    // Fetch categories from database
     const categories = await prisma.pRODUCT_CATEGORIES.findMany({
       orderBy: { CATEGORY_ID: "asc" },
     })
     
-    // ส่งข้อมูลหมวดหมู่กลับ
+    // Return categories data
     return NextResponse.json(categories)
   } catch (error) {
-    // ถ้าเกิด error ขณะดึงข้อมูล
+    // If error occurs while fetching data
     console.error("Error fetching categories:", error)
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 })
   }

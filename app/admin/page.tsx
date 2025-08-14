@@ -58,6 +58,12 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
+  
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (!user) return 'User';
+    return user.FullNameThai || user.FullNameEng || user.USERNAME || user.AdLoginName || user.name || 'User';
+  }
 
   useEffect(() => {
     if (!isAuthenticated || user?.ROLE !== "ADMIN") {
@@ -130,11 +136,14 @@ export default function AdminDashboard() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    return new Date(dateString).toLocaleDateString("th-TH", {
       year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    });
   }
 
   if (!isAuthenticated || user?.ROLE !== "ADMIN") {
@@ -248,7 +257,7 @@ export default function AdminDashboard() {
                 🛠️ Admin Dashboard
               </Typography>
               <Typography variant="h6" className="text-blue-100">
-                Welcome back, {user?.FullNameThai || user?.FullNameEng || user?.USERNAME || user?.AdLoginName || user?.name || 'User'}! Here's what's happening today.
+                Welcome back, {getUserDisplayName()}! Here&apos;s what&apos;s happening today.
               </Typography>
             </div>
 

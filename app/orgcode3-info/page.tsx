@@ -164,7 +164,7 @@ export default function OrgCode3InfoPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">แผนก:</span>
-                  <Badge variant="outline">{user?.CostCenterEng || "ไม่ระบุ"}</Badge>
+                  <Badge variant="outline">{user && (user as any).CostCenterEng ? (user as any).CostCenterEng : "ไม่ระบุ"}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">SITE_ID:</span>

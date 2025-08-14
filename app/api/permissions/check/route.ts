@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
 import { RoleManagementService, Permission, UserRole } from "@/lib/role-management"
+import { prisma } from "@/lib/prisma"
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,6 +52,11 @@ export async function GET(request: NextRequest) {
     // ดึงข้อมูล Permission ของ User
     const userRole = await RoleManagementService.getUserRole(userId)
     const userPermissions = await RoleManagementService.getUserPermissions(userId)
+
+    // Fetch additional data
+    const userWithRoles = await prisma.$queryRaw`
+      SELECT * FROM userWithRoles WHERE USER_ID = ${userId}
+    `
 
     // ตรวจสอบ Permission เฉพาะ
     const canApprove = await RoleManagementService.canApproveRequisition(userId)

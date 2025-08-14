@@ -19,6 +19,13 @@ interface AuthContextType {
   user: {
     name?: string | null;
     email?: string | null;
+    FullNameThai?: string | null;
+    FullNameEng?: string | null;
+    USERNAME?: string | null;
+    AdLoginName?: string | null;
+    ROLE?: string | null;
+    USER_ID?: string | null;
+    EmpCode?: string | null;
     [key: string]: unknown;
   } | null;
   login: (username: string, password: string) => Promise<boolean>

@@ -113,8 +113,8 @@ model USERS {
 
 /// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 view UserWithRoles {
-  AdLoginName   String? @db.VarChar(50)
-  EmpCode       String? @db.VarChar(50)
+  AdLoginName   String @db.VarChar(50)
+  EmpCode       String @db.VarChar(50)
   CurrentEmail  String? @db.VarChar(100)
   FullNameEng   String? @db.VarChar(100)
   FullNameThai  String? @db.VarChar(100)

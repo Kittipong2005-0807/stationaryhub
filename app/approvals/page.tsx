@@ -200,13 +200,14 @@ export default function ApprovalsPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    return new Date(dateString).toLocaleDateString("th-TH", {
       year: "numeric",
-      month: "short",
-      day: "numeric",
+      month: "2-digit",
+      day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-    })
+      hour12: false
+    });
   }
 
   const pendingCount = requisitions.filter(r => r.STATUS === "PENDING").length

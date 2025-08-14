@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     // อนุญาตให้เปลี่ยน Role ของตัวเองได้เสมอ
     if (isChangingOwnRole) {
-      // ไม่ต้องตรวจสอบสิทธิ์เพิ่มเติม - อนุญาตให้เปลี่ยน Role ของตัวเองได้เสมอ
+      // No need to check additional permissions - always allow users to change their own role
     }
 
     // เปลี่ยน Role

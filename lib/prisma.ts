@@ -1,9 +1,9 @@
 import { PrismaClient } from "@prisma/client"
 
-// ป้องกัน hot-reload สร้าง PrismaClient ซ้ำใน dev
+// Prevent hot-reload from creating duplicate PrismaClient in dev
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient }
 
-// สร้าง Prisma client instance เดียว
+// Create single Prisma client instance
 const prismaClientSingleton = () => {
   return new PrismaClient({
     log: ["query", "error", "warn"],
@@ -15,26 +15,15 @@ const prismaClientSingleton = () => {
   })
 }
 
-// ใช้ singleton pattern เพื่อให้มี Prisma client instance เดียว
+// Use singleton pattern to ensure single Prisma client instance
 export const prisma = globalForPrisma.prisma ?? prismaClientSingleton()
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
 
-// เพิ่มฟังก์ชันสำหรับปิดการเชื่อมต่อ
+// Add function to close connection
 export async function disconnectPrisma() {
   if (prisma) {
     await prisma.$disconnect()
   }
 }
-
-// เพิ่ม error handling สำหรับ database connection
-prisma.$on('error', (e) => {
-  console.error('Prisma error:', e)
-})
-
-prisma.$on('query', (e) => {
-  console.log('Prisma query:', e.query)
-  console.log('Prisma params:', e.params)
-  console.log('Prisma duration:', e.duration + 'ms')
-})
 

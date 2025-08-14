@@ -41,7 +41,7 @@ export class OrgCode3Service {
         return null
       }
       
-      // ค้นหาด้วย EmpCode เท่านั้น (ตาม authOptions ที่ใช้ empCode เป็น USER_ID)
+      // Search by EmpCode only (according to authOptions that uses empCode as USER_ID)
       console.log("Querying userWithRoles view with EmpCode:", userId)
       const userData = await prisma.$queryRaw<{ orgcode3: string }[]>`
         SELECT orgcode3 

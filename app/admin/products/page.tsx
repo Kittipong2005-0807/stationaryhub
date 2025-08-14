@@ -72,19 +72,53 @@ export default function ProductManagementPage() {
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
 
-  // ดึงข้อมูลสินค้าและหมวดหมู่
+  // Fetch products and categories
+  useEffect(() => {
+    // Fetch products
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch('/api/products');
+        if (response.ok) {
+          const data = await response.json();
+          setProducts(data);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+    };
+
+    // Fetch categories
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
+    if (isAuthenticated && user?.ROLE === "ADMIN") {
+      fetchProducts();
+      fetchCategories();
+    }
+  }, [isAuthenticated, user, router]);
+
+  // Function to refresh data
   const fetchData = async () => {
     try {
-      setRefreshing(true)
+      setRefreshing(true);
       
-      // ดึงข้อมูลสินค้า
+      // Fetch products
       const productsResponse = await fetch("/api/products")
       if (productsResponse.ok) {
         const productsData = await productsResponse.json()
         setProducts(productsData)
       }
 
-      // ดึงข้อมูลหมวดหมู่
+      // Fetch categories
       const categoriesResponse = await fetch("/api/categories")
       if (categoriesResponse.ok) {
         const categoriesData = await categoriesResponse.json()
@@ -97,21 +131,6 @@ export default function ProductManagementPage() {
       setRefreshing(false)
     }
   }
-
-  useEffect(() => {
-    if (!isAuthenticated || user?.ROLE !== "ADMIN") {
-      console.log("🔍 Admin products access check:", { 
-        isAuthenticated, 
-        userRole: user?.ROLE, 
-        userId: user?.USER_ID,
-        empCode: user?.EmpCode 
-      })
-      router.push("/login")
-      return
-    }
-
-    fetchData()
-  }, [isAuthenticated, user, router])
 
   const handleOpenDialog = (product?: Product) => {
     if (product) {
@@ -398,7 +417,14 @@ export default function ProductManagementPage() {
                         </TableCell>
                         <TableCell className="text-gray-600 py-3">
                           {product.CREATED_AT 
-                            ? new Date(product.CREATED_AT).toLocaleDateString('en-US')
+                            ? new Date(product.CREATED_AT).toLocaleDateString('th-TH', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: false
+                              })
                             : "-"
                           }
                         </TableCell>

@@ -82,7 +82,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
           }}
           className="glass-card hover:shadow-lg"
         >
-        {/* รูปภาพ */}
+        {/* Image */}
         <Box style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <Image
             src={product.PHOTO_URL || "/placeholder.svg"}
@@ -92,18 +92,18 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             style={{ objectFit: "cover", borderRadius: 12, border: "1px solid #eee", background: '#fafafa' }}
           />
         </Box>
-        {/* เนื้อหา */}
+        {/* Content */}
         <Box style={{ flex: 3, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 16, position: 'relative' }}>
-          {/* ป้ายโปรโมชั่น/ร้านค้า */}
+          {/* Promotion/Store badges */}
           <Box style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
             <Chip label="LazPick" size="small" color="secondary" />
-            {/* เพิ่มป้ายอื่น ๆ ตามต้องการ */}
+            {/* Add other badges as needed */}
           </Box>
-          {/* ชื่อสินค้า */}
+          {/* Product name */}
           <Typography variant="h6" style={{ fontWeight: 700, marginBottom: 12 }}>
             {product.PRODUCT_NAME}
           </Typography>
-          {/* รายละเอียด bullet */}
+          {/* Bullet details */}
           {/* Quantity Selector */}
           <Box style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <IconButton onClick={decrementQuantity} disabled={quantity <= 1} size="small" style={{ background: '#f3f3f3', borderRadius: 8 }}>
@@ -121,7 +121,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
               <Add />
             </IconButton>
           </Box>
-          {/* ราคา + ปุ่ม */}
+          {/* Price + Button */}
           <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
             <Typography variant="h5" style={{ color: "#FF5722", fontWeight: 700 }}>฿{Number(product.UNIT_COST || 0).toFixed(2)}</Typography>
             <Box>
@@ -129,7 +129,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
                 {isFavorite ? <Favorite className="text-red-500" /> : <FavoriteBorder className="text-gray-400" />}
               </IconButton>
               <Button variant="contained" color="primary" startIcon={<ShoppingCart />} onClick={handleAddToCart} disabled={isAdding} style={{ borderRadius: 20, marginLeft: 8 }}>
-                {isAdding ? "กำลังเพิ่ม..." : "ใส่ตะกร้า"}
+                {isAdding ? "Adding..." : "Add to Cart"}
               </Button>
             </Box>
           </Box>
@@ -139,7 +139,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
     )
   }
 
-  // --- Grid View (แบบเดิม) ---
+  // --- Grid View (Original style) ---
   return (
     <motion.div
       whileHover={{ y: -2, scale: 1.01 }}
@@ -184,7 +184,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             </AnimatePresence>
           </IconButton>
         </motion.div>
-        {/* ส่วนที่ 1: รูปภาพ */}
+        {/* Part 1: Image */}
         <Box
           style={{ position: 'relative', width: '100%', aspectRatio: '1/1', borderBottom: '2px solid #e5e7eb', paddingBottom: 8 }}
         >
@@ -209,7 +209,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             onError={() => setImageLoading(false)}
           />
         </Box>
-        {/* ส่วนที่ 2-4: เนื้อหา */}
+        {/* Parts 2-4: Content */}
         <Box>
           <CardContent>
             {/* Product Info */}
@@ -230,10 +230,10 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
                 />
               </Box>
               <Typography variant="body2" className="text-gray-500 mb-1">
-                ราคาต่อหน่วย: <span className="font-semibold text-blue-700">฿{Number(product.UNIT_COST || 0).toFixed(2)}</span>
+                Unit Price: <span className="font-semibold text-blue-700">฿{Number(product.UNIT_COST || 0).toFixed(2)}</span>
               </Typography>
               <Typography variant="caption" className="text-gray-400">
-                เพิ่มเมื่อ: {new Date(product.CREATED_AT).toLocaleDateString()}
+                Added: {new Date(product.CREATED_AT).toLocaleDateString('th-TH')} {new Date(product.CREATED_AT).toLocaleTimeString('th-TH', { hour12: false })}
               </Typography>
             </motion.div>
             {/* Quantity Selector */}

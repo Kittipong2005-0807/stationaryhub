@@ -86,3 +86,4 @@ export default function Toast({ id, type, title, message, duration = 5000, onClo
     </motion.div>
   )
 }
+

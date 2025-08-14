@@ -213,12 +213,12 @@ export default function CreateUserPage() {
               <CardTitle className="text-lg">คำแนะนำ</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-gray-600">
-              <p>1. กรอกข้อมูลผู้ใช้ที่ต้องการสร้าง</p>
-              <p>2. เลือก Role ที่เหมาะสม</p>
-              <p>3. กดปุ่ม "Create User"</p>
-              <p>4. ล็อกอินด้วย User ID ที่สร้าง</p>
+              <p>1. Enter user information</p>
+              <p>2. Select appropriate Role</p>
+              <p>3. Click "Create User" button</p>
+              <p>4. Log in with the created User ID</p>
               <p className="text-blue-600 font-medium mt-4">
-                💡 Tip: หลังจากสร้าง user แล้ว ให้แก้ไข Role ในฐานข้อมูลโดยตรง
+                💡 Tip: After creating a user, edit the Role directly in the database
               </p>
             </CardContent>
           </Card>

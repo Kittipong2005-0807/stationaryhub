@@ -196,13 +196,13 @@ export default function OrdersPage() {
   const getStatusText = (status: string) => {
     switch (status?.toUpperCase()) {
       case "APPROVED":
-        return "อนุมัติแล้ว"
+        return "Approved"
       case "PENDING":
-        return "รออนุมัติ"
+        return "Pending Approval"
       case "REJECTED":
-        return "ไม่อนุมัติ"
+        return "Rejected"
       default:
-        return status || "รออนุมัติ"
+        return status || "Pending Approval"
     }
   }
 
@@ -213,7 +213,7 @@ export default function OrdersPage() {
       {/* Header */}
       <Box className="flex justify-between items-center mb-6">
         <Typography variant="h4" className="font-bold text-gray-800">
-          📦 คำสั่งซื้อของฉัน
+          📦 My Purchase Orders
         </Typography>
         <Button
           variant="outlined"
@@ -221,7 +221,7 @@ export default function OrdersPage() {
           disabled={loading}
           startIcon={<RefreshIcon className={loading ? "animate-spin" : ""} />}
         >
-          {loading ? "กำลังโหลด..." : updating ? "กำลังอัพเดท..." : "อัพเดท"}
+          {loading ? "Loading..." : updating ? "Updating..." : "Update"}
         </Button>
       </Box>
 
@@ -235,15 +235,15 @@ export default function OrdersPage() {
       {/* Debug Info */}
       <Box className="mb-4 p-3 glass-card rounded">
         <Typography variant="body2" className="text-blue-700">
-          🔍 Debug: พบคำสั่งซื้อ {orders.length} รายการ
+          🔍 Debug: Found {orders.length} orders
           {lastUpdated && (
             <span className="ml-2 text-xs">
-              (อัพเดทล่าสุด: {lastUpdated.toLocaleTimeString('th-TH')})
+              (Last updated: {lastUpdated.toLocaleTimeString('th-TH', { hour12: false })})
             </span>
           )}
           {updating && (
             <span className="ml-2 text-xs text-orange-600">
-              🔄 กำลังอัพเดทอัตโนมัติ...
+              🔄 Auto-updating...
             </span>
           )}
         </Typography>
@@ -256,16 +256,16 @@ export default function OrdersPage() {
       ) : !Array.isArray(orders) || orders.length === 0 ? (
         <Box className="text-center py-16">
           <Typography variant="h6" className="text-gray-500 mb-2">
-            ไม่พบประวัติคำสั่งซื้อ
+            No purchase orders found
           </Typography>
           <Typography variant="body2" className="text-gray-400 mb-4">
-            เริ่มต้นการสั่งซื้อสินค้าจากหน้าแรก
+            Start ordering products from the first page
           </Typography>
           <Button 
             variant="outlined" 
             onClick={() => window.location.href = "/test-data"}
           >
-            สร้างข้อมูลทดสอบ
+            Create Test Data
           </Button>
         </Box>
       ) : (
@@ -284,7 +284,8 @@ export default function OrdersPage() {
                         month: 'long',
                         day: 'numeric',
                         hour: '2-digit',
-                        minute: '2-digit'
+                        minute: '2-digit',
+                        hour12: false
                       })}
                     </Typography>
                   </Box>
@@ -298,10 +299,10 @@ export default function OrdersPage() {
                 <Box className="flex justify-between items-center mb-3">
                   <Box>
                     <Typography variant="body2" className="text-gray-600">
-                      ยอดรวม: <span className="font-semibold">฿{(Number(order.TOTAL_AMOUNT) || 0).toFixed(2)}</span>
+                      Total Amount: <span className="font-semibold">฿{(Number(order.TOTAL_AMOUNT) || 0).toFixed(2)}</span>
                     </Typography>
                     <Typography variant="body2" className="text-gray-600">
-                      รายการ: <span className="font-semibold">{Array.isArray(order.REQUISITION_ITEMS) ? order.REQUISITION_ITEMS.length : 0} รายการ</span>
+                      Items: <span className="font-semibold">{Array.isArray(order.REQUISITION_ITEMS) ? order.REQUISITION_ITEMS.length : 0} items</span>
                     </Typography>
                   </Box>
                   <Button 
@@ -310,7 +311,7 @@ export default function OrdersPage() {
                     onClick={() => handleViewDetails(order)}
                     startIcon={<VisibilityIcon />}
                   >
-                    ดูรายละเอียด
+                    View Details
                   </Button>
                 </Box>
 
@@ -333,14 +334,14 @@ export default function OrdersPage() {
         fullWidth
       >
         <DialogTitle>
-          รายละเอียด Order #{selectedOrder?.REQUISITION_ID}
+          Order Details #{selectedOrder?.REQUISITION_ID}
         </DialogTitle>
         <DialogContent>
           {selectedOrder && (
             <Box>
               <Box className="mb-4">
                 <Box className="flex justify-between items-center mb-2">
-                  <Typography variant="body2" className="text-gray-600">สถานะ:</Typography>
+                  <Typography variant="body2" className="text-gray-600">Status:</Typography>
                   <Chip 
                     label={getStatusText(selectedOrder.STATUS)} 
                     color={getStatusColor(selectedOrder.STATUS) as "success" | "warning" | "error" | "default"}
@@ -348,19 +349,20 @@ export default function OrdersPage() {
                   />
                 </Box>
                 <Box className="flex justify-between items-center mb-2">
-                  <Typography variant="body2" className="text-gray-600">วันที่:</Typography>
+                  <Typography variant="body2" className="text-gray-600">Date:</Typography>
                   <Typography variant="body2">
                     {new Date(selectedOrder.SUBMITTED_AT).toLocaleDateString('th-TH', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
                       hour: '2-digit',
-                      minute: '2-digit'
+                      minute: '2-digit',
+                      hour12: false
                     })}
                   </Typography>
                 </Box>
                 <Box className="flex justify-between items-center mb-2">
-                  <Typography variant="body2" className="text-gray-600">ยอดรวม:</Typography>
+                  <Typography variant="body2" className="text-gray-600">Total Amount:</Typography>
                   <Typography variant="body2" className="font-semibold">฿{(Number(selectedOrder.TOTAL_AMOUNT) || 0).toFixed(2)}</Typography>
                 </Box>
                 {selectedOrder.ISSUE_NOTE && (
@@ -372,10 +374,10 @@ export default function OrdersPage() {
                 )}
               </Box>
               
-              {/* รายการสินค้า */}
+              {/* Product List */}
               {Array.isArray(selectedOrder.REQUISITION_ITEMS) && selectedOrder.REQUISITION_ITEMS.length > 0 && (
                 <Box>
-                  <Typography variant="h6" className="mb-3">รายการสินค้า</Typography>
+                  <Typography variant="h6" className="mb-3">Product List</Typography>
                   <Box className="space-y-2">
                     {selectedOrder.REQUISITION_ITEMS.map((item) => (
                       <Box key={item.REQUISITION_ITEM_ID} className="flex justify-between items-center p-2 bg-gray-50 rounded">
@@ -384,7 +386,7 @@ export default function OrdersPage() {
                             {item.PRODUCT_NAME}
                           </Typography>
                           <Typography variant="body2" className="text-gray-600">
-                            จำนวน: {item.QUANTITY} x ฿{item.UNIT_PRICE}
+                            Quantity: {item.QUANTITY} x ฿{item.UNIT_PRICE}
                           </Typography>
                         </Box>
                         <Typography variant="body2" className="font-semibold">
@@ -399,7 +401,7 @@ export default function OrdersPage() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>ปิด</Button>
+          <Button onClick={handleCloseDialog}>Close</Button>
         </DialogActions>
       </Dialog>
     </motion.div>

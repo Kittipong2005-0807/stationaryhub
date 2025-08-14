@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
         if (!userId) {
           return NextResponse.json({ error: "User ID is required" }, { status: 400 })
         }
-        const managerUserId = session.user.AdLoginName || session.user.name
+        const managerUserId = (session.user as any).AdLoginName || session.user.name
         const canSubmit = await OrgCode3Service.canUserSubmitToManager(userId, managerUserId)
         return NextResponse.json({ canSubmit })
 
