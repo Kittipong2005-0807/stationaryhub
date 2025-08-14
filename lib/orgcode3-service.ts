@@ -52,12 +52,27 @@ export class OrgCode3Service {
       
       if (!userData || userData.length === 0) {
         console.log("No user found in userWithRoles view with EmpCode:", userId)
-        return null
+        
+        // Fallback: Try to find user in USERS table
+        console.log("Trying fallback: searching in USERS table...")
+        const fallbackUser = await prisma.uSERS.findUnique({
+          where: { USER_ID: userId },
+          select: { SITE_ID: true }
+        })
+        
+        if (fallbackUser?.SITE_ID) {
+          console.log("Found SITE_ID in USERS table:", fallbackUser.SITE_ID)
+          return fallbackUser.SITE_ID
+        }
+        
+        // If still no SITE_ID, use default
+        console.log("No SITE_ID found, using default 'HQ'")
+        return 'HQ'
       }
       
       const orgcode3 = userData[0].orgcode3
       console.log("Found orgcode3:", orgcode3)
-      return orgcode3
+      return orgcode3 || 'HQ' // Fallback to 'HQ' if orgcode3 is null
     } catch (error: unknown) {
       console.error('Error fetching user SITE_ID:', error)
       if (error instanceof Error) {
@@ -66,7 +81,10 @@ export class OrgCode3Service {
           stack: error.stack
         })
       }
-      return null
+      
+      // Fallback: return default SITE_ID
+      console.log("Error occurred, using fallback SITE_ID: 'HQ'")
+      return 'HQ'
     }
   }
 
@@ -214,6 +232,85 @@ export class OrgCode3Service {
     } catch (error) {
       console.error('Error checking user-manager relationship:', error)
       return false
+    }
+  }
+
+  /**
+   * ดึงข้อมูลคำสั่งซื้อทั้งหมดจากแผนกเดียวกัน (SITE_ID เดียวกัน)
+   */
+  static async getAllRequisitionsForDepartment(userId: string): Promise<unknown[]> {
+    try {
+      console.log("🏢 Getting all requisitions for department of user:", userId)
+      
+      // ดึง SITE_ID ของ user
+      const userSiteId = await this.getUserSiteId(userId)
+      
+      console.log("🏢 User SITE_ID:", userSiteId)
+      
+      // ดึง requisitions ทั้งหมดจาก SITE_ID เดียวกัน
+      const requisitions = await prisma.$queryRaw`
+        SELECT
+          r.REQUISITION_ID, 
+          r.USER_ID, 
+          r.STATUS, 
+          r.SUBMITTED_AT, 
+          r.TOTAL_AMOUNT, 
+          r.SITE_ID, 
+          r.ISSUE_NOTE, 
+          u.USERNAME, 
+          u.DEPARTMENT,
+          u.ROLE
+        FROM REQUISITIONS r
+        JOIN USERS u ON r.USER_ID = u.USER_ID
+        WHERE r.SITE_ID = ${userSiteId}
+        ORDER BY r.SUBMITTED_AT DESC
+      `
+      
+      console.log("🏢 Found department requisitions:", requisitions)
+      return Array.isArray(requisitions) ? requisitions : []
+    } catch (error: unknown) {
+      console.error('Error fetching department requisitions:', error)
+      if (error instanceof Error) { 
+        console.error('Error details:', { message: error.message, stack: error.stack }) 
+      }
+      return []
+    }
+  }
+
+  /**
+   * ดึงข้อมูลคำสั่งซื้อทั้งหมดจาก SITE_ID ที่กำหนด (สำหรับกรณีที่ต้องการข้อมูลจาก SITE_ID เฉพาะ)
+   */
+  static async getRequisitionsBySiteId(siteId: string): Promise<unknown[]> {
+    try {
+      console.log("🏢 Getting all requisitions for SITE_ID:", siteId)
+      
+      // ดึง requisitions ทั้งหมดจาก SITE_ID ที่กำหนด
+      const requisitions = await prisma.$queryRaw`
+        SELECT
+          r.REQUISITION_ID, 
+          r.USER_ID, 
+          r.STATUS, 
+          r.SUBMITTED_AT, 
+          r.TOTAL_AMOUNT, 
+          r.SITE_ID, 
+          r.ISSUE_NOTE, 
+          u.USERNAME, 
+          u.DEPARTMENT,
+          u.ROLE
+        FROM REQUISITIONS r
+        JOIN USERS u ON r.USER_ID = u.USER_ID
+        WHERE r.SITE_ID = ${siteId}
+        ORDER BY r.SUBMITTED_AT DESC
+      `
+      
+      console.log("🏢 Found requisitions for SITE_ID:", siteId, requisitions)
+      return Array.isArray(requisitions) ? requisitions : []
+    } catch (error: unknown) {
+      console.error('Error fetching requisitions by SITE_ID:', error)
+      if (error instanceof Error) { 
+        console.error('Error details:', { message: error.message, stack: error.stack }) 
+      }
+      return []
     }
   }
 

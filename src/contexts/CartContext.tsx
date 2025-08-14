@@ -83,3 +83,8 @@ export function useCart() {
   }
   return context
 }
+
+// Helper function to check if user can use cart
+export function canUseCart(userRole?: string): boolean {
+  return userRole === "USER" || userRole === "MANAGER"
+}

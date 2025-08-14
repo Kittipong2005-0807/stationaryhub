@@ -48,8 +48,8 @@ export async function GET(request: NextRequest) {
         if (!userId) {
           return NextResponse.json({ error: "User ID is required" }, { status: 400 })
         }
-        const siteId = await OrgCode3Service.getUserSiteId(userId)
-        return NextResponse.json({ siteId })
+        const userSiteIdResult = await OrgCode3Service.getUserSiteId(userId)
+        return NextResponse.json({ siteId: userSiteIdResult })
 
       case "getManagersBySiteId":
         if (!userId) {
@@ -75,6 +75,21 @@ export async function GET(request: NextRequest) {
         }
         const requisitions = await OrgCode3Service.getRequisitionsForManager(userId)
         return NextResponse.json({ requisitions })
+        
+      case "getAllRequisitionsForDepartment":
+        if (!userId) {
+          return NextResponse.json({ error: "User ID is required" }, { status: 400 })
+        }
+        const departmentRequisitions = await OrgCode3Service.getAllRequisitionsForDepartment(userId)
+        return NextResponse.json({ requisitions: departmentRequisitions })
+        
+      case "getRequisitionsBySiteId":
+        const siteId = searchParams.get("siteId")
+        if (!siteId) {
+          return NextResponse.json({ error: "Site ID is required" }, { status: 400 })
+        }
+        const siteRequisitions = await OrgCode3Service.getRequisitionsBySiteId(siteId)
+        return NextResponse.json({ requisitions: siteRequisitions })
 
       case "getStats":
         const stats = await OrgCode3Service.getSiteIdStats()

@@ -4,7 +4,8 @@ import { useState } from "react"
 import { Card, CardContent, Typography, Button, TextField, Box, Chip, IconButton } from "@mui/material"
 import { Add, Remove, ShoppingCart, FavoriteBorder, Favorite, Inventory } from "@mui/icons-material"
 import type { Product } from "@/lib/database"
-import { useCart } from "@/src/contexts/CartContext"
+import { useCart, canUseCart } from "@/src/contexts/CartContext"
+import { useAuth } from "@/src/contexts/AuthContext"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import StatusBadge from "./ui/StatusBadge"
@@ -23,6 +24,10 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
   const [imageLoading, setImageLoading] = useState(true)
   const { addToCart } = useCart()
   const { showSuccess, showError, showWarning } = useToast()
+  const { user } = useAuth()
+  
+  // Check if user can use cart (USER or MANAGER)
+  const canUseCartForUser = canUseCart(user?.ROLE)
 
   const handleAddToCart = async () => {
     if (quantity > product.STOCK_QUANTITY) {
@@ -82,58 +87,62 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
           }}
           className="glass-card hover:shadow-lg"
         >
-        {/* Image */}
-        <Box style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <Image
-            src={product.PHOTO_URL || "/placeholder.svg"}
-            alt={product.PRODUCT_NAME}
-            width={180}
-            height={180}
-            style={{ objectFit: "cover", borderRadius: 12, border: "1px solid #eee", background: '#fafafa' }}
-          />
-        </Box>
-        {/* Content */}
-        <Box style={{ flex: 3, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 16, position: 'relative' }}>
-          {/* Promotion/Store badges */}
-          <Box style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-            <Chip label="LazPick" size="small" color="secondary" />
-            {/* Add other badges as needed */}
-          </Box>
-          {/* Product name */}
-          <Typography variant="h6" style={{ fontWeight: 700, marginBottom: 12 }}>
-            {product.PRODUCT_NAME}
-          </Typography>
-          {/* Bullet details */}
-          {/* Quantity Selector */}
-          <Box style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <IconButton onClick={decrementQuantity} disabled={quantity <= 1} size="small" style={{ background: '#f3f3f3', borderRadius: 8 }}>
-              <Remove />
-            </IconButton>
-            <TextField
-              type="number"
-              value={quantity}
-              onChange={(e) => handleQuantityChange(e.target.value)}
-              size="small"
-              inputProps={{ min: 1, className: 'text-center font-semibold', 'aria-label': 'Product quantity' }}
-              style={{ width: 56 }}
+          {/* Image */}
+          <Box style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <Image
+              src={product.PHOTO_URL || "/placeholder.svg"}
+              alt={product.PRODUCT_NAME}
+              width={180}
+              height={180}
+              style={{ objectFit: "cover", borderRadius: 12, border: "1px solid #eee", background: '#fafafa' }}
             />
-            <IconButton onClick={incrementQuantity} size="small" style={{ background: '#f3f3f3', borderRadius: 8 }}>
-              <Add />
-            </IconButton>
           </Box>
-          {/* Price + Button */}
-          <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
-            <Typography variant="h5" style={{ color: "#FF5722", fontWeight: 700 }}>฿{Number(product.UNIT_COST || 0).toFixed(2)}</Typography>
-            <Box>
-              <IconButton onClick={() => setIsFavorite(!isFavorite)} aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}>
-                {isFavorite ? <Favorite className="text-red-500" /> : <FavoriteBorder className="text-gray-400" />}
-              </IconButton>
-              <Button variant="contained" color="primary" startIcon={<ShoppingCart />} onClick={handleAddToCart} disabled={isAdding} style={{ borderRadius: 20, marginLeft: 8 }}>
-                {isAdding ? "Adding..." : "Add to Cart"}
-              </Button>
+          {/* Content */}
+          <Box style={{ flex: 3, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 16, position: 'relative' }}>
+            {/* Promotion/Store badges */}
+            <Box style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+              <Chip label="LazPick" size="small" color="secondary" />
+              {/* Add other badges as needed */}
+            </Box>
+            {/* Product name */}
+            <Typography variant="h6" style={{ fontWeight: 700, marginBottom: 12 }}>
+              {product.PRODUCT_NAME}
+            </Typography>
+            {/* Bullet details */}
+            {/* Quantity Selector */}
+            {canUseCartForUser && (
+              <Box style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                <IconButton onClick={decrementQuantity} disabled={quantity <= 1} size="small" style={{ background: '#f3f3f3', borderRadius: 8 }}>
+                  <Remove />
+                </IconButton>
+                <TextField
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => handleQuantityChange(e.target.value)}
+                  size="small"
+                  inputProps={{ min: 1, className: 'text-center font-semibold', 'aria-label': 'Product quantity' }}
+                  style={{ width: 56 }}
+                />
+                <IconButton onClick={incrementQuantity} size="small" style={{ background: '#f3f3f3', borderRadius: 8 }}>
+                  <Add />
+                </IconButton>
+              </Box>
+            )}
+            {/* Price + Button */}
+            <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+              <Typography variant="h5" style={{ color: "#FF5722", fontWeight: 700 }}>฿{Number(product.UNIT_COST || 0).toFixed(2)}</Typography>
+              <Box>
+                <IconButton onClick={() => setIsFavorite(!isFavorite)} aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}>
+                  {isFavorite ? <Favorite className="text-red-500" /> : <FavoriteBorder className="text-gray-400" />}
+                </IconButton>
+                {canUseCartForUser && (
+                  <Button variant="contained" color="primary" startIcon={<ShoppingCart />} onClick={handleAddToCart} disabled={isAdding} style={{ borderRadius: 20, marginLeft: 8 }}>
+                    {isAdding ? "Adding..." : "Add to Cart"}
+                  </Button>
+                )}
+              </Box>
             </Box>
           </Box>
-        </Box>
         </Card>
       </motion.div>
     )
@@ -237,7 +246,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
               </Typography>
             </motion.div>
             {/* Quantity Selector */}
-            {!isOutOfStock && (
+            {canUseCartForUser && !isOutOfStock && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -301,64 +310,66 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
               </motion.div>
             )}
             {/* Add to Cart Button */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button
-                variant="contained"
-                fullWidth
-                startIcon={isAdding ? null : <ShoppingCart />}
-                onClick={handleAddToCart}
-                disabled={isAdding || isOutOfStock}
-                className={`btn-gradient-primary rounded-2xl py-3 font-bold text-white shadow-lg ${
-                  isAdding ? "animate-pulse" : ""
-                }`}
-                aria-label={`Add ${product.PRODUCT_NAME} to cart`}
+            {canUseCartForUser && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <AnimatePresence mode="wait">
-                  {isAdding ? (
-                    <motion.div
-                      key="adding"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="flex items-center gap-2"
-                    >
-                      <div className="loading-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                      </div>
-                      Added!
-                    </motion.div>
-                  ) : isOutOfStock ? (
-                    <motion.span
-                      key="outofstock"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                    >
-                      Out of Stock
-                    </motion.span>
-                  ) : (
-                    <motion.span
-                      key="add"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                    >
-                      Add to Cart
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </Button>
-            </motion.div>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  startIcon={isAdding ? null : <ShoppingCart />}
+                  onClick={handleAddToCart}
+                  disabled={isAdding || isOutOfStock}
+                  className={`btn-gradient-primary rounded-2xl py-3 font-bold text-white shadow-lg ${
+                    isAdding ? "animate-pulse" : ""
+                  }`}
+                  aria-label={`Add ${product.PRODUCT_NAME} to cart`}
+                >
+                  <AnimatePresence mode="wait">
+                    {isAdding ? (
+                      <motion.div
+                        key="adding"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="flex items-center gap-2"
+                      >
+                        <div className="loading-dots">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                        Added!
+                      </motion.div>
+                    ) : isOutOfStock ? (
+                      <motion.span
+                        key="outofstock"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                      >
+                        Out of Stock
+                      </motion.span>
+                    ) : (
+                      <motion.span
+                        key="add"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                      >
+                        Add to Cart
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </Button>
+              </motion.div>
+            )}
             {/* Total Price Preview */}
-            {!isOutOfStock && quantity > 1 && (
+            {canUseCartForUser && !isOutOfStock && quantity > 1 && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}

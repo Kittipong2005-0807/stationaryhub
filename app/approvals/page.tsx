@@ -47,6 +47,7 @@ export default function ApprovalsPage() {
   const [note, setNote] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<"all" | "pending" | "approved" | "rejected">("all")
   const router = useRouter()
   const { data: session } = useSession()
   const user = session?.user as unknown as { EmpCode?: string; USER_ID?: string; AdLoginName?: string; ROLE?: string }
@@ -210,6 +211,36 @@ export default function ApprovalsPage() {
     });
   }
 
+  // ฟังก์ชันสำหรับฟิลเตอร์ข้อมูล
+  const getFilteredRequisitions = () => {
+    let filtered = requisitions
+    
+    // กรองตามสถานะที่เลือก
+    switch (activeFilter) {
+      case "pending":
+        filtered = requisitions.filter(r => r.STATUS === "PENDING")
+        break
+      case "approved":
+        filtered = requisitions.filter(r => r.STATUS === "APPROVED")
+        break
+      case "rejected":
+        filtered = requisitions.filter(r => r.STATUS === "REJECTED")
+        break
+      default:
+        // สำหรับ "all" ให้เรียงลำดับ: PENDING อยู่ด้านบน, APPROVED/REJECTED อยู่ด้านล่าง
+        filtered = [...requisitions].sort((a, b) => {
+          if (a.STATUS === "PENDING" && b.STATUS !== "PENDING") return -1
+          if (a.STATUS !== "PENDING" && b.STATUS === "PENDING") return 1
+          return 0
+        })
+        break
+    }
+    
+    return filtered
+  }
+
+  const filteredRequisitions = getFilteredRequisitions()
+
   const pendingCount = requisitions.filter(r => r.STATUS === "PENDING").length
   const approvedCount = requisitions.filter(r => r.STATUS === "APPROVED").length
   const rejectedCount = requisitions.filter(r => r.STATUS === "REJECTED").length
@@ -292,6 +323,72 @@ export default function ApprovalsPage() {
           </Card>
         </motion.div>
 
+        {/* Filter Tabs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mb-6"
+        >
+          <Card className="bg-white shadow-lg border-0 rounded-2xl overflow-hidden">
+            <CardContent className="p-0">
+              <div className="flex flex-wrap gap-2 p-4">
+                <Button
+                  variant={activeFilter === "all" ? "default" : "outline"}
+                  onClick={() => setActiveFilter("all")}
+                  className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                    activeFilter === "all"
+                      ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg hover:shadow-xl"
+                      : "hover:bg-gray-50 border-gray-200"
+                  }`}
+                >
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  All ({requisitions.length})
+                </Button>
+                
+                <Button
+                  variant={activeFilter === "pending" ? "default" : "outline"}
+                  onClick={() => setActiveFilter("pending")}
+                  className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                    activeFilter === "pending"
+                      ? "bg-gradient-to-r from-yellow-500 to-orange-600 text-white shadow-lg hover:shadow-xl"
+                      : "hover:bg-yellow-50 border-yellow-200 text-yellow-700"
+                  }`}
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  Pending ({pendingCount})
+                </Button>
+                
+                <Button
+                  variant={activeFilter === "approved" ? "default" : "outline"}
+                  onClick={() => setActiveFilter("approved")}
+                  className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                    activeFilter === "approved"
+                      ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg hover:shadow-xl"
+                      : "hover:bg-green-50 border-green-200 text-green-700"
+                  }`}
+                >
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  Approved ({approvedCount})
+                </Button>
+                
+                <Button
+                  variant={activeFilter === "rejected" ? "default" : "outline"}
+                  onClick={() => setActiveFilter("rejected")}
+                  className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                    activeFilter === "rejected"
+                      ? "bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-lg hover:shadow-xl"
+                      : "hover:bg-red-50 border-red-200 text-red-700"
+                  }`}
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Rejected ({rejectedCount})
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {user?.ROLE === "MANAGER" && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -312,12 +409,51 @@ export default function ApprovalsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
+          className="space-y-8"
         >
-                     <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b">
-              <CardTitle className="text-xl font-semibold text-gray-800">
-                Requisition Requests
+          {/* Unified Table View with Filter */}
+          <Card className="bg-white shadow-xl border-0 rounded-2xl overflow-hidden">
+            <CardHeader className={`border-b ${
+              activeFilter === "pending" 
+                ? "bg-gradient-to-r from-yellow-50 to-orange-100 border-yellow-200"
+                : activeFilter === "approved"
+                ? "bg-gradient-to-r from-green-50 to-emerald-100 border-green-200"
+                : activeFilter === "rejected"
+                ? "bg-gradient-to-r from-red-50 to-pink-100 border-red-200"
+                : "bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200"
+            }`}>
+              <CardTitle className={`text-xl font-semibold flex items-center gap-3 ${
+                activeFilter === "pending" 
+                  ? "text-yellow-800"
+                  : activeFilter === "approved"
+                  ? "text-green-800"
+                  : activeFilter === "rejected"
+                  ? "text-red-800"
+                  : "text-gray-800"
+              }`}>
+                {activeFilter === "pending" && <Clock className="h-6 w-6 text-yellow-600" />}
+                {activeFilter === "approved" && <CheckSquare className="h-6 w-6 text-green-600" />}
+                {activeFilter === "rejected" && <AlertTriangle className="h-6 w-6 text-red-600" />}
+                {activeFilter === "all" && <ClipboardList className="h-6 w-6 text-gray-600" />}
+                {activeFilter === "all" && "All Requisitions"}
+                {activeFilter === "pending" && `Pending Requisitions (${pendingCount})`}
+                {activeFilter === "approved" && `Approved Requisitions (${approvedCount})`}
+                {activeFilter === "rejected" && `Rejected Requisitions (${rejectedCount})`}
               </CardTitle>
+              <p className={`text-sm ${
+                activeFilter === "pending" 
+                  ? "text-yellow-700"
+                  : activeFilter === "approved"
+                  ? "text-green-700"
+                  : activeFilter === "rejected"
+                  ? "text-red-700"
+                  : "text-gray-600"
+              }`}>
+                {activeFilter === "all" && "View all requisitions across all statuses"}
+                {activeFilter === "pending" && "Requisitions awaiting your approval or rejection"}
+                {activeFilter === "approved" && "Requisitions that have been approved"}
+                {activeFilter === "rejected" && "Requisitions that have been rejected"}
+              </p>
             </CardHeader>
             <CardContent className="p-0">
               {loading ? (
@@ -335,33 +471,153 @@ export default function ApprovalsPage() {
                 </div>
               ) : (
                 <div className="overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-50/50 hover:bg-gray-50/70">
-                        <TableHead className="font-semibold text-gray-700">Requisition ID</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Requested By</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Submitted Date</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Total Amount</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Status</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <AnimatePresence>
-                        {requisitions.map((requisition, index) => {
-                          console.log("TOTAL_AMOUNT typeof:", typeof requisition.TOTAL_AMOUNT, "value:", requisition.TOTAL_AMOUNT)
-                          return (
+                  {filteredRequisitions.length === 0 ? (
+                    <div className="p-12 text-center">
+                      <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                        activeFilter === "pending" 
+                          ? "bg-gradient-to-r from-yellow-100 to-orange-100"
+                          : activeFilter === "approved"
+                          ? "bg-gradient-to-r from-green-100 to-emerald-100"
+                          : activeFilter === "rejected"
+                          ? "bg-gradient-to-r from-red-100 to-pink-100"
+                          : "bg-gradient-to-r from-gray-100 to-gray-200"
+                      }`}>
+                        {activeFilter === "pending" && <Clock className="h-10 w-10 text-yellow-600" />}
+                        {activeFilter === "approved" && <CheckSquare className="h-10 w-10 text-green-600" />}
+                        {activeFilter === "rejected" && <AlertTriangle className="h-10 w-10 text-red-600" />}
+                        {activeFilter === "all" && <ClipboardList className="h-10 w-10 text-gray-400" />}
+                      </div>
+                      <h3 className={`text-xl font-semibold mb-2 ${
+                        activeFilter === "pending" 
+                          ? "text-yellow-700"
+                          : activeFilter === "approved"
+                          ? "text-green-700"
+                          : activeFilter === "rejected"
+                          ? "text-red-700"
+                          : "text-gray-500"
+                      }`}>
+                        {activeFilter === "pending" && "No pending requisitions"}
+                        {activeFilter === "approved" && "No approved requisitions"}
+                        {activeFilter === "rejected" && "No rejected requisitions"}
+                        {activeFilter === "all" && "No requisitions found"}
+                      </h3>
+                      <p className={`max-w-md mx-auto ${
+                        activeFilter === "pending" 
+                          ? "text-yellow-600"
+                          : activeFilter === "approved"
+                          ? "text-green-600"
+                          : activeFilter === "rejected"
+                          ? "text-red-600"
+                          : "text-gray-400"
+                      }`}>
+                        {activeFilter === "pending" && "All requisitions have been processed. You're all caught up!"}
+                        {activeFilter === "approved" && "No requisitions have been approved yet."}
+                        {activeFilter === "rejected" && "No requisitions have been rejected yet."}
+                        {activeFilter === "all" && "No requisitions found in the system."}
+                      </p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className={`${
+                          activeFilter === "pending" 
+                            ? "bg-yellow-50/50 hover:bg-yellow-50/70"
+                            : activeFilter === "approved"
+                            ? "bg-green-50/50 hover:bg-green-50/70"
+                            : activeFilter === "rejected"
+                            ? "bg-red-50/50 hover:bg-red-50/70"
+                            : "bg-gray-50/50 hover:bg-gray-50/70"
+                        }`}>
+                          <TableHead className={`font-semibold ${
+                            activeFilter === "pending" 
+                              ? "text-yellow-800"
+                              : activeFilter === "approved"
+                              ? "text-green-800"
+                              : activeFilter === "rejected"
+                              ? "text-red-800"
+                              : "text-gray-700"
+                          }`}>Requisition ID</TableHead>
+                          <TableHead className={`font-semibold ${
+                            activeFilter === "pending" 
+                              ? "text-yellow-800"
+                              : activeFilter === "approved"
+                              ? "text-green-800"
+                              : activeFilter === "rejected"
+                              ? "text-red-800"
+                              : "text-gray-700"
+                          }`}>Requested By</TableHead>
+                          <TableHead className={`font-semibold ${
+                            activeFilter === "pending" 
+                              ? "text-yellow-800"
+                              : activeFilter === "approved"
+                              ? "text-green-800"
+                              : activeFilter === "rejected"
+                              ? "text-red-800"
+                              : "text-gray-700"
+                          }`}>Submitted Date</TableHead>
+                          <TableHead className={`font-semibold ${
+                            activeFilter === "pending" 
+                              ? "text-yellow-800"
+                              : activeFilter === "approved"
+                              ? "text-green-800"
+                              : activeFilter === "rejected"
+                              ? "text-red-800"
+                              : "text-gray-700"
+                          }`}>Total Amount</TableHead>
+                          <TableHead className={`font-semibold ${
+                            activeFilter === "pending" 
+                              ? "text-yellow-800"
+                              : activeFilter === "approved"
+                              ? "text-green-800"
+                              : activeFilter === "rejected"
+                              ? "text-red-800"
+                              : "text-gray-700"
+                          }`}>Status</TableHead>
+                          <TableHead className={`font-semibold ${
+                            activeFilter === "pending" 
+                              ? "text-yellow-800"
+                              : activeFilter === "approved"
+                              ? "text-green-800"
+                              : activeFilter === "rejected"
+                              ? "text-red-800"
+                              : "text-gray-700"
+                          }`}>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <AnimatePresence>
+                          {filteredRequisitions.map((requisition, index) => (
                             <motion.tr
                               key={requisition.REQUISITION_ID}
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -20 }}
                               transition={{ delay: index * 0.1 }}
-                              className="hover:bg-gray-50/50 transition-colors duration-200"
+                              className={`transition-colors duration-200 ${
+                                activeFilter === "pending" 
+                                  ? "hover:bg-yellow-50/50"
+                                  : activeFilter === "approved"
+                                  ? "hover:bg-green-50/50"
+                                  : activeFilter === "rejected"
+                                  ? "hover:bg-red-50/50"
+                                  : "hover:bg-gray-50/50"
+                              }`}
                             >
                               <TableCell>
                                 <div className="flex items-center gap-2">
-                                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                    activeFilter === "pending" 
+                                      ? "bg-gradient-to-r from-yellow-500 to-orange-600"
+                                      : activeFilter === "approved"
+                                      ? "bg-gradient-to-r from-green-500 to-emerald-600"
+                                      : activeFilter === "rejected"
+                                      ? "bg-gradient-to-r from-red-500 to-pink-600"
+                                      : requisition.STATUS === "APPROVED"
+                                      ? "bg-gradient-to-r from-green-500 to-emerald-600"
+                                      : requisition.STATUS === "REJECTED"
+                                      ? "bg-gradient-to-r from-red-500 to-pink-600"
+                                      : "bg-gradient-to-r from-gray-500 to-gray-600"
+                                  }`}>
                                     <span className="text-white text-sm font-bold">#{requisition.REQUISITION_ID}</span>
                                   </div>
                                 </div>
@@ -404,7 +660,7 @@ export default function ApprovalsPage() {
                                     <Eye className="h-4 w-4 mr-2" />
                                     View
                                   </Button>
-                                  {requisition.STATUS === "PENDING" && (
+                                  {requisition.STATUS === "PENDING" && user?.ROLE === "MANAGER" && (
                                     <>
                                       <Button
                                         size="sm"
@@ -428,30 +684,12 @@ export default function ApprovalsPage() {
                                 </div>
                               </TableCell>
                             </motion.tr>
-                          )
-                        })}
-                      </AnimatePresence>
-                    </TableBody>
-                  </Table>
+                          ))}
+                        </AnimatePresence>
+                      </TableBody>
+                    </Table>
+                  )}
                 </div>
-              )}
-
-              {!loading && requisitions.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-center py-20"
-                >
-                  <div className="w-24 h-24 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <ClipboardList className="h-12 w-12 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-500 mb-2">
-                    No requisitions found
-                  </h3>
-                  <p className="text-gray-400 max-w-md mx-auto">
-                    All requisitions have been processed. Check back later for new requests.
-                  </p>
-                </motion.div>
               )}
             </CardContent>
           </Card>

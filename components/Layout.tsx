@@ -250,7 +250,9 @@ export default function Layout({ children }: LayoutProps) {
       items.push(
         { label: "Dashboard", path: "/manager", icon: Dashboard },
         { label: "Approvals", path: "/approvals", icon: Assignment },
-        { label: "Products", path: "/", icon: Inventory },
+        { label: "Products", path: "/manager/products", icon: Inventory },
+        { label: "Cart", path: "/manager/cart", icon: ShoppingCart, badge: getTotalItems() },
+        { label: "Orders", path: "/manager/orders", icon: Assignment },
       )
     }
 
