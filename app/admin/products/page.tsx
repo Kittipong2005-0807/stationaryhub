@@ -62,7 +62,7 @@ export default function ProductManagementPage() {
     PRODUCT_NAME: "",
     CATEGORY_ID: 1,
     UNIT_COST: 0,
-    ORDER_UNIT: "PIECE",
+    ORDER_UNIT: "",
     PHOTO_URL: "",
   })
   const [loading, setLoading] = useState(false)
@@ -140,7 +140,7 @@ export default function ProductManagementPage() {
         PRODUCT_NAME: product.PRODUCT_NAME,
         CATEGORY_ID: product.CATEGORY_ID,
         UNIT_COST: product.UNIT_COST || 0,
-        ORDER_UNIT: product.ORDER_UNIT || "PIECE",
+        ORDER_UNIT: product.ORDER_UNIT || "",
         PHOTO_URL: product.PHOTO_URL || "",
       })
     } else {
@@ -150,7 +150,7 @@ export default function ProductManagementPage() {
         PRODUCT_NAME: "",
         CATEGORY_ID: 1,
         UNIT_COST: 0,
-        ORDER_UNIT: "PIECE",
+        ORDER_UNIT: "",
         PHOTO_URL: "",
       })
     }
@@ -165,6 +165,11 @@ export default function ProductManagementPage() {
   const handleSubmit = async () => {
     if (!formData.PRODUCT_NAME.trim()) {
       alert("Please enter product name")
+      return
+    }
+
+    if (!formData.ORDER_UNIT.trim()) {
+      alert("Please enter unit")
       return
     }
 
@@ -471,23 +476,47 @@ export default function ProductManagementPage() {
         </motion.div>
 
         {/* Add/Edit Product Dialog */}
-        <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-          <DialogTitle className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-            <Typography variant="h6" className="font-bold">
-              {editingProduct ? "Edit Product" : "Add New Product"}
+        <Dialog 
+          open={dialogOpen} 
+          onClose={handleCloseDialog} 
+          maxWidth="md" 
+          fullWidth
+          PaperProps={{
+            style: {
+              borderRadius: '16px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            }
+          }}
+        >
+          <DialogTitle 
+            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-2xl"
+            style={{ padding: '24px 32px' }}
+          >
+            <Typography variant="h5" className="font-bold">
+              {editingProduct ? "✏️ Edit Product" : "➕ Add New Product"}
+            </Typography>
+            <Typography variant="body2" className="text-blue-100 mt-1">
+              {editingProduct ? "Update product information" : "Create a new product in your inventory"}
             </Typography>
           </DialogTitle>
-          <DialogContent className="pt-6">
-            <Grid container spacing={3}>
+          <DialogContent 
+            className="pt-8 pb-6"
+            style={{ padding: '32px' }}
+          >
+            <Grid container spacing={4}>
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Item ID"
                   value={formData.ITEM_ID}
                   onChange={(e) => setFormData({ ...formData, ITEM_ID: e.target.value })}
-                  placeholder="P001"
+                  placeholder="P001, SKU123, etc."
                   variant="outlined"
                   size="medium"
+                  InputProps={{
+                    style: { borderRadius: '12px' }
+                  }}
+                  helperText="Optional: Enter a unique identifier for the product"
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -496,19 +525,24 @@ export default function ProductManagementPage() {
                   label="Product Name *"
                   value={formData.PRODUCT_NAME}
                   onChange={(e) => setFormData({ ...formData, PRODUCT_NAME: e.target.value })}
-                  placeholder="Product name"
+                  placeholder="Enter product name"
                   required
                   variant="outlined"
                   size="medium"
+                  InputProps={{
+                    style: { borderRadius: '12px' }
+                  }}
+                  helperText="Required: Enter the name of the product"
                 />
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth size="medium">
-                  <InputLabel>Category</InputLabel>
+                  <InputLabel>Category *</InputLabel>
                   <Select
                     value={formData.CATEGORY_ID}
                     onChange={(e) => setFormData({ ...formData, CATEGORY_ID: e.target.value as number })}
-                    label="Category"
+                    label="Category *"
+                    style={{ borderRadius: '12px' }}
                   >
                     {categories.map((category) => (
                       <MenuItem key={category.CATEGORY_ID} value={category.CATEGORY_ID}>
@@ -529,53 +563,81 @@ export default function ProductManagementPage() {
                   variant="outlined"
                   size="medium"
                   InputProps={{
-                    startAdornment: <span className="text-gray-500 mr-2">$</span>,
+                    startAdornment: <span className="text-gray-500 mr-2 font-semibold">$</span>,
+                    style: { borderRadius: '12px' }
                   }}
+                  helperText="Enter the price per unit"
                 />
               </Grid>
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth size="medium">
-                  <InputLabel>Unit</InputLabel>
-                  <Select
-                    value={formData.ORDER_UNIT}
-                    onChange={(e) => setFormData({ ...formData, ORDER_UNIT: e.target.value })}
-                    label="Unit"
-                  >
-                    <MenuItem value="PIECE">Piece</MenuItem>
-                    <MenuItem value="BOX">Box</MenuItem>
-                    <MenuItem value="PACK">Pack</MenuItem>
-                    <MenuItem value="REAM">Ream</MenuItem>
-                    <MenuItem value="ROLL">Roll</MenuItem>
-                    <MenuItem value="SET">Set</MenuItem>
-                  </Select>
-                </FormControl>
+                <TextField
+                  fullWidth
+                  label="Unit *"
+                  value={formData.ORDER_UNIT}
+                  onChange={(e) => setFormData({ ...formData, ORDER_UNIT: e.target.value })}
+                  placeholder="Piece, Box, Pack, Ream, Roll, Set, etc."
+                  required
+                  variant="outlined"
+                  size="medium"
+                  InputProps={{
+                    style: { borderRadius: '12px' }
+                  }}
+                  helperText="Required: Enter the unit of measurement (e.g., Piece, Box, Pack)"
+                />
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Image URL"
                   value={formData.PHOTO_URL}
                   onChange={(e) => setFormData({ ...formData, PHOTO_URL: e.target.value })}
                   placeholder="https://example.com/image.jpg"
-                  helperText="Enter product image URL (optional)"
                   variant="outlined"
                   size="medium"
+                  InputProps={{
+                    style: { borderRadius: '12px' }
+                  }}
+                  helperText="Optional: Enter product image URL"
                 />
+              </Grid>
+              <Grid item xs={12}>
+                <Box className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                  <Typography variant="body2" className="text-blue-700 font-medium mb-2">
+                    💡 Tips for better product management:
+                  </Typography>
+                  <ul className="text-blue-600 text-sm space-y-1">
+                    <li>• Use descriptive product names for easy identification</li>
+                    <li>• Choose appropriate categories to organize your inventory</li>
+                    <li>• Set accurate unit prices for cost tracking</li>
+                    <li>• Use consistent unit formats (e.g., "Piece", "Box", "Pack")</li>
+                    <li>• Add product images to improve visual recognition</li>
+                  </ul>
+                </Box>
               </Grid>
             </Grid>
           </DialogContent>
-          <DialogActions className="p-6 bg-gray-50">
-            <Button onClick={handleCloseDialog} color="inherit" variant="outlined" size="medium">
+          <DialogActions 
+            className="p-6 bg-gray-50 rounded-b-2xl"
+            style={{ padding: '24px 32px' }}
+          >
+            <Button 
+              onClick={handleCloseDialog} 
+              color="inherit" 
+              variant="outlined" 
+              size="large"
+              style={{ borderRadius: '12px', padding: '10px 24px' }}
+            >
               Cancel
             </Button>
             <Button
               onClick={handleSubmit}
               variant="contained"
-              disabled={loading || !formData.PRODUCT_NAME.trim()}
+              disabled={loading || !formData.PRODUCT_NAME.trim() || !formData.ORDER_UNIT.trim()}
               className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold"
-              size="medium"
+              size="large"
+              style={{ borderRadius: '12px', padding: '10px 24px' }}
             >
-              {loading ? "Saving..." : (editingProduct ? "Update" : "Add Product")}
+              {loading ? "Saving..." : (editingProduct ? "Update Product" : "Add Product")}
             </Button>
           </DialogActions>
         </Dialog>

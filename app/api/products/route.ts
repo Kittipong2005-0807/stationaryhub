@@ -10,9 +10,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma"
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,20 +64,50 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       )
     }
+
+    // Check ADMIN role
+    const user = session.user as any
+    if (user?.ROLE !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Access denied. Admin role required." },
+        { status: 403 }
+      )
+    }
     
     const body = await request.json()
     
-    // Add product to database
-    const newProduct = await prisma.$executeRaw`
-      INSERT INTO PRODUCTS (PRODUCT_NAME, CATEGORY_ID, UNIT_COST, STOCK_QUANTITY, PHOTO_URL, CREATED_AT)
-      VALUES (${body.PRODUCT_NAME}, ${body.CATEGORY_ID}, ${body.UNIT_COST}, ${body.STOCK_QUANTITY}, ${body.PHOTO_URL}, GETDATE())
-    `
+    // Validate required fields
+    if (!body.PRODUCT_NAME || !body.CATEGORY_ID || !body.ORDER_UNIT) {
+      return NextResponse.json(
+        { error: "Missing required fields: PRODUCT_NAME, CATEGORY_ID, ORDER_UNIT" },
+        { status: 400 }
+      )
+    }
     
-    return NextResponse.json({ success: true, product: newProduct })
+    // Add product to database using Prisma
+    const newProduct = await prisma.pRODUCTS.create({
+      data: {
+        ITEM_ID: body.ITEM_ID || null,
+        PRODUCT_NAME: body.PRODUCT_NAME,
+        CATEGORY_ID: parseInt(body.CATEGORY_ID),
+        UNIT_COST: body.UNIT_COST ? parseFloat(body.UNIT_COST) : null,
+        ORDER_UNIT: body.ORDER_UNIT,
+        PHOTO_URL: body.PHOTO_URL || null,
+      },
+      include: {
+        PRODUCT_CATEGORIES: true,
+      },
+    })
+    
+    return NextResponse.json({ 
+      success: true, 
+      product: newProduct,
+      message: "Product added successfully"
+    })
   } catch (error) {
     console.error("Error adding product:", error)
     return NextResponse.json(
-      { error: "Failed to add product" },
+      { error: "Failed to add product", details: error.message },
       { status: 500 }
     )
   }

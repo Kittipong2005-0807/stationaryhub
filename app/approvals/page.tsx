@@ -1,6 +1,6 @@
 "use client"
 
-import { useSession, signIn, signOut } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,9 +10,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
-import { CheckCircle, XCircle, Eye, ClipboardList, TrendingUp, Clock, CheckSquare, AlertTriangle } from "lucide-react"
+import { CheckCircle, XCircle, Eye, ClipboardList, TrendingUp, Clock, CheckSquare, AlertTriangle, RefreshCw, Download, FileText } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 interface RequisitionItem {
   ITEM_ID: number
@@ -48,6 +50,17 @@ export default function ApprovalsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [activeFilter, setActiveFilter] = useState<"all" | "pending" | "approved" | "rejected">("all")
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingRequisition, setEditingRequisition] = useState<Requisition | null>(null)
+  const [editFormData, setEditFormData] = useState({
+    deliveryDate: "",
+    contactPerson: "",
+    category: "",
+    companyName: "",
+    fax: "",
+    phone: "",
+    contact: ""
+  })
   const router = useRouter()
   const { data: session } = useSession()
   const user = session?.user as unknown as { EmpCode?: string; USER_ID?: string; AdLoginName?: string; ROLE?: string }
@@ -72,15 +85,29 @@ export default function ApprovalsPage() {
       })
       
       fetch(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
-        .then((res) => res.json())
+        .then((res) => {
+          console.log("Admin API response status:", res.status)
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`)
+          }
+          return res.json()
+        })
         .then((data) => {
           console.log("Fetched approved requisitions for admin:", data)
-          setRequisitions(data.requisitions || [])
+          if (data.requisitions && Array.isArray(data.requisitions)) {
+            setRequisitions(data.requisitions)
+          } else if (Array.isArray(data)) {
+            setRequisitions(data)
+          } else {
+            console.warn("Unexpected data format:", data)
+            setRequisitions([])
+          }
           setLoading(false)
         })
         .catch((error) => {
           console.error("Error fetching approved requisitions:", error)
-          alert("โหลดข้อมูล requisitions ไม่สำเร็จ")
+          alert("โหลดข้อมูล requisitions ไม่สำเร็จ: " + error.message)
+          setRequisitions([])
           setLoading(false)
         })
     } else {
@@ -133,11 +160,25 @@ export default function ApprovalsPage() {
 
       if (response.ok) {
         // อัปเดตสถานะใน UI โดยดึงข้อมูลใหม่จาก API orgcode3
-        const managerUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName
-        const response = await fetch(`/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
-        if (response.ok) {
-          const data = await response.json()
-          setRequisitions(data.requisitions || [])
+        if (user?.ROLE === "ADMIN") {
+          // Admin refresh ข้อมูล
+          const refreshResponse = await fetch(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
+          if (refreshResponse.ok) {
+            const data = await refreshResponse.json()
+            if (data.requisitions && Array.isArray(data.requisitions)) {
+              setRequisitions(data.requisitions)
+            } else if (Array.isArray(data)) {
+              setRequisitions(data)
+            }
+          }
+        } else {
+          // Manager refresh ข้อมูล
+          const managerUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName
+          const refreshResponse = await fetch(`/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
+          if (refreshResponse.ok) {
+            const data = await refreshResponse.json()
+            setRequisitions(data.requisitions || [])
+          }
         }
         setDialogOpen(false)
         alert(`Requisition ${actionType === "approve" ? "approved" : "rejected"} successfully!`)
@@ -148,6 +189,343 @@ export default function ApprovalsPage() {
       alert("Failed to update requisition. Please try again.")
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  // เพิ่มฟังก์ชัน refresh สำหรับ Admin
+  const handleRefresh = async () => {
+    if (!isAuthenticated) return
+    
+    setLoading(true)
+    
+    try {
+      if (user?.ROLE === "ADMIN") {
+        const response = await fetch(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.requisitions && Array.isArray(data.requisitions)) {
+            setRequisitions(data.requisitions)
+          } else if (Array.isArray(data)) {
+            setRequisitions(data)
+          }
+        }
+      } else {
+        const managerUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName
+        const response = await fetch(`/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
+        if (response.ok) {
+          const data = await response.json()
+          setRequisitions(data.requisitions || [])
+        }
+      }
+    } catch (error) {
+      console.error("Error refreshing data:", error)
+      alert("Failed to refresh data")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // เพิ่มฟังก์ชันดาวน์โหลดไฟล์ Excel/CSV สำหรับ Admin
+  const handleDownload = () => {
+    if (!requisitions.length) {
+      alert("ไม่มีข้อมูลให้ดาวน์โหลด")
+      return
+    }
+
+    // สร้างข้อมูล CSV สำหรับใบเบิกสินค้า
+    const headers = [
+      "ใบเบิกสินค้า",
+      "Requisition ID",
+      "วันที่ขอเบิก",
+      "ผู้ขอเบิก",
+      "Site ID",
+      "หมายเหตุ",
+      "สถานะ",
+      "รายการสินค้า",
+      "จำนวน",
+      "หน่วย",
+      "ราคาต่อหน่วย",
+      "ราคารวม"
+    ]
+
+    // สร้างข้อมูลรายการสินค้าทั้งหมด
+    const csvData: (string | number)[][] = []
+    
+    requisitions.forEach(req => {
+      if (req.REQUISITION_ITEMS && req.REQUISITION_ITEMS.length > 0) {
+        // สำหรับแต่ละ item ใน requisition
+        req.REQUISITION_ITEMS.forEach((item, index) => {
+          csvData.push([
+            `ใบเบิกสินค้า #${req.REQUISITION_ID}`, // ชื่อเอกสาร
+            req.REQUISITION_ID, // Requisition ID
+            formatDate(req.SUBMITTED_AT), // วันที่ขอเบิก
+            req.USER_ID, // ผู้ขอเบิก
+            req.SITE_ID, // Site ID
+            req.ISSUE_NOTE || "", // หมายเหตุ
+            req.STATUS, // สถานะ
+            item.PRODUCT_NAME || "Unknown Product", // รายการสินค้า
+            item.QUANTITY, // จำนวน
+            "ชิ้น", // หน่วย (default)
+            item.UNIT_PRICE, // ราคาต่อหน่วย
+            item.TOTAL_PRICE // ราคารวม
+          ])
+        })
+      } else {
+        // ถ้าไม่มี items ให้ใส่ข้อมูลหลัก
+        csvData.push([
+          `ใบเบิกสินค้า #${req.REQUISITION_ID}`,
+          req.REQUISITION_ID,
+          formatDate(req.SUBMITTED_AT),
+          req.USER_ID,
+          req.SITE_ID,
+          req.ISSUE_NOTE || "",
+          req.STATUS,
+          "ไม่มีรายการสินค้า",
+          "",
+          "",
+          "",
+          ""
+        ])
+      }
+    })
+
+    // รวม headers และ data
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map((cell: string | number) => `"${cell}"`).join(","))
+      .join("\n")
+
+    // สร้างไฟล์และดาวน์โหลด
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", `ใบเบิกสินค้า_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // เพิ่มฟังก์ชันดาวน์โหลดเฉพาะรายการ
+  const handleDownloadSingle = (requisition: Requisition) => {
+    if (!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0) {
+      alert("ไม่มีรายการสินค้าให้ดาวน์โหลด")
+      return
+    }
+
+    // สร้างข้อมูล CSV สำหรับใบเบิกสินค้าเฉพาะรายการ
+    const headers = [
+      "ใบเบิกสินค้า",
+      "Requisition ID",
+      "วันที่ขอเบิก",
+      "ผู้ขอเบิก",
+      "Site ID",
+      "หมายเหตุ",
+      "สถานะ",
+      "รายการสินค้า",
+      "จำนวน",
+      "หน่วย",
+      "ราคาต่อหน่วย",
+      "ราคารวม"
+    ]
+
+    // สร้างข้อมูลรายการสินค้าสำหรับ requisition เดียว
+    const csvData: (string | number)[][] = []
+    
+    requisition.REQUISITION_ITEMS.forEach((item, index) => {
+      csvData.push([
+        `ใบเบิกสินค้า #${requisition.REQUISITION_ID}`, // ชื่อเอกสาร
+        requisition.REQUISITION_ID, // Requisition ID
+        formatDate(requisition.SUBMITTED_AT), // วันที่ขอเบิก
+        requisition.USER_ID, // ผู้ขอเบิก
+        requisition.SITE_ID, // Site ID
+        requisition.ISSUE_NOTE || "", // หมายเหตุ
+        requisition.STATUS, // สถานะ
+        item.PRODUCT_NAME || "Unknown Product", // รายการสินค้า
+        item.QUANTITY, // จำนวน
+        "ชิ้น", // หน่วย (default)
+        item.UNIT_PRICE, // ราคาต่อหน่วย
+        item.TOTAL_PRICE // ราคารวม
+      ])
+    })
+
+    // รวม headers และ data
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map((cell: string | number) => `"${cell}"`).join(","))
+      .join("\n")
+
+    // สร้างไฟล์และดาวน์โหลด
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", `ใบเบิกสินค้า_${requisition.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // เพิ่มฟังก์ชันสร้าง PDF สำหรับใบเบิกสินค้า
+  const generatePDF = async (requisition: Requisition) => {
+    if (!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0) {
+      alert("ไม่มีรายการสินค้าให้สร้าง PDF")
+      return
+    }
+
+    try {
+      // สร้าง HTML element ชั่วคราว
+      const tempDiv = document.createElement('div')
+      tempDiv.style.position = 'absolute'
+      tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '-9999px'
+      tempDiv.style.width = '210mm' // A4 width
+      tempDiv.style.padding = '20mm'
+      tempDiv.style.backgroundColor = 'white'
+      tempDiv.style.fontFamily = 'Arial, sans-serif'
+      tempDiv.style.fontSize = '12px'
+      tempDiv.style.lineHeight = '1.4'
+      
+             // สร้าง HTML content สำหรับ SUPPLY REQUEST ORDER
+       tempDiv.innerHTML = `
+         <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
+           <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
+         </div>
+         
+                   <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px;">
+            <div style="text-align: left;">
+              <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold; text-transform: uppercase;">TO:</h3>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">${editFormData.companyName}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">FAX: ${editFormData.fax}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">PHONE: ${editFormData.phone}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">CONTACT: ${editFormData.contact}</p>
+            </div>
+           <div style="text-align: right;">
+             <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
+             <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Time:</strong> ${new Date(requisition.SUBMITTED_AT).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+             <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
+           </div>
+         </div>
+         
+                   <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+            <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
+            <p style="margin: 0 0 3px 0; font-size: 11px;">${editFormData.deliveryDate || '_________________________________'}</p>
+            <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
+            <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson}</p>
+          </div>
+          
+          <div style="margin-bottom: 20px; padding: 8px; background: #e8f4fd; border-left: 4px solid #2196f3;">
+            <h3 style="margin: 0; font-size: 12px; font-weight: bold; color: #1976d2;">หมวดหมู่: ${editFormData.category}</h3>
+          </div>
+        
+        <div style="margin-bottom: 25px;">
+          <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
+            <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${requisition.SITE_ID}</div>
+            <div style="font-size: 11px; color: #666; margin-top: 2px;">UCHA ${requisition.SITE_ID} - ${requisition.USER_ID}</div>
+          </div>
+          
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; font-size: 10px;">
+            <thead>
+              <tr>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 60px;">Itemnum</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 300px;">Description</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 60px;">Order</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 50px;">Unit</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 60px;">Cost</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 60px;">Sent</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 60px;">SRNum</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${requisition.REQUISITION_ITEMS.map((item, index) => `
+                <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'};">
+                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #1976d2;">SA${String(index + 1).padStart(3, '0')}</td>
+                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 9px;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
+                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.QUANTITY.toFixed(2)}</td>
+                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">EA</td>
+                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>
+                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center; color: #999;">...</td>
+                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center; font-weight: bold; color: #1976d2;">${requisition.REQUISITION_ID}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
+          <h3 style="margin: 0 0 10px 0; color: #1976d2;">สรุปยอดรวม</h3>
+          <div style="font-size: 18px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${Number(requisition.TOTAL_AMOUNT).toFixed(2)}</div>
+          <p style="margin: 10px 0 0 0; color: #1976d2;">จำนวนรายการ: ${requisition.REQUISITION_ITEMS.length} รายการ</p>
+          <p style="margin: 5px 0 0 0; color: #1976d2;">สถานะ: ${requisition.STATUS}</p>
+        </div>
+        
+        <div style="margin-top: 30px; text-align: center; color: #666; font-size: 10px; border-top: 1px solid #ddd; padding-top: 15px;">
+          <p style="margin: 0 0 5px 0;">เอกสารนี้ถูกสร้างโดยระบบ StationaryHub</p>
+          <p style="margin: 0 0 5px 0;">วันที่สร้าง: ${new Date().toLocaleDateString('th-TH')} เวลา: ${new Date().toLocaleTimeString('th-TH')}</p>
+          <p style="margin: 0;">Page 1 of 1</p>
+        </div>
+      `
+      
+      // เพิ่ม element ลงใน DOM
+      document.body.appendChild(tempDiv)
+      
+      // รอให้ content render เสร็จ
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // แปลง HTML เป็น canvas
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      })
+      
+      // ลบ element ชั่วคราว
+      document.body.removeChild(tempDiv)
+      
+      // สร้าง PDF
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const imgWidth = 210 // A4 width in mm
+      const pageHeight = 295 // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      let position = 0
+      
+      // เพิ่มหน้าแรก
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+      
+      // เพิ่มหน้าถัดไปถ้าจำเป็น
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+      
+      // ดาวน์โหลด PDF
+      pdf.save(`SUPPLY_REQUEST_ORDER_${requisition.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}.pdf`)
+      
+      alert('ไฟล์ SUPPLY REQUEST ORDER PDF ถูกสร้างและดาวน์โหลดแล้ว!')
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + (error as Error).message)
+    }
+  }
+
+  // เพิ่มฟังก์ชันสำหรับเปิดหน้าแก้ไข
+  const handleEdit = (requisition: Requisition) => {
+    setEditingRequisition(requisition)
+    setEditDialogOpen(true)
+  }
+
+  // เพิ่มฟังก์ชันสำหรับบันทึกการแก้ไข
+  const handleSaveEdit = () => {
+    setEditDialogOpen(false)
+    if (editingRequisition) {
+      generatePDF(editingRequisition)
     }
   }
 
@@ -263,19 +641,50 @@ export default function ApprovalsPage() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="flex items-center gap-3 mb-4"
+            className="flex items-center justify-between mb-4"
           >
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
-              <CheckSquare className="h-8 w-8 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
+                <CheckSquare className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Requisition Approvals
+                </h1>
+                <p className="text-gray-600 mt-2">
+                  Review and manage pending requisitions with ease
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Requisition Approvals
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Review and manage pending requisitions with ease
-              </p>
-            </div>
+            
+            {/* Refresh Button */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 }}
+              className="flex gap-3"
+            >
+                               
+              
+              <Button
+                onClick={handleRefresh}
+                disabled={loading}
+                variant="outline"
+                className="px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:shadow-lg border-blue-200 text-blue-600 hover:bg-blue-50"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    Loading...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh
+                  </div>
+                )}
+              </Button>
+            </motion.div>
           </motion.div>
         </div>
 
@@ -681,6 +1090,18 @@ export default function ApprovalsPage() {
                                       </Button>
                                     </>
                                   )}
+                                                                     {user?.ROLE === "ADMIN" && (
+                                     <Button
+                                       size="sm"
+                                       variant="outline"
+                                       onClick={() => handleEdit(requisition)}
+                                       disabled={!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0}
+                                       className="hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-600"
+                                     >
+                                       <FileText className="h-4 w-4 mr-2" />
+                                       แก้ไข & PDF
+                                       </Button>
+                                   )}
                                 </div>
                               </TableCell>
                             </motion.tr>
@@ -985,8 +1406,129 @@ export default function ApprovalsPage() {
               )}
             </DialogFooter>
           </DialogContent>
-        </Dialog>
-      </motion.div>
-    </div>
-  )
-}
+                 </Dialog>
+
+                   {/* Dialog สำหรับแก้ไขข้อมูล */}
+          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] bg-white overflow-y-auto">
+             <DialogHeader>
+               <DialogTitle className="flex items-center gap-3">
+                 <div className="w-10 h-10 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                   <FileText className="h-5 w-5 text-white" />
+                 </div>
+                 <div>
+                   <h2 className="text-xl font-bold text-gray-900">แก้ไขข้อมูล SUPPLY REQUEST ORDER</h2>
+                   <p className="text-sm text-gray-500 mt-1">ปรับแต่งข้อมูลก่อนสร้าง PDF</p>
+                 </div>
+               </DialogTitle>
+             </DialogHeader>
+             
+             <div className="space-y-6 py-4">
+               {/* ข้อมูลบริษัท */}
+               <div className="space-y-4">
+                 <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">ข้อมูลบริษัท</h3>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">ชื่อบริษัท</label>
+                     <input
+                       type="text"
+                       value={editFormData.companyName}
+                       onChange={(e) => setEditFormData({...editFormData, companyName: e.target.value})}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">FAX</label>
+                     <input
+                       type="text"
+                       value={editFormData.fax}
+                       onChange={(e) => setEditFormData({...editFormData, fax: e.target.value})}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">โทรศัพท์</label>
+                     <input
+                       type="text"
+                       value={editFormData.phone}
+                       onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">ผู้ติดต่อ</label>
+                     <input
+                       type="text"
+                       value={editFormData.contact}
+                       onChange={(e) => setEditFormData({...editFormData, contact: e.target.value})}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     />
+                   </div>
+                 </div>
+               </div>
+
+               {/* ข้อมูลการจัดส่ง */}
+               <div className="space-y-4">
+                 <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">ข้อมูลการจัดส่ง</h3>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">วันที่จัดส่ง</label>
+                     <input
+                       type="text"
+                       value={editFormData.deliveryDate}
+                       onChange={(e) => setEditFormData({...editFormData, deliveryDate: e.target.value})}
+                       placeholder="เช่น 15/01/2025 หรือ ภายใน 7 วัน"
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">ผู้ติดต่อเพิ่มเติม</label>
+                     <input
+                       type="text"
+                       value={editFormData.contactPerson}
+                       onChange={(e) => setEditFormData({...editFormData, contactPerson: e.target.value})}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                     />
+                   </div>
+                 </div>
+               </div>
+
+               {/* หมวดหมู่ */}
+               <div className="space-y-4">
+                 <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">หมวดหมู่สินค้า</h3>
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-2">หมวดหมู่</label>
+                   <input
+                     type="text"
+                     value={editFormData.category}
+                     onChange={(e) => setEditFormData({...editFormData, category: e.target.value})}
+                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                   />
+                 </div>
+               </div>
+
+               
+             </div>
+
+             <DialogFooter className="gap-3 pt-6 border-t border-gray-200">
+               <Button 
+                 variant="outline" 
+                 onClick={() => setEditDialogOpen(false)}
+                 className="flex-1 h-12 text-base font-medium"
+               >
+                 ยกเลิก
+               </Button>
+               <Button
+                 onClick={handleSaveEdit}
+                 className="flex-1 h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base font-medium"
+               >
+                 <FileText className="h-5 w-5 mr-2" />
+                 สร้าง PDF
+               </Button>
+             </DialogFooter>
+           </DialogContent>
+         </Dialog>
+       </motion.div>
+     </div>
+   )
+ }

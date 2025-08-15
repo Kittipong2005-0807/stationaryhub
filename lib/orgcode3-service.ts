@@ -390,7 +390,16 @@ export class OrgCode3Service {
       // ดึง requisitions ที่มี STATUS = 'APPROVED' (Manager approve แล้ว)
       const requisitions = await prisma.$queryRaw`
         SELECT
-          r.REQUISITION_ID, r.USER_ID, r.STATUS, r.SUBMITTED_AT, r.TOTAL_AMOUNT, r.SITE_ID, r.ISSUE_NOTE, u.USERNAME, u.DEPARTMENT
+          r.REQUISITION_ID, 
+          r.USER_ID, 
+          r.STATUS, 
+          r.SUBMITTED_AT, 
+          r.TOTAL_AMOUNT, 
+          r.SITE_ID, 
+          r.ISSUE_NOTE, 
+          u.USERNAME, 
+          u.DEPARTMENT,
+          u.ROLE as USER_ROLE
         FROM REQUISITIONS r
         JOIN USERS u ON r.USER_ID = u.USER_ID
         WHERE r.STATUS = 'APPROVED'
@@ -398,7 +407,63 @@ export class OrgCode3Service {
       `
       
       console.log("🔍 Found approved requisitions:", requisitions)
-      return Array.isArray(requisitions) ? requisitions : []
+      
+      // ดึงข้อมูล requisition items สำหรับแต่ละ requisition
+      if (Array.isArray(requisitions)) {
+        const enrichedRequisitions = await Promise.all(
+          requisitions.map(async (req: any) => {
+            try {
+              // ดึง requisition items
+              const items = await prisma.$queryRaw`
+                SELECT 
+                  ri.ITEM_ID,
+                  ri.REQUISITION_ID,
+                  ri.PRODUCT_ID,
+                  p.PRODUCT_NAME,
+                  ri.QUANTITY,
+                  ri.UNIT_PRICE,
+                  ri.TOTAL_PRICE
+                FROM REQUISITION_ITEMS ri
+                JOIN PRODUCTS p ON ri.PRODUCT_ID = p.PRODUCT_ID
+                WHERE ri.REQUISITION_ID = ${req.REQUISITION_ID}
+              `
+              
+              // ดึงข้อมูล approval history
+              const approvals = await prisma.$queryRaw`
+                SELECT 
+                  a.APPROVAL_ID,
+                  a.APPROVED_BY,
+                  a.STATUS,
+                  a.APPROVED_AT,
+                  a.NOTE,
+                  u.USERNAME as APPROVER_NAME
+                FROM APPROVALS a
+                JOIN USERS u ON a.APPROVED_BY = u.USER_ID
+                WHERE a.REQUISITION_ID = ${req.REQUISITION_ID}
+                ORDER BY a.APPROVED_AT DESC
+              `
+              
+              return {
+                ...req,
+                REQUISITION_ITEMS: Array.isArray(items) ? items : [],
+                APPROVALS: Array.isArray(approvals) ? approvals : []
+              }
+            } catch (itemError) {
+              console.error(`Error fetching items for requisition ${req.REQUISITION_ID}:`, itemError)
+              return {
+                ...req,
+                REQUISITION_ITEMS: [],
+                APPROVALS: []
+              }
+            }
+          })
+        )
+        
+        console.log("🔍 Enriched requisitions with items and approvals:", enrichedRequisitions)
+        return enrichedRequisitions
+      }
+      
+      return []
     } catch (error: unknown) {
       console.error('Error fetching approved requisitions for admin:', error)
       if (error instanceof Error) { 
