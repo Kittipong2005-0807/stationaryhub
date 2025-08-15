@@ -5,11 +5,13 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient }
 
 // Create single Prisma client instance
 const prismaClientSingleton = () => {
+  const databaseUrl = process.env.DATABASE_URL || "sqlserver://tcl_ryg2;database=StationaryNew;user=kittipong;password=password@1;trustServerCertificate=true"
+  
   return new PrismaClient({
     log: ["query", "error", "warn"],
     datasources: {
       db: {
-        url: process.env.DATABASE_URL,
+        url: databaseUrl,
       },
     },
   })

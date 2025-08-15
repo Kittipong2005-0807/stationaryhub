@@ -41,10 +41,13 @@ export class NotificationService {
         message
       })
 
+      // ดึง email จาก LDAP
+      const userEmail = await this.getUserEmailFromLDAP(userId)
+
       // ส่งอีเมลแจ้งเตือน (ถ้ามี email)
-      if (requisition.USERS?.EMAIL) {
+      if (userEmail) {
         await this.sendEmail(
-          requisition.USERS.EMAIL,
+          userEmail,
           'ยืนยันการส่งคำขอเบิก',
           this.createEmailTemplate('requisition_created', {
             requisitionId,
@@ -84,10 +87,13 @@ export class NotificationService {
         message
       })
 
+      // ดึง email จาก LDAP
+      const userEmail = await this.getUserEmailFromLDAP(requisition.USER_ID)
+
       // ส่งอีเมลแจ้งเตือน
-      if (requisition.USERS?.EMAIL) {
+      if (userEmail) {
         await this.sendEmail(
-          requisition.USERS.EMAIL,
+          userEmail,
           'คำขอเบิกได้รับการอนุมัติ',
           this.createEmailTemplate('requisition_approved', {
             requisitionId,
@@ -126,10 +132,13 @@ export class NotificationService {
         message
       })
 
+      // ดึง email จาก LDAP
+      const userEmail = await this.getUserEmailFromLDAP(requisition.USER_ID)
+
       // ส่งอีเมลแจ้งเตือน
-      if (requisition.USERS?.EMAIL) {
+      if (userEmail) {
         await this.sendEmail(
-          requisition.USERS.EMAIL,
+          userEmail,
           'คำขอเบิกถูกปฏิเสธ',
           this.createEmailTemplate('requisition_rejected', {
             requisitionId,
@@ -158,19 +167,19 @@ export class NotificationService {
 
       const orgcode3 = user[0].orgcode3
 
-      // หา managers ในแผนกเดียวกัน
-      const managers = await prisma.$queryRaw<{ USER_ID: string, EMAIL: string }[]>`
-        SELECT USER_ID, EMAIL 
-        FROM USERS 
-        WHERE ORGCODE3 = ${orgcode3} 
-        AND ROLE IN ('MANAGER', 'ADMIN', 'SUPER_ADMIN', 'DEV')
+      // หา managers ในแผนกเดียวกันจาก LDAP
+      const managers = await prisma.$queryRaw<{ USER_ID: string, CurrentEmail: string, AdLoginName: string }[]>`
+        SELECT USER_ID, CurrentEmail, AdLoginName
+        FROM userWithRoles 
+        WHERE orgcode3 = ${orgcode3} 
+        AND PostNameEng LIKE '%Manager%'
       `
 
       // ส่งอีเมลแจ้งเตือน managers
       for (const manager of managers) {
-        if (manager.EMAIL) {
+        if (manager.CurrentEmail) {
           await this.sendEmail(
-            manager.EMAIL,
+            manager.CurrentEmail,
             'มีคำขอเบิกใหม่รอการอนุมัติ',
             this.createEmailTemplate('requisition_pending', {
               requisitionId,
@@ -198,18 +207,18 @@ export class NotificationService {
 
       if (!requisition) return
 
-      // หา Admin ทั้งหมด
-      const admins = await prisma.$queryRaw<{ USER_ID: string, EMAIL: string, FullNameThai: string }[]>`
-        SELECT USER_ID, EMAIL, FullNameThai
-        FROM USERS 
-        WHERE ROLE IN ('ADMIN', 'SUPER_ADMIN', 'DEV')
+      // หา Admin ทั้งหมดจาก LDAP
+      const admins = await prisma.$queryRaw<{ USER_ID: string, CurrentEmail: string, FullNameThai: string, AdLoginName: string }[]>`
+        SELECT USER_ID, CurrentEmail, FullNameThai, AdLoginName
+        FROM userWithRoles 
+        WHERE PostNameEng LIKE '%Admin%' OR PostNameEng LIKE '%Manager%'
       `
 
       // ส่งอีเมลแจ้งเตือน admins
       for (const admin of admins) {
-        if (admin.EMAIL) {
+        if (admin.CurrentEmail) {
           await this.sendEmail(
-            admin.EMAIL,
+            admin.CurrentEmail,
             'มีการอนุมัติคำขอเบิกใหม่',
             this.createEmailTemplate('requisition_approved_admin', {
               requisitionId,
@@ -371,6 +380,66 @@ export class NotificationService {
 
       default:
         return '<p>การแจ้งเตือนจากระบบ Stationary Hub</p>'
+    }
+  }
+
+  /**
+   * ดึง email จาก LDAP ตาม AdLoginName
+   */
+  private static async getUserEmailFromLDAP(adLoginName: string): Promise<string | null> {
+    try {
+      const user = await prisma.$queryRaw<{ CurrentEmail: string }[]>`
+        SELECT CurrentEmail FROM userWithRoles WHERE AdLoginName = ${adLoginName}
+      `
+      return user && user.length > 0 ? user[0].CurrentEmail : null
+    } catch (error) {
+      console.error(`Error fetching email for AdLoginName: ${adLoginName}`, error)
+      return null
+    }
+  }
+
+  /**
+   * ส่งอีเมลทดสอบ
+   */
+  static async sendTestEmail(toEmail: string, subject: string, message: string) {
+    try {
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Test Email</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+            .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
+            .footer { margin-top: 20px; padding: 20px; background: #f5f5f5; border-radius: 8px; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🧪 Test Email</h1>
+            </div>
+            <div class="content">
+              <h2>${subject}</h2>
+              <p>${message}</p>
+              <p><strong>เวลาส่ง:</strong> ${new Date().toLocaleString('th-TH')}</p>
+            </div>
+            <div class="footer">
+              <p>นี่เป็นอีเมลทดสอบจากระบบ Stationary Hub</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+
+      await this.sendEmail(toEmail, subject, htmlContent)
+      console.log(`✅ Test email sent to ${toEmail}`)
+    } catch (error) {
+      console.error('❌ Error sending test email:', error)
+      throw error
     }
   }
 

@@ -281,7 +281,7 @@ export default function ManagerDashboard() {
             🎯 Manager Dashboard
           </Typography>
           <Typography variant="h6" className="text-gray-600">
-            Welcome back, {user?.FULL_NAME || user?.USERNAME || 'Manager'}! Here's your overview.
+            Welcome back, {user?.FULL_NAME ? user.FULL_NAME : user?.USERNAME ? user.USERNAME : 'Manager'}! Here's your overview.
           </Typography>
           
                      {/* Debug Info */}

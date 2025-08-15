@@ -211,7 +211,7 @@ export default function ManagerOrdersPage() {
                     <TableCell>
                       <Button
                         size="small"
-                        variant="outline"
+                        variant="outlined"
                         startIcon={<Visibility />}
                         onClick={() => {
                           // TODO: Implement view order details
