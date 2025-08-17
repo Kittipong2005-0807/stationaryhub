@@ -1,13 +1,25 @@
 {
-  "name": "my-v0-project",
+  "name": "stationaryhub",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "next build",
     "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "lint": "next lint",
-    "start": "next start"
+    "lint:fix": "next lint --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next out dist",
+    "analyze": "ANALYZE=true npm run build",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:migrate": "prisma migrate dev",
+    "db:reset": "prisma migrate reset",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
@@ -59,7 +71,7 @@
     "ldapjs": "^3.0.7",
     "lucide-react": "^0.454.0",
     "mssql": "^11.0.1",
-    "next": "14.2.16",
+    "next": "14.2.31",
     "next-auth": "^4.24.11",
     "next-themes": "^0.4.4",
     "nodemailer": "^6.9.11",
@@ -86,6 +98,7 @@
     "@types/react-dom": "^18",
     "@typescript-eslint/eslint-plugin": "^8.37.0",
     "@typescript-eslint/parser": "^8.37.0",
+    "cssnano": "^7.0.0",
     "eslint": "^9.31.0",
     "eslint-config-next": "15.4.2",
     "eslint-config-prettier": "^10.1.8",
@@ -94,6 +107,16 @@
     "prettier": "^3.6.2",
     "prisma": "^6.13.0",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
-  }
+    "typescript": "^5",
+    "webpack-bundle-analyzer": "^4.10.1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "browserslist": [
+    ">0.3%",
+    "not dead",
+    "not op_mini all"
+  ]
 }

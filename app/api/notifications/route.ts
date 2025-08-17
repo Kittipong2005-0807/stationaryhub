@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     });
 
     // แปลงข้อมูลให้ตรงกับ interface
-    const formattedNotifications = notifications.map(notification => ({
+    const formattedNotifications = notifications.map((notification: any) => ({
       id: notification.EMAIL_ID,
       userId: notification.TO_USER_ID,
       subject: notification.SUBJECT,

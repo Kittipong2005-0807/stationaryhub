@@ -2,7 +2,10 @@ import { prisma } from './prisma'
 import nodemailer from 'nodemailer'
 
 export interface NotificationData {
-  type: 'requisition_created' | 'requisition_approved' | 'requisition_rejected' | 'requisition_pending'
+  type: 'requisition_created' | 'requisition_approved' | 'requisition_rejected' | 'requisition_pending' | 
+        'requisition_pending_manager' | 'requisition_pending_general_manager' |
+        'requisition_approved_manager' | 'requisition_approved_general_manager' |
+        'requisition_rejected_manager' | 'requisition_rejected_general_manager'
   userId: string
   requisitionId: number
   message: string
@@ -15,6 +18,8 @@ export class NotificationService {
    */
   static async notifyRequisitionCreated(requisitionId: number, userId: string) {
     try {
+      console.log(`🔔 Notifying requisition created: ${requisitionId} by ${userId}`)
+      
       // ดึงข้อมูล requisition
       const requisition = await prisma.rEQUISITIONS.findUnique({
         where: { REQUISITION_ID: requisitionId },
@@ -28,7 +33,10 @@ export class NotificationService {
         }
       })
 
-      if (!requisition) return
+      if (!requisition) {
+        console.log(`❌ Requisition ${requisitionId} not found`)
+        return
+      }
 
       // สร้างข้อความแจ้งเตือน
       const message = `คำขอเบิกของคุณ (เลขที่ ${requisitionId}) ได้รับการส่งเรียบร้อยแล้ว จำนวนเงิน: ฿${requisition.TOTAL_AMOUNT?.toFixed(2)}`
@@ -55,13 +63,18 @@ export class NotificationService {
             items: requisition.REQUISITION_ITEMS
           })
         )
+        console.log(`✅ Email sent to user ${userId} at ${userEmail}`)
+      } else {
+        console.log(`⚠️ No email found for user ${userId}`)
       }
 
       // แจ้งเตือน Manager ที่เกี่ยวข้อง
       await this.notifyManagers(requisitionId, userId)
 
+      console.log(`✅ Requisition creation notification completed for ${requisitionId}`)
+
     } catch (error) {
-      console.error('Error notifying requisition created:', error)
+      console.error('❌ Error notifying requisition created:', error)
     }
   }
 
@@ -70,12 +83,17 @@ export class NotificationService {
    */
   static async notifyRequisitionApproved(requisitionId: number, approvedBy: string) {
     try {
+      console.log(`🔔 Notifying requisition approved: ${requisitionId} by ${approvedBy}`)
+      
       const requisition = await prisma.rEQUISITIONS.findUnique({
         where: { REQUISITION_ID: requisitionId },
         include: { USERS: true }
       })
 
-      if (!requisition) return
+      if (!requisition) {
+        console.log(`❌ Requisition ${requisitionId} not found`)
+        return
+      }
 
       const message = `คำขอเบิกของคุณ (เลขที่ ${requisitionId}) ได้รับการอนุมัติแล้ว`
 
@@ -100,13 +118,19 @@ export class NotificationService {
             approvedBy
           })
         )
+        console.log(`✅ Approval email sent to user ${requisition.USER_ID}`)
       }
 
       // แจ้งเตือน Admin ว่ามีการอนุมัติคำขอ
       await this.notifyAdmins(requisitionId, approvedBy)
 
+      // แจ้งเตือน Manager อื่นๆ ในแผนกเดียวกัน
+      await this.notifyManagersOfApproval(requisitionId, approvedBy, requisition.USER_ID)
+
+      console.log(`✅ Requisition approval notification completed for ${requisitionId}`)
+
     } catch (error) {
-      console.error('Error notifying requisition approved:', error)
+      console.error('❌ Error notifying requisition approved:', error)
     }
   }
 
@@ -115,12 +139,17 @@ export class NotificationService {
    */
   static async notifyRequisitionRejected(requisitionId: number, rejectedBy: string, reason?: string) {
     try {
+      console.log(`🔔 Notifying requisition rejected: ${requisitionId} by ${rejectedBy}`)
+      
       const requisition = await prisma.rEQUISITIONS.findUnique({
         where: { REQUISITION_ID: requisitionId },
         include: { USERS: true }
       })
 
-      if (!requisition) return
+      if (!requisition) {
+        console.log(`❌ Requisition ${requisitionId} not found`)
+        return
+      }
 
       const message = `คำขอเบิกของคุณ (เลขที่ ${requisitionId}) ถูกปฏิเสธ${reason ? `: ${reason}` : ''}`
 
@@ -146,10 +175,16 @@ export class NotificationService {
             reason
           })
         )
+        console.log(`✅ Rejection email sent to user ${requisition.USER_ID}`)
       }
 
+      // แจ้งเตือน Manager อื่นๆ ในแผนกเดียวกัน
+      await this.notifyManagersOfRejection(requisitionId, rejectedBy, requisition.USER_ID, reason)
+
+      console.log(`✅ Requisition rejection notification completed for ${requisitionId}`)
+
     } catch (error) {
-      console.error('Error notifying requisition rejected:', error)
+      console.error('❌ Error notifying requisition rejected:', error)
     }
   }
 
@@ -158,39 +193,101 @@ export class NotificationService {
    */
   static async notifyManagers(requisitionId: number, userId: string) {
     try {
+      console.log(`🔔 Notifying managers for requisition ${requisitionId} from user ${userId}`)
+      
       // ดึงข้อมูล user เพื่อหา orgcode3
       const user = await prisma.$queryRaw<{ orgcode3: string }[]>`
         SELECT orgcode3 FROM userWithRoles WHERE AdLoginName = ${userId}
       `
 
-      if (!user || user.length === 0 || !user[0].orgcode3) return
+      if (!user || user.length === 0 || !user[0].orgcode3) {
+        console.log(`❌ User ${userId} not found or no orgcode3`)
+        return
+      }
 
       const orgcode3 = user[0].orgcode3
+      console.log(`🔔 User orgcode3: ${orgcode3}`)
 
-      // หา managers ในแผนกเดียวกันจาก LDAP
-      const managers = await prisma.$queryRaw<{ USER_ID: string, CurrentEmail: string, AdLoginName: string }[]>`
-        SELECT USER_ID, CurrentEmail, AdLoginName
+      // หา managers ในแผนกเดียวกันจาก LDAP (รวม Manager และ Admin)
+      const managers = await prisma.$queryRaw<{ USER_ID: string, CurrentEmail: string, AdLoginName: string, PostNameEng: string }[]>`
+        SELECT USER_ID, CurrentEmail, AdLoginName, PostNameEng
         FROM userWithRoles 
         WHERE orgcode3 = ${orgcode3} 
-        AND PostNameEng LIKE '%Manager%'
+        AND (PostNameEng LIKE '%Manager%' OR PostNameEng LIKE '%Admin%' OR PostNameEng LIKE '%หัวหน้า%')
       `
 
-      // ส่งอีเมลแจ้งเตือน managers
+      console.log(`🔔 Found ${managers.length} managers in orgcode3 ${orgcode3}:`, managers)
+
+      // ส่งอีเมลแจ้งเตือน managers และบันทึกลงฐานข้อมูล
       for (const manager of managers) {
         if (manager.CurrentEmail) {
-          await this.sendEmail(
-            manager.CurrentEmail,
-            'มีคำขอเบิกใหม่รอการอนุมัติ',
-            this.createEmailTemplate('requisition_pending', {
+          try {
+            // ส่งอีเมล
+            await this.sendEmail(
+              manager.CurrentEmail,
+              'มีคำขอเบิกใหม่รอการอนุมัติ',
+              this.createEmailTemplate('requisition_pending', {
+                requisitionId,
+                userId
+              })
+            )
+
+            // บันทึกการแจ้งเตือนลงฐานข้อมูลสำหรับ Manager
+            await this.logNotification({
+              type: 'requisition_pending_manager',
+              userId: manager.AdLoginName, // ใช้ AdLoginName ของ Manager
               requisitionId,
-              userId
+              message: `มีคำขอเบิกใหม่ (เลขที่ ${requisitionId}) จาก ${userId} รอการอนุมัติ`
             })
-          )
+
+            console.log(`✅ Notification sent and logged for manager ${manager.AdLoginName}`)
+          } catch (error) {
+            console.error(`❌ Error notifying manager ${manager.AdLoginName}:`, error)
+          }
+        } else {
+          console.log(`⚠️ Manager ${manager.AdLoginName} has no email`)
+        }
+      }
+
+      // ถ้าไม่พบ Manager ในแผนกเดียวกัน ให้แจ้งเตือน Manager ทั่วไป
+      if (managers.length === 0) {
+        console.log(`🔔 No managers found in orgcode3 ${orgcode3}, notifying general managers`)
+        
+        const generalManagers = await prisma.$queryRaw<{ USER_ID: string, CurrentEmail: string, AdLoginName: string }[]>`
+          SELECT USER_ID, CurrentEmail, AdLoginName
+          FROM userWithRoles 
+          WHERE PostNameEng LIKE '%Manager%' OR PostNameEng LIKE '%หัวหน้า%'
+        `
+
+        for (const manager of generalManagers) {
+          if (manager.CurrentEmail) {
+            try {
+              await this.sendEmail(
+                manager.CurrentEmail,
+                'มีคำขอเบิกใหม่รอการอนุมัติ (ไม่มี Manager ในแผนก)',
+                this.createEmailTemplate('requisition_pending', {
+                  requisitionId,
+                  userId
+                })
+              )
+
+              await this.logNotification({
+                type: 'requisition_pending_general_manager',
+                userId: manager.AdLoginName,
+                requisitionId,
+                message: `มีคำขอเบิกใหม่ (เลขที่ ${requisitionId}) จาก ${userId} รอการอนุมัติ (ไม่มี Manager ในแผนก)`
+              })
+
+              console.log(`✅ Notification sent to general manager ${manager.AdLoginName}`)
+            } catch (error) {
+              console.error(`❌ Error notifying general manager ${manager.AdLoginName}:`, error)
+            }
+          }
         }
       }
 
     } catch (error) {
-      console.error('Error notifying managers:', error)
+      console.error('❌ Error notifying managers:', error)
     }
   }
 
@@ -233,6 +330,210 @@ export class NotificationService {
 
     } catch (error) {
       console.error('Error notifying admins:', error)
+    }
+  }
+
+  /**
+   * แจ้งเตือน Manager อื่นๆ ในแผนกเดียวกันเมื่อมีการอนุมัติคำขอ
+   */
+  private static async notifyManagersOfApproval(requisitionId: number, approvedBy: string, requesterId: string) {
+    try {
+      // ดึงข้อมูล user ที่ส่งคำขอเพื่อหา orgcode3
+      const requester = await prisma.$queryRaw<{ orgcode3: string }[]>`
+        SELECT orgcode3 FROM userWithRoles WHERE AdLoginName = ${requesterId}
+      `
+
+      if (!requester || requester.length === 0 || !requester[0].orgcode3) {
+        console.log(`❌ Requester ${requesterId} not found or no orgcode3 for approval notification`)
+        return
+      }
+
+      const orgcode3 = requester[0].orgcode3
+      console.log(`🔔 Requester orgcode3 for approval: ${orgcode3}`)
+
+      // หา managers ในแผนกเดียวกันจาก LDAP (รวม Manager และ Admin)
+      const managers = await prisma.$queryRaw<{ USER_ID: string, CurrentEmail: string, AdLoginName: string, PostNameEng: string }[]>`
+        SELECT USER_ID, CurrentEmail, AdLoginName, PostNameEng
+        FROM userWithRoles 
+        WHERE orgcode3 = ${orgcode3} 
+        AND (PostNameEng LIKE '%Manager%' OR PostNameEng LIKE '%Admin%' OR PostNameEng LIKE '%หัวหน้า%')
+        AND AdLoginName != ${requesterId} -- ไม่แจ้งเตือนตัวเอง
+      `
+
+      console.log(`🔔 Found ${managers.length} managers in orgcode3 ${orgcode3} for approval notification:`, managers)
+
+      for (const manager of managers) {
+        if (manager.CurrentEmail) {
+          try {
+            await this.sendEmail(
+              manager.CurrentEmail,
+              'มีคำขอเบิกได้รับการอนุมัติ',
+              this.createEmailTemplate('requisition_approved_manager', {
+                requisitionId,
+                approvedBy,
+                requesterName: (await prisma.uSERS.findUnique({ where: { USER_ID: requesterId } }) as any)?.FullNameThai || (await prisma.uSERS.findUnique({ where: { USER_ID: requesterId } }) as any)?.FullNameEng || requesterId,
+                totalAmount: (await prisma.rEQUISITIONS.findUnique({ where: { REQUISITION_ID: requisitionId } }) as any)?.TOTAL_AMOUNT,
+                submittedAt: (await prisma.rEQUISITIONS.findUnique({ where: { REQUISITION_ID: requisitionId } }) as any)?.SUBMITTED_AT
+              })
+            )
+            await this.logNotification({
+              type: 'requisition_approved_manager',
+              userId: manager.AdLoginName,
+              requisitionId,
+              message: `มีคำขอเบิก (เลขที่ ${requisitionId}) จาก ${requesterId} ได้รับการอนุมัติแล้ว`
+            })
+            console.log(`✅ Approval notification sent to manager ${manager.AdLoginName}`)
+          } catch (error) {
+            console.error(`❌ Error notifying manager ${manager.AdLoginName} for approval:`, error)
+          }
+        } else {
+          console.log(`⚠️ Manager ${manager.AdLoginName} has no email for approval notification`)
+        }
+      }
+
+      // ถ้าไม่พบ Manager ในแผนกเดียวกัน ให้แจ้งเตือน Manager ทั่วไป
+      if (managers.length === 0) {
+        console.log(`🔔 No managers found in orgcode3 ${orgcode3} for approval notification, notifying general managers`)
+        
+        const generalManagers = await prisma.$queryRaw<{ USER_ID: string, CurrentEmail: string, AdLoginName: string }[]>`
+          SELECT USER_ID, CurrentEmail, AdLoginName
+          FROM userWithRoles 
+          WHERE PostNameEng LIKE '%Manager%' OR PostNameEng LIKE '%หัวหน้า%'
+        `
+
+        for (const manager of generalManagers) {
+          if (manager.CurrentEmail) {
+            try {
+              await this.sendEmail(
+                manager.CurrentEmail,
+                'มีคำขอเบิกได้รับการอนุมัติ (ไม่มี Manager ในแผนก)',
+                this.createEmailTemplate('requisition_approved_manager', {
+                  requisitionId,
+                  approvedBy,
+                  requesterName: (await prisma.uSERS.findUnique({ where: { USER_ID: requesterId } }) as any)?.FullNameThai || (await prisma.uSERS.findUnique({ where: { USER_ID: requesterId } }) as any)?.FullNameEng || requesterId,
+                  totalAmount: (await prisma.rEQUISITIONS.findUnique({ where: { REQUISITION_ID: requisitionId } }) as any)?.TOTAL_AMOUNT,
+                  submittedAt: (await prisma.rEQUISITIONS.findUnique({ where: { REQUISITION_ID: requisitionId } }) as any)?.SUBMITTED_AT
+                })
+              )
+              await this.logNotification({
+                type: 'requisition_approved_general_manager',
+                userId: manager.AdLoginName,
+                requisitionId,
+                message: `มีคำขอเบิก (เลขที่ ${requisitionId}) จาก ${requesterId} ได้รับการอนุมัติแล้ว (ไม่มี Manager ในแผนก)`
+              })
+              console.log(`✅ Approval notification sent to general manager ${manager.AdLoginName}`)
+            } catch (error) {
+              console.error(`❌ Error notifying general manager ${manager.AdLoginName} for approval:`, error)
+            }
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Error notifying managers of approval:', error)
+    }
+  }
+
+  /**
+   * แจ้งเตือน Manager อื่นๆ ในแผนกเดียวกันเมื่อมีการปฏิเสธคำขอ
+   */
+  private static async notifyManagersOfRejection(requisitionId: number, rejectedBy: string, requesterId: string, reason?: string) {
+    try {
+      // ดึงข้อมูล user ที่ส่งคำขอเพื่อหา orgcode3
+      const requester = await prisma.$queryRaw<{ orgcode3: string }[]>`
+        SELECT orgcode3 FROM userWithRoles WHERE AdLoginName = ${requesterId}
+      `
+
+      if (!requester || requester.length === 0 || !requester[0].orgcode3) {
+        console.log(`❌ Requester ${requesterId} not found or no orgcode3 for rejection notification`)
+        return
+      }
+
+      const orgcode3 = requester[0].orgcode3
+      console.log(`🔔 Requester orgcode3 for rejection: ${orgcode3}`)
+
+      // หา managers ในแผนกเดียวกันจาก LDAP (รวม Manager และ Admin)
+      const managers = await prisma.$queryRaw<{ USER_ID: string, CurrentEmail: string, AdLoginName: string, PostNameEng: string }[]>`
+        SELECT USER_ID, CurrentEmail, AdLoginName, PostNameEng
+        FROM userWithRoles 
+        WHERE orgcode3 = ${orgcode3} 
+        AND (PostNameEng LIKE '%Manager%' OR PostNameEng LIKE '%Admin%' OR PostNameEng LIKE '%หัวหน้า%')
+        AND AdLoginName != ${requesterId} -- ไม่แจ้งเตือนตัวเอง
+      `
+
+      console.log(`🔔 Found ${managers.length} managers in orgcode3 ${orgcode3} for rejection notification:`, managers)
+
+      for (const manager of managers) {
+        if (manager.CurrentEmail) {
+          try {
+            await this.sendEmail(
+              manager.CurrentEmail,
+              'มีคำขอเบิกถูกปฏิเสธ',
+              this.createEmailTemplate('requisition_rejected_manager', {
+                requisitionId,
+                rejectedBy,
+                reason,
+                requesterName: (await prisma.uSERS.findUnique({ where: { USER_ID: requesterId } }) as any)?.FullNameThai || (await prisma.uSERS.findUnique({ where: { USER_ID: requesterId } }) as any)?.FullNameEng || requesterId,
+                totalAmount: (await prisma.rEQUISITIONS.findUnique({ where: { REQUISITION_ID: requisitionId } }) as any)?.TOTAL_AMOUNT,
+                submittedAt: (await prisma.rEQUISITIONS.findUnique({ where: { REQUISITION_ID: requisitionId } }) as any)?.SUBMITTED_AT
+              })
+            )
+            await this.logNotification({
+              type: 'requisition_rejected_manager',
+              userId: manager.AdLoginName,
+              requisitionId,
+              message: `มีคำขอเบิก (เลขที่ ${requisitionId}) จาก ${requesterId} ถูกปฏิเสธแล้ว`
+            })
+            console.log(`✅ Rejection notification sent to manager ${manager.AdLoginName}`)
+          } catch (error) {
+            console.error(`❌ Error notifying manager ${manager.AdLoginName} for rejection:`, error)
+          }
+        } else {
+          console.log(`⚠️ Manager ${manager.AdLoginName} has no email for rejection notification`)
+        }
+      }
+
+      // ถ้าไม่พบ Manager ในแผนกเดียวกัน ให้แจ้งเตือน Manager ทั่วไป
+      if (managers.length === 0) {
+        console.log(`🔔 No managers found in orgcode3 ${orgcode3} for rejection notification, notifying general managers`)
+        
+        const generalManagers = await prisma.$queryRaw<{ USER_ID: string, CurrentEmail: string, AdLoginName: string }[]>`
+          SELECT USER_ID, CurrentEmail, AdLoginName
+          FROM userWithRoles 
+          WHERE PostNameEng LIKE '%Manager%' OR PostNameEng LIKE '%หัวหน้า%'
+        `
+
+        for (const manager of generalManagers) {
+          if (manager.CurrentEmail) {
+            try {
+              await this.sendEmail(
+                manager.CurrentEmail,
+                'มีคำขอเบิกถูกปฏิเสธ (ไม่มี Manager ในแผนก)',
+                this.createEmailTemplate('requisition_rejected_manager', {
+                  requisitionId,
+                  rejectedBy,
+                  reason,
+                  requesterName: (await prisma.uSERS.findUnique({ where: { USER_ID: requesterId } }) as any)?.FullNameThai || (await prisma.uSERS.findUnique({ where: { USER_ID: requesterId } }) as any)?.FullNameEng || requesterId,
+                  totalAmount: (await prisma.rEQUISITIONS.findUnique({ where: { REQUISITION_ID: requisitionId } }) as any)?.TOTAL_AMOUNT,
+                  submittedAt: (await prisma.rEQUISITIONS.findUnique({ where: { REQUISITION_ID: requisitionId } }) as any)?.SUBMITTED_AT
+                })
+              )
+              await this.logNotification({
+                type: 'requisition_rejected_general_manager',
+                userId: manager.AdLoginName,
+                requisitionId,
+                message: `มีคำขอเบิก (เลขที่ ${requisitionId}) จาก ${requesterId} ถูกปฏิเสธแล้ว (ไม่มี Manager ในแผนก)`
+              })
+              console.log(`✅ Rejection notification sent to general manager ${manager.AdLoginName}`)
+            } catch (error) {
+              console.error(`❌ Error notifying general manager ${manager.AdLoginName} for rejection:`, error)
+            }
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Error notifying managers of rejection:', error)
     }
   }
 
@@ -376,6 +677,33 @@ export class NotificationService {
           <p><strong>วันที่ส่งคำขอ:</strong> ${new Date(data.submittedAt).toLocaleDateString('th-TH')} ${new Date(data.submittedAt).toLocaleTimeString('th-TH', { hour12: false })}</p>
           <p>คุณสามารถติดตามรายงานได้ในระบบ</p>
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin" class="button">ดูรายงาน</a>
+        `
+
+      case 'requisition_approved_manager':
+        return `
+          <h2>🎉 คำขอเบิกได้รับการอนุมัติ</h2>
+          <p>คำขอเบิกของคุณได้รับการอนุมัติแล้ว</p>
+          <p><strong>เลขที่คำขอ:</strong> ${data.requisitionId}</p>
+          <p><strong>อนุมัติโดย:</strong> ${data.approvedBy}</p>
+          <p><strong>ผู้ขอ:</strong> ${data.requesterName}</p>
+          <p><strong>จำนวนเงิน:</strong> ฿${data.totalAmount?.toFixed(2)}</p>
+          <p><strong>วันที่ส่งคำขอ:</strong> ${new Date(data.submittedAt).toLocaleDateString('th-TH')} ${new Date(data.submittedAt).toLocaleTimeString('th-TH', { hour12: false })}</p>
+          <p>คุณสามารถติดตามรายงานได้ในระบบ</p>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/approvals" class="button">ดูคำขอเบิก</a>
+        `
+
+      case 'requisition_rejected_manager':
+        return `
+          <h2>❌ คำขอเบิกถูกปฏิเสธ</h2>
+          <p>คำขอเบิกของคุณถูกปฏิเสธ</p>
+          <p><strong>เลขที่คำขอ:</strong> ${data.requisitionId}</p>
+          <p><strong>ปฏิเสธโดย:</strong> ${data.rejectedBy}</p>
+          ${data.reason ? `<p><strong>เหตุผล:</strong> ${data.reason}</p>` : ''}
+          <p><strong>ผู้ขอ:</strong> ${data.requesterName}</p>
+          <p><strong>จำนวนเงิน:</strong> ฿${data.totalAmount?.toFixed(2)}</p>
+          <p><strong>วันที่ส่งคำขอ:</strong> ${new Date(data.submittedAt).toLocaleDateString('th-TH')} ${new Date(data.submittedAt).toLocaleTimeString('th-TH', { hour12: false })}</p>
+          <p>คุณสามารถติดตามรายงานได้ในระบบ</p>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/approvals" class="button">ดูคำขอเบิก</a>
         `
 
       default:

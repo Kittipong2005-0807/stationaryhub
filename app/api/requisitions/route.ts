@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
       })
       
       // แปลงข้อมูลให้ตรงกับ interface และดึงสถานะล่าสุด
-      const result = await Promise.all(requisitions.map(async (requisition) => {
+      const result = await Promise.all(requisitions.map(async (requisition: any) => {
         // ดึงสถานะล่าสุดจาก ApprovalService
         const latestStatus = await ApprovalService.getLatestStatus(requisition.REQUISITION_ID)
         
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
           STATUS: latestStatus || requisition.STATUS || "PENDING",
           TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
           ISSUE_NOTE: requisition.ISSUE_NOTE,
-          REQUISITION_ITEMS: requisition.REQUISITION_ITEMS?.map(item => ({
+          REQUISITION_ITEMS: requisition.REQUISITION_ITEMS?.map((item: any) => ({
             REQUISITION_ITEM_ID: item.ITEM_ID,
             PRODUCT_ID: item.PRODUCT_ID,
             PRODUCT_NAME: item.PRODUCTS?.PRODUCT_NAME || "Unknown Product",
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
         }
       })
       
-      const result = requisitions.map(requisition => ({
+      const result = requisitions.map((requisition: any) => ({
         REQUISITION_ID: requisition.REQUISITION_ID,
         USER_ID: requisition.USER_ID,
         USERNAME: requisition.USERS?.USERNAME || requisition.USER_ID,
@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
         STATUS: requisition.STATUS || "PENDING",
         TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
         ISSUE_NOTE: requisition.ISSUE_NOTE,
-        REQUISITION_ITEMS: requisition.REQUISITION_ITEMS?.map(item => ({
+        REQUISITION_ITEMS: requisition.REQUISITION_ITEMS?.map((item: any) => ({
           REQUISITION_ITEM_ID: item.ITEM_ID,
           PRODUCT_ID: item.PRODUCT_ID,
           PRODUCT_NAME: item.PRODUCTS?.PRODUCT_NAME || "Unknown Product",

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { NotificationService } from "./notification-service"
 
 export interface ApprovalData {
   REQUISITION_ID: number
@@ -234,6 +235,8 @@ export class ApprovalService {
    */
   static async createApproval(approvalData: ApprovalData): Promise<ApprovalResult> {
     try {
+      console.log(`🔔 Creating approval for requisition ${approvalData.REQUISITION_ID} with status ${approvalData.STATUS}`)
+      
       // ใช้ transaction เพื่อให้แน่ใจว่าข้อมูลถูกบันทึกทั้งสามตาราง
       const result = await prisma.$transaction(async (tx) => {
         // อัพเดทสถานะในตาราง REQUISITIONS
@@ -272,9 +275,23 @@ export class ApprovalService {
         }
       })
 
+      // ส่งการแจ้งเตือนหลังจาก transaction สำเร็จ
+      try {
+        if (approvalData.STATUS === "APPROVED") {
+          await NotificationService.notifyRequisitionApproved(approvalData.REQUISITION_ID, approvalData.APPROVED_BY)
+          console.log(`✅ Approval notification sent for requisition ${approvalData.REQUISITION_ID}`)
+        } else if (approvalData.STATUS === "REJECTED") {
+          await NotificationService.notifyRequisitionRejected(approvalData.REQUISITION_ID, approvalData.APPROVED_BY, approvalData.NOTE)
+          console.log(`✅ Rejection notification sent for requisition ${approvalData.REQUISITION_ID}`)
+        }
+      } catch (notificationError) {
+        console.error("❌ Error sending notification:", notificationError)
+        // ไม่ throw error เพราะ transaction สำเร็จแล้ว
+      }
+
       return result
     } catch (error) {
-      console.error("Error creating approval:", error)
+      console.error("❌ Error creating approval:", error)
       throw new Error("Failed to create approval")
     }
   }

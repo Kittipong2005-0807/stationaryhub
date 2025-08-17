@@ -18,7 +18,7 @@ export async function GET(request: NextRequest, { params }: { params: { filename
       ? "image/svg+xml"
       : "application/octet-stream"
 
-    return new NextResponse(file, {
+    return new NextResponse(new Uint8Array(file), {
       status: 200,
       headers: {
         "Content-Type": mimeType,

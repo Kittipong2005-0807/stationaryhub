@@ -112,7 +112,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
                 Stock: {product.STOCK_QUANTITY} units
               </Typography>
               <Typography variant="body2" style={{ color: '#666' }}>
-                SKU: {product.ITEM_ID || 'N/A'}
+                SKU: {product?.PRODUCT_ID || 'N/A'}
               </Typography>
             </Box>
             {/* Quantity Selector and Price Row */}
