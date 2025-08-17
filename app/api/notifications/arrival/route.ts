@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
         USERS: {
           select: {
             USERNAME: true,
-            AdLoginName: true
+            USER_ID: true
           }
         }
       }
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ตรวจสอบข้อมูล user
-    const toUserId = requisition.USERS?.AdLoginName || requisition.USER_ID?.toString() || 'unknown'
+    const toUserId = requisition.USERS?.USER_ID || requisition.USER_ID?.toString() || 'unknown'
     console.log("🔔 Using TO_USER_ID:", toUserId)
 
     // สร้างการแจ้งเตือนว่าสินค้ามาแล้ว

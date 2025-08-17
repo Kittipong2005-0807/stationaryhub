@@ -27,7 +27,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
   const { user } = useAuth()
   
   // Check if user can use cart (USER or MANAGER)
-  const canUseCartForUser = canUseCart(user?.ROLE)
+  const canUseCartForUser = canUseCart(user?.ROLE || undefined)
 
   const handleAddToCart = async () => {
     if (quantity > product.STOCK_QUANTITY) {
@@ -78,7 +78,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'stretch',
-            minHeight: 220,
+            minHeight: 200,
             position: 'relative',
             boxShadow: '0 2px 8px #eee',
             borderRadius: 16,
@@ -88,55 +88,64 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
           className="glass-card hover:shadow-lg"
         >
           {/* Image */}
-          <Box style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <Box style={{ width: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, flexShrink: 0 }}>
             <Image
               src={product.PHOTO_URL || "/placeholder.svg"}
               alt={product.PRODUCT_NAME}
-              width={180}
-              height={180}
+              width={160}
+              height={160}
               style={{ objectFit: "cover", borderRadius: 12, border: "1px solid #eee", background: '#fafafa' }}
             />
           </Box>
           {/* Content */}
-          <Box style={{ flex: 3, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 16, position: 'relative' }}>
-            {/* Promotion/Store badges */}
-            <Box style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-              <Chip label="LazPick" size="small" color="secondary" />
-              {/* Add other badges as needed */}
-            </Box>
+          <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 16, position: 'relative' }}>
             {/* Product name */}
-            <Typography variant="h6" style={{ fontWeight: 700, marginBottom: 12 }}>
+            <Typography variant="h6" style={{ fontWeight: 700, marginBottom: 8 }}>
               {product.PRODUCT_NAME}
             </Typography>
-            {/* Bullet details */}
-            {/* Quantity Selector */}
-            {canUseCartForUser && (
-              <Box style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <IconButton onClick={decrementQuantity} disabled={quantity <= 1} size="small" style={{ background: '#f3f3f3', borderRadius: 8 }}>
-                  <Remove />
-                </IconButton>
-                <TextField
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => handleQuantityChange(e.target.value)}
-                  size="small"
-                  inputProps={{ min: 1, className: 'text-center font-semibold', 'aria-label': 'Product quantity' }}
-                  style={{ width: 56 }}
-                />
-                <IconButton onClick={incrementQuantity} size="small" style={{ background: '#f3f3f3', borderRadius: 8 }}>
-                  <Add />
-                </IconButton>
+            {/* Product details */}
+            <Box style={{ marginBottom: 16 }}>
+              <Typography variant="body2" style={{ color: '#666', marginBottom: 4 }}>
+                Category: {product.CATEGORY_NAME || 'N/A'}
+              </Typography>
+              <Typography variant="body2" style={{ color: '#666', marginBottom: 4 }}>
+                Stock: {product.STOCK_QUANTITY} units
+              </Typography>
+              <Typography variant="body2" style={{ color: '#666' }}>
+                SKU: {product.ITEM_ID || 'N/A'}
+              </Typography>
+            </Box>
+            {/* Quantity Selector and Price Row */}
+            <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {/* Left side - Quantity and Price */}
+              <Box style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                {canUseCartForUser && (
+                  <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <IconButton onClick={decrementQuantity} disabled={quantity <= 1} size="small" style={{ background: '#f3f3f3', borderRadius: 8 }}>
+                      <Remove />
+                    </IconButton>
+                    <TextField
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => handleQuantityChange(e.target.value)}
+                      size="small"
+                      inputProps={{ min: 1, className: 'text-center font-semibold', 'aria-label': 'Product quantity' }}
+                      style={{ width: 56 }}
+                    />
+                    <IconButton onClick={incrementQuantity} size="small" style={{ background: '#f3f3f3', borderRadius: 8 }}>
+                      <Add />
+                    </IconButton>
+                  </Box>
+                )}
+                <Typography variant="h5" style={{ color: "#FF5722", fontWeight: 700 }}>฿{Number(product.UNIT_COST || 0).toFixed(2)}</Typography>
               </Box>
-            )}
-            {/* Price + Button */}
-            <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
-              <Typography variant="h5" style={{ color: "#FF5722", fontWeight: 700 }}>฿{Number(product.UNIT_COST || 0).toFixed(2)}</Typography>
-              <Box>
+              {/* Right side - Buttons */}
+              <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <IconButton onClick={() => setIsFavorite(!isFavorite)} aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}>
                   {isFavorite ? <Favorite className="text-red-500" /> : <FavoriteBorder className="text-gray-400" />}
                 </IconButton>
                 {canUseCartForUser && (
-                  <Button variant="contained" color="primary" startIcon={<ShoppingCart />} onClick={handleAddToCart} disabled={isAdding} style={{ borderRadius: 20, marginLeft: 8 }}>
+                  <Button variant="contained" color="primary" startIcon={<ShoppingCart />} onClick={handleAddToCart} disabled={isAdding} style={{ borderRadius: 20 }}>
                     {isAdding ? "Adding..." : "Add to Cart"}
                   </Button>
                 )}

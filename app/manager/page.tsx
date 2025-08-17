@@ -281,20 +281,16 @@ export default function ManagerDashboard() {
             🎯 Manager Dashboard
           </Typography>
           <Typography variant="h6" className="text-gray-600">
-            Welcome back, {user?.FULL_NAME ? user.FULL_NAME : user?.USERNAME ? user.USERNAME : 'Manager'}! Here's your overview.
+            {`Welcome back, ${user?.FULL_NAME ? user.FULL_NAME : user?.USERNAME ? user.USERNAME : 'Manager'}! Here's your overview.`}
           </Typography>
           
                      {/* Debug Info */}
            <Box className="mt-4 p-3 bg-blue-50 rounded-lg">
              <Typography variant="body2" className="text-blue-700">
-               🔍 Debug: Total Requisitions: {stats.totalRequisitions} | 
-               Pending: {stats.pendingRequisitions} | 
-               Approved: {stats.approvedRequisitions} | 
-               Rejected: {stats.rejectedRequisitions}
+               {`🔍 Debug: Total Requisitions: ${stats.totalRequisitions} | Pending: ${stats.pendingRequisitions} | Approved: ${stats.approvedRequisitions} | Rejected: ${stats.rejectedRequisitions}`}
              </Typography>
              <Typography variant="body2" className="text-blue-700 mt-1">
-               🏢 User SITE_ID: {user?.SITE_ID || 'Not set'} | 
-               Department: {user?.DEPARTMENT || 'Not set'}
+               {`🏢 User SITE_ID: ${user?.SITE_ID || 'Not set'} | Department: ${user?.DEPARTMENT || 'Not set'}`}
              </Typography>
            </Box>
         </motion.div>
