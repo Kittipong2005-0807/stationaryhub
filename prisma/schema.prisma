@@ -26,7 +26,10 @@ model EMAIL_LOGS {
   BODY       String?   @db.Text
   SENT_AT    DateTime? @default(now(), map: "DF__EMAIL_LOG__SENT___5AEE82B9") @db.DateTime
   STATUS     String?   @db.VarChar(50)
+  IS_READ    Boolean?  @default(false, map: "DF__EMAIL_LOG__IS_RE__0D44F85C")
   USERS      USERS     @relation(fields: [TO_USER_ID], references: [USER_ID], onUpdate: NoAction, map: "FK__EMAIL_LOG__TO_US__5CD6CB2B")
+
+  @@index([IS_READ], map: "IX_EMAIL_LOGS_IS_READ")
 }
 
 model EXPORT_LOGS {
@@ -37,6 +40,20 @@ model EXPORT_LOGS {
   EXPORTED_AT    DateTime?    @default(now(), map: "DF__EXPORT_LO__EXPOR__5629CD9C") @db.DateTime
   USERS          USERS        @relation(fields: [EXPORTED_BY], references: [USER_ID], onUpdate: NoAction, map: "FK__EXPORT_LO__EXPOR__5812160E")
   REQUISITIONS   REQUISITIONS @relation(fields: [REQUISITION_ID], references: [REQUISITION_ID], onUpdate: NoAction, map: "FK__EXPORT_LO__REQUI__571DF1D5")
+}
+
+model NOTIFICATIONS {
+  NOTIFICATION_ID                     Int           @id(map: "PK__NOTIFICA__83A4A446C148D203") @default(autoincrement())
+  USER_ID                             String        @db.VarChar(50)
+  ACTOR_ID                            String?       @db.VarChar(50)
+  REQUISITION_ID                      Int?
+  TYPE                                String        @db.NVarChar(50)
+  MESSAGE                             String        @db.NVarChar(Max)
+  IS_READ                             Boolean?      @default(false, map: "DF__NOTIFICAT__IS_RE__0880433F")
+  CREATED_AT                          DateTime?     @default(now(), map: "DF__NOTIFICAT__CREAT__09746778") @db.DateTime
+  USERS_NOTIFICATIONS_ACTOR_IDToUSERS USERS?        @relation("NOTIFICATIONS_ACTOR_IDToUSERS", fields: [ACTOR_ID], references: [USER_ID], onDelete: NoAction, onUpdate: NoAction, map: "FK_NOTIFICATIONS_ACTOR")
+  REQUISITIONS                        REQUISITIONS? @relation(fields: [REQUISITION_ID], references: [REQUISITION_ID], onDelete: NoAction, onUpdate: NoAction, map: "FK_NOTIFICATIONS_REQ")
+  USERS_NOTIFICATIONS_USER_IDToUSERS  USERS         @relation("NOTIFICATIONS_USER_IDToUSERS", fields: [USER_ID], references: [USER_ID], onUpdate: NoAction, map: "FK_NOTIFICATIONS_USER")
 }
 
 model PRODUCT_CATEGORIES {
@@ -79,6 +96,7 @@ model REQUISITIONS {
   ISSUE_NOTE        String?             @db.VarChar(1000)
   APPROVALS         APPROVALS[]
   EXPORT_LOGS       EXPORT_LOGS[]
+  NOTIFICATIONS     NOTIFICATIONS[]
   REQUISITION_ITEMS REQUISITION_ITEMS[]
   USERS             USERS               @relation(fields: [USER_ID], references: [USER_ID], onUpdate: NoAction, map: "FK__REQUISITI__USER___48CFD27E")
   STATUS_HISTORY    STATUS_HISTORY[]
@@ -96,31 +114,33 @@ model STATUS_HISTORY {
 }
 
 model USERS {
-  USER_ID        String           @id(map: "PK__USERS__F3BEEBFF17F9F5BC") @db.VarChar(50)
-  USERNAME       String           @db.VarChar(100)
-  PASSWORD       String           @db.VarChar(255)
-  EMAIL          String           @db.VarChar(255)
-  ROLE           String?          @db.VarChar(50)
-  DEPARTMENT     String?          @db.VarChar(100)
-  SITE_ID        String?          @db.VarChar(50)
-  CREATED_AT     DateTime?        @default(now(), map: "DF__USERS__CREATED_A__3F466844") @db.DateTime
-  APPROVALS      APPROVALS[]
-  EMAIL_LOGS     EMAIL_LOGS[]
-  EXPORT_LOGS    EXPORT_LOGS[]
-  REQUISITIONS   REQUISITIONS[]
-  STATUS_HISTORY STATUS_HISTORY[]
+  USER_ID                                     String           @id(map: "PK__USERS__F3BEEBFF17F9F5BC") @db.VarChar(50)
+  USERNAME                                    String           @db.VarChar(100)
+  PASSWORD                                    String           @db.VarChar(255)
+  EMAIL                                       String           @db.VarChar(255)
+  ROLE                                        String?          @db.VarChar(50)
+  DEPARTMENT                                  String?          @db.VarChar(100)
+  SITE_ID                                     String?          @db.VarChar(50)
+  CREATED_AT                                  DateTime?        @default(now(), map: "DF__USERS__CREATED_A__3F466844") @db.DateTime
+  APPROVALS                                   APPROVALS[]
+  EMAIL_LOGS                                  EMAIL_LOGS[]
+  EXPORT_LOGS                                 EXPORT_LOGS[]
+  NOTIFICATIONS_NOTIFICATIONS_ACTOR_IDToUSERS NOTIFICATIONS[]  @relation("NOTIFICATIONS_ACTOR_IDToUSERS")
+  NOTIFICATIONS_NOTIFICATIONS_USER_IDToUSERS  NOTIFICATIONS[]  @relation("NOTIFICATIONS_USER_IDToUSERS")
+  REQUISITIONS                                REQUISITIONS[]
+  STATUS_HISTORY                              STATUS_HISTORY[]
 }
 
 /// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 view UserWithRoles {
-  AdLoginName   String @db.VarChar(50)
-  EmpCode       String @db.VarChar(50)
+  AdLoginName   String? @db.VarChar(50)
+  EmpCode       String? @db.VarChar(50)
   CurrentEmail  String? @db.VarChar(100)
   FullNameEng   String? @db.VarChar(100)
   FullNameThai  String? @db.VarChar(100)
   PostNameEng   String? @db.VarChar(100)
   CostCenterEng String? @db.VarChar(100)
-  orgcode3      String? @db.NVarChar(Max)
+  OrgCode3      String? @db.NVarChar(Max)
 
   @@ignore
 }

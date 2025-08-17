@@ -24,6 +24,7 @@ interface Notification {
   SUBJECT: string
   BODY: string
   STATUS: string
+  IS_READ: boolean
   SENT_AT: Date
 }
 

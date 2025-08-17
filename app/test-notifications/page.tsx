@@ -103,6 +103,37 @@ export default function TestNotificationsPage() {
     }
   }
 
+  // เพิ่มฟังก์ชันสร้างการแจ้งเตือนทดสอบอัตโนมัติ
+  const createAutoTestNotifications = async () => {
+    if (!user?.AdLoginName) {
+      setError("ไม่พบข้อมูลผู้ใช้")
+      return
+    }
+
+    try {
+      setLoading(true)
+      setError("")
+      setSuccess(false)
+
+      const response = await fetch(`/api/notifications/test?userId=${user.AdLoginName}`, {
+        method: "GET"
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSuccess(true)
+        setMessage(`สร้างการแจ้งเตือนทดสอบ ${data.notifications?.length || 0} รายการสำเร็จ`)
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || "เกิดข้อผิดพลาด")
+      }
+    } catch (error) {
+      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <motion.div
@@ -182,6 +213,14 @@ export default function TestNotificationsPage() {
                 >
                   สร้างตัวอย่าง
                 </Button>
+                <Button
+                  onClick={createAutoTestNotifications}
+                  disabled={loading}
+                  variant="outline"
+                  className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                >
+                  สร้างอัตโนมัติ
+                </Button>
               </div>
 
               {success && (
@@ -221,6 +260,7 @@ export default function TestNotificationsPage() {
               <p>• การแจ้งเตือนจะปรากฏในไอคอนแจ้งเตือนที่ header</p>
               <p>• สามารถดูประวัติการแจ้งเตือนทั้งหมดได้ที่หน้า /notifications</p>
               <p>• ปุ่ม "สร้างตัวอย่าง" จะสร้างการแจ้งเตือน 3 รายการ</p>
+              <p>• ปุ่ม "สร้างอัตโนมัติ" จะสร้างการแจ้งเตือนทดสอบ 3 รายการพร้อมข้อมูลครบถ้วน</p>
             </CardContent>
           </Card>
         </motion.div>

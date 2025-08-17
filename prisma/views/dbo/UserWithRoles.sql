@@ -6,6 +6,6 @@ SELECT
   CAST(FullNameThai AS VARCHAR(100)) AS FullNameThai,
   CAST(PostNameEng AS VARCHAR(100)) AS PostNameEng,
   CAST(costcentereng AS VARCHAR(100)) AS CostCenterEng,
-  orgcode3
+  OrgCode3
 FROM
   THRYGSD002.ICTPortal_PRD.dbo.vwHR_SC_Employee AS u;

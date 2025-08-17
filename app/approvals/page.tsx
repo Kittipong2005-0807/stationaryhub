@@ -61,6 +61,9 @@ export default function ApprovalsPage() {
     phone: "",
     contact: ""
   })
+  const [notifyDialogOpen, setNotifyDialogOpen] = useState(false)
+  const [notifyMessage, setNotifyMessage] = useState("")
+  const [notifying, setNotifying] = useState(false)
   const router = useRouter()
   const { data: session } = useSession()
   const user = session?.user as unknown as { EmpCode?: string; USER_ID?: string; AdLoginName?: string; ROLE?: string }
@@ -441,7 +444,7 @@ export default function ApprovalsPage() {
                 <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'};">
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #1976d2;">SA${String(index + 1).padStart(3, '0')}</td>
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 9px;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
-                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.QUANTITY.toFixed(2)}</td>
+                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${Math.round(item.QUANTITY)}</td>
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">EA</td>
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center; color: #999;">...</td>
@@ -519,6 +522,46 @@ export default function ApprovalsPage() {
   const handleEdit = (requisition: Requisition) => {
     setEditingRequisition(requisition)
     setEditDialogOpen(true)
+  }
+
+  // เพิ่มฟังก์ชันสำหรับแจ้งเตือนว่าสินค้ามาแล้ว
+  const handleNotifyArrival = (requisition: Requisition) => {
+    setSelectedRequisition(requisition)
+    setNotifyMessage(`สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`)
+    setNotifyDialogOpen(true)
+  }
+
+  const handleSubmitNotification = async () => {
+    if (!selectedRequisition) return
+    
+    setNotifying(true)
+    try {
+      const response = await fetch("/api/notifications/arrival", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requisitionId: selectedRequisition.REQUISITION_ID,
+          message: notifyMessage,
+        }),
+      })
+
+      if (response.ok) {
+        alert("ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ!")
+        setNotifyDialogOpen(false)
+        setNotifyMessage("")
+        setSelectedRequisition(null)
+      } else {
+        const errorData = await response.json()
+        alert(`เกิดข้อผิดพลาด: ${errorData.error}`)
+      }
+    } catch (error) {
+      alert("เกิดข้อผิดพลาดในการส่งการแจ้งเตือน")
+      console.error("Error sending notification:", error)
+    } finally {
+      setNotifying(false)
+    }
   }
 
   // เพิ่มฟังก์ชันสำหรับบันทึกการแก้ไข
@@ -1033,7 +1076,7 @@ export default function ApprovalsPage() {
                               </TableCell>
                               <TableCell>
                                 <div className="space-y-1">
-                                  <p className="font-medium text-gray-900">{requisition.USER_ID}</p>
+                                  <p className="font-medium text-gray-900">{requisition.USERNAME || requisition.USER_ID}</p>
                                   <p className="text-sm text-gray-500 line-clamp-2">
                                     {requisition.ISSUE_NOTE || "No note provided"}
                                   </p>
@@ -1091,16 +1134,29 @@ export default function ApprovalsPage() {
                                     </>
                                   )}
                                                                      {user?.ROLE === "ADMIN" && (
-                                     <Button
-                                       size="sm"
-                                       variant="outline"
-                                       onClick={() => handleEdit(requisition)}
-                                       disabled={!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0}
-                                       className="hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-600"
-                                     >
-                                       <FileText className="h-4 w-4 mr-2" />
-                                       แก้ไข & PDF
+                                     <>
+                                       <Button
+                                         size="sm"
+                                         variant="outline"
+                                         onClick={() => handleEdit(requisition)}
+                                         disabled={!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0}
+                                         className="hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-600"
+                                       >
+                                         <FileText className="h-4 w-4 mr-2" />
+                                         แก้ไข & PDF
                                        </Button>
+                                       
+                                       {/* ปุ่มแจ้งเตือนว่าสินค้ามาแล้ว */}
+                                       <Button
+                                         size="sm"
+                                         onClick={() => handleNotifyArrival(requisition)}
+                                         disabled={requisition.STATUS !== "APPROVED"}
+                                         className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
+                                       >
+                                         <span className="mr-2">📦</span>
+                                         แจ้งเตือน
+                                       </Button>
+                                     </>
                                    )}
                                 </div>
                               </TableCell>
@@ -1142,7 +1198,7 @@ export default function ApprovalsPage() {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm font-medium text-gray-700 mb-2">Requisition Details:</p>
                 <div className="space-y-1 text-sm text-gray-600">
-                  <p><span className="font-medium">Requested by:</span> {selectedRequisition?.USER_ID}</p>
+                  <p><span className="font-medium">Requested by:</span> {selectedRequisition?.USERNAME || selectedRequisition?.USER_ID}</p>
                   <p><span className="font-medium">Amount:</span> ฿{Number(selectedRequisition?.TOTAL_AMOUNT || 0).toFixed(2)}</p>
                   <p><span className="font-medium">Submitted:</span> {selectedRequisition?.SUBMITTED_AT && formatDate(selectedRequisition.SUBMITTED_AT)}</p>
                 </div>
@@ -1216,7 +1272,7 @@ export default function ApprovalsPage() {
                       </div>
                       <p className="text-sm font-medium text-blue-700">Requested By</p>
                     </div>
-                    <p className="text-xl font-bold text-blue-900">{selectedRequisition?.USER_ID}</p>
+                    <p className="text-xl font-bold text-blue-900">{selectedRequisition?.USERNAME || selectedRequisition?.USER_ID}</p>
                   </div>
                   <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
@@ -1408,8 +1464,79 @@ export default function ApprovalsPage() {
           </DialogContent>
                  </Dialog>
 
-                   {/* Dialog สำหรับแก้ไขข้อมูล */}
-          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                                       {/* Dialog สำหรับแจ้งเตือนว่าสินค้ามาแล้ว */}
+                    <Dialog open={notifyDialogOpen} onOpenChange={setNotifyDialogOpen}>
+                      <DialogContent className="max-w-md bg-white">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                              <span className="text-white text-lg">📦</span>
+                            </div>
+                            <div>
+                              <h2 className="text-xl font-bold text-gray-900">สินค้ามาแล้ว!</h2>
+                              <DialogDescription className="text-sm text-gray-500">
+                                ส่งการแจ้งเตือนให้ผู้ใช้ทราบ
+                              </DialogDescription>
+                            </div>
+                          </DialogTitle>
+                        </DialogHeader>
+                        
+                        <div className="space-y-4 py-4">
+                          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <p className="text-sm font-medium text-blue-700 mb-2">รายละเอียด Requisition:</p>
+                            <div className="space-y-1 text-sm text-blue-600">
+                              <p><span className="font-medium">ID:</span> #{selectedRequisition?.REQUISITION_ID}</p>
+                              <p><span className="font-medium">ผู้ขอเบิก:</span> {selectedRequisition?.USERNAME || selectedRequisition?.USER_ID}</p>
+                              <p><span className="font-medium">จำนวนเงิน:</span> ฿{(parseFloat(selectedRequisition?.TOTAL_AMOUNT?.toString() || '0') || 0).toFixed(2)}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">
+                              ข้อความแจ้งเตือน
+                            </label>
+                            <Textarea
+                              value={notifyMessage}
+                              onChange={(e) => setNotifyMessage(e.target.value)}
+                              rows={3}
+                              placeholder="พิมพ์ข้อความแจ้งเตือนที่นี่..."
+                              className="resize-none"
+                            />
+                          </div>
+                        </div>
+                        
+                        <DialogFooter className="gap-3">
+                          <Button
+                            variant="outline"
+                            onClick={() => setNotifyDialogOpen(false)}
+                            disabled={notifying}
+                            className="flex-1"
+                          >
+                            ยกเลิก
+                          </Button>
+                          <Button
+                            onClick={handleSubmitNotification}
+                            disabled={notifying}
+                            className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0"
+                          >
+                            {notifying ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                กำลังส่ง...
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span>📦</span>
+                                ส่งการแจ้งเตือน
+                              </div>
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* Dialog สำหรับแก้ไขข้อมูล */}
+           <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
             <DialogContent className="max-w-2xl max-h-[90vh] bg-white overflow-y-auto">
              <DialogHeader>
                <DialogTitle className="flex items-center gap-3">

@@ -448,8 +448,14 @@ export class NotificationService {
    */
   static async getUserNotifications(userId: string) {
     try {
+      // ค้นหาด้วย AdLoginName แทน TO_USER_ID
       return await prisma.eMAIL_LOGS.findMany({
-        where: { TO_USER_ID: userId },
+        where: { 
+          OR: [
+            { TO_USER_ID: userId }, // กรณีที่เป็น integer
+            { TO_USER_ID: { equals: userId } } // กรณีที่เป็น string
+          ]
+        },
         orderBy: { SENT_AT: 'desc' },
         take: 50
       })

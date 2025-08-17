@@ -20,6 +20,9 @@ import {
   MenuItem,
   Avatar,
   LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from "@mui/material"
 import {
   Dashboard,
@@ -56,6 +59,9 @@ export default function AdminDashboard() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [selectedRequisition, setSelectedRequisition] = useState<Requisition | null>(null)
   const [loading, setLoading] = useState(true)
+  const [notifyDialogOpen, setNotifyDialogOpen] = useState(false)
+  const [notifyMessage, setNotifyMessage] = useState("")
+  const [notifying, setNotifying] = useState(false)
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
   
@@ -120,6 +126,45 @@ export default function AdminDashboard() {
 
     setAnchorEl(null)
     setSelectedRequisition(null)
+  }
+
+  const handleNotifyArrival = (requisition: Requisition) => {
+    setSelectedRequisition(requisition)
+    setNotifyMessage(`สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`)
+    setNotifyDialogOpen(true)
+  }
+
+  const handleSubmitNotification = async () => {
+    if (!selectedRequisition) return
+    
+    setNotifying(true)
+    try {
+      const response = await fetch("/api/notifications/arrival", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requisitionId: selectedRequisition.REQUISITION_ID,
+          message: notifyMessage,
+        }),
+      })
+
+      if (response.ok) {
+        alert("ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ!")
+        setNotifyDialogOpen(false)
+        setNotifyMessage("")
+        setSelectedRequisition(null)
+      } else {
+        const errorData = await response.json()
+        alert(`เกิดข้อผิดพลาด: ${errorData.error}`)
+      }
+    } catch (error) {
+      alert("เกิดข้อผิดพลาดในการส่งการแจ้งเตือน")
+      console.error("Error sending notification:", error)
+    } finally {
+      setNotifying(false)
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -367,35 +412,34 @@ export default function AdminDashboard() {
 
                   <div className="space-y-4">
                     {quickActions.map((action, index) => (
-                                             <Link href={action.href || "#"} style={{ textDecoration: 'none' }}>
-                         <motion.div
-                           key={action.title}
-                           initial={{ opacity: 0, x: -20 }}
-                           animate={{ opacity: 1, x: 0 }}
-                           transition={{ delay: 0.7 + index * 0.1 }}
-                           whileHover={{ scale: 1.02, x: 5 }}
-                           whileTap={{ scale: 0.98 }}
-                           className="glass-button rounded-2xl p-4 cursor-pointer group"
-                         >
-                        <div className="flex items-center gap-4">
-                          <div
-                            className={`w-12 h-12 rounded-xl bg-gradient-to-r ${action.color} flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300`}
-                          >
-                            <action.icon className="text-white" />
+                      <Link key={action.title} href={action.href || "#"} style={{ textDecoration: 'none' }}>
+                        <motion.div
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.7 + index * 0.1 }}
+                          whileHover={{ scale: 1.02, x: 5 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="glass-button rounded-2xl p-4 cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div
+                              className={`w-12 h-12 rounded-xl bg-gradient-to-r ${action.color} flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300`}
+                            >
+                              <action.icon className="text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <Typography variant="subtitle1" className="font-bold text-gray-800">
+                                {action.title}
+                              </Typography>
+                              <Typography variant="body2" className="text-gray-600">
+                                {action.description}
+                              </Typography>
+                            </div>
+                            <div className="text-gray-400 group-hover:text-gray-600 transition-colors">→</div>
                           </div>
-                          <div className="flex-1">
-                            <Typography variant="subtitle1" className="font-bold text-gray-800">
-                              {action.title}
-                            </Typography>
-                            <Typography variant="body2" className="text-gray-600">
-                              {action.description}
-                            </Typography>
-                          </div>
-                          <div className="text-gray-400 group-hover:text-gray-600 transition-colors">→</div>
-                        </div>
-                      </motion.div>
-                    </Link>
-                  ))}
+                        </motion.div>
+                      </Link>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -591,21 +635,24 @@ export default function AdminDashboard() {
                         <TableCell>
                           <Chip
                             label={requisition.STATUS}
-                            color={getStatusColor(requisition.STATUS) as any}
+                            color={getStatusColor(requisition.STATUS) as "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"}
                             size="small"
                             className="font-semibold"
                           />
                         </TableCell>
                         <TableCell>
-                          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                            <IconButton
+                          {/* ปุ่มแจ้งเตือนว่าสินค้ามาแล้ว */}
+                          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button
                               size="small"
-                              onClick={(e) => handleExportMenu(e, requisition)}
+                              onClick={() => handleNotifyArrival(requisition)}
                               disabled={requisition.STATUS !== "APPROVED"}
-                              className="glass-button rounded-xl"
+                              variant="contained"
+                              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-md hover:shadow-lg transition-all duration-200 rounded-xl px-4 py-2"
+                              startIcon={<span className="text-sm">📦</span>}
                             >
-                              <MoreVert />
-                            </IconButton>
+                              แจ้งเตือน
+                            </Button>
                           </motion.div>
                         </TableCell>
                       </motion.tr>
@@ -636,6 +683,94 @@ export default function AdminDashboard() {
           <Typography>Export as Excel</Typography>
         </MenuItem>
       </Menu>
+
+      {/* Notification Dialog */}
+      <Dialog
+        open={notifyDialogOpen}
+        onClose={() => setNotifyDialogOpen(false)}
+        PaperProps={{
+          className: "glass-card-strong rounded-2xl",
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle className="text-center">
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+              <span className="text-white text-2xl">📦</span>
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900">สินค้ามาแล้ว!</h2>
+        </DialogTitle>
+        
+        <DialogContent className="text-center text-gray-600 mb-4">
+          <Typography variant="body2" component="div">
+            ส่งการแจ้งเตือนให้ผู้ใช้ทราบ
+          </Typography>
+        </DialogContent>
+        
+        <DialogContent>
+          <div className="space-y-4">
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+              <div className="text-center">
+                <p className="text-lg font-bold text-blue-800 mb-2">
+                  Requisition #{selectedRequisition?.REQUISITION_ID}
+                </p>
+                <p className="text-blue-600">
+                  ผู้ขอเบิก: <span className="font-semibold">{selectedRequisition?.USERNAME || selectedRequisition?.USER_ID}</span>
+                </p>
+                <p className="text-blue-600">
+                  จำนวนเงิน: <span className="font-semibold">฿{(parseFloat(selectedRequisition?.TOTAL_AMOUNT?.toString() || '0') || 0).toFixed(2)}</span>
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 text-center">
+                ข้อความแจ้งเตือน
+              </label>
+              <textarea
+                value={notifyMessage}
+                onChange={(e) => setNotifyMessage(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none text-center text-gray-700"
+                placeholder="พิมพ์ข้อความแจ้งเตือนที่นี่..."
+              />
+              <p className="text-xs text-gray-500 text-center">
+                หรือใช้ข้อความเริ่มต้นที่แนะนำไว้
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+        
+        <div className="flex gap-3 px-6 pb-6 justify-end">
+          <Button
+            variant="outlined"
+            onClick={() => setNotifyDialogOpen(false)}
+            disabled={notifying}
+            className="flex-1 h-12 text-base font-medium border-2 border-gray-300 hover:border-gray-400"
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            onClick={handleSubmitNotification}
+            disabled={notifying}
+            className="flex-1 h-12 text-base font-medium bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            {notifying ? (
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                กำลังส่ง...
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📦</span>
+                ส่งการแจ้งเตือน
+              </div>
+            )}
+          </Button>
+        </div>
+      </Dialog>
         </motion.div>
       </div>
     )

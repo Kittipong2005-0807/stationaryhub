@@ -40,3 +40,11 @@ INSERT INTO REQUISITIONS (USER_ID, STATUS, TOTAL_AMOUNT, SITE_ID, ISSUE_NOTE) VA
 INSERT INTO REQUISITION_ITEMS (REQUISITION_ID, PRODUCT_ID, QUANTITY, UNIT_PRICE, TOTAL_PRICE) VALUES 
 (1, 1, 2, 5.50, 11.00),
 (1, 2, 12, 1.20, 14.40);
+
+-- Insert sample email notifications for testing
+INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT) VALUES 
+('admin', 'ทดสอบการแจ้งเตือน #1', 'นี่เป็นการแจ้งเตือนทดสอบเพื่อตรวจสอบระบบ', 'SENT', GETDATE()),
+('admin', 'ทดสอบการแจ้งเตือน #2', 'การแจ้งเตือนทดสอบที่สองสำหรับการตรวจสอบ', 'SENT', DATEADD(HOUR, -1, GETDATE())),
+('admin', 'ทดสอบการแจ้งเตือน #3', 'การแจ้งเตือนทดสอบที่สามสำหรับการตรวจสอบ', 'SENT', DATEADD(HOUR, -2, GETDATE())),
+('manager1', 'ทดสอบการแจ้งเตือน Manager', 'การแจ้งเตือนทดสอบสำหรับ Manager', 'SENT', GETDATE()),
+('user1', 'ทดสอบการแจ้งเตือน User', 'การแจ้งเตือนทดสอบสำหรับ User', 'SENT', GETDATE());

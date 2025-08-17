@@ -15,10 +15,10 @@ export async function POST(
 
     const notificationId = parseInt(params.id)
 
-    // อัปเดตสถานะเป็น READ
+    // อัปเดต IS_READ เป็น true แทนการเปลี่ยน STATUS
     await prisma.eMAIL_LOGS.update({
       where: { EMAIL_ID: notificationId },
-      data: { STATUS: 'READ' }
+      data: { IS_READ: true }
     })
 
     return NextResponse.json({ success: true })

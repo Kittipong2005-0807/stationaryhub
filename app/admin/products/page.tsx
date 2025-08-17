@@ -69,6 +69,7 @@ export default function ProductManagementPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<number | "all">("all")
+  const [imageUploading, setImageUploading] = useState(false)
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
 
@@ -160,6 +161,51 @@ export default function ProductManagementPage() {
   const handleCloseDialog = () => {
     setDialogOpen(false)
     setEditingProduct(null)
+  }
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // ตรวจสอบประเภทไฟล์
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      alert("Invalid file type. Only JPEG, PNG, and WebP are allowed.")
+      return
+    }
+
+    // ตรวจสอบขนาดไฟล์ (max 5MB)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      alert("File too large. Maximum size is 5MB.")
+      return
+    }
+
+    try {
+      setImageUploading(true)
+      
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/upload-product-image", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setFormData(prev => ({ ...prev, PHOTO_URL: result.imageUrl }))
+        alert("Image uploaded successfully!")
+      } else {
+        const errorData = await response.json()
+        alert(`Upload failed: ${errorData.error}`)
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error)
+      alert("Failed to upload image")
+    } finally {
+      setImageUploading(false)
+    }
   }
 
   const handleSubmit = async () => {
@@ -503,118 +549,135 @@ export default function ProductManagementPage() {
             className="pt-8 pb-6"
             style={{ padding: '32px' }}
           >
-            <Grid container spacing={4}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Item ID"
-                  value={formData.ITEM_ID}
-                  onChange={(e) => setFormData({ ...formData, ITEM_ID: e.target.value })}
-                  placeholder="P001, SKU123, etc."
-                  variant="outlined"
-                  size="medium"
-                  InputProps={{
-                    style: { borderRadius: '12px' }
-                  }}
-                  helperText="Optional: Enter a unique identifier for the product"
-                />
+                                                   <Grid container spacing={3}>
+                {/* Basic Information */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Item ID"
+                    value={formData.ITEM_ID}
+                    onChange={(e) => setFormData({ ...formData, ITEM_ID: e.target.value })}
+                    placeholder="P001, SKU123, etc."
+                    variant="outlined"
+                    size="medium"
+                    helperText="Optional: Enter a unique identifier"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Product Name *"
+                    value={formData.PRODUCT_NAME}
+                    onChange={(e) => setFormData({ ...formData, PRODUCT_NAME: e.target.value })}
+                    placeholder="Enter product name"
+                    required
+                    variant="outlined"
+                    size="medium"
+                    helperText="Required: Enter the name of the product"
+                  />
+                </Grid>
+
+                {/* Category and Pricing */}
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth size="medium">
+                    <InputLabel>Category *</InputLabel>
+                    <Select
+                      value={formData.CATEGORY_ID}
+                      onChange={(e) => setFormData({ ...formData, CATEGORY_ID: e.target.value as number })}
+                      label="Category *"
+                    >
+                      {categories.map((category) => (
+                        <MenuItem key={category.CATEGORY_ID} value={category.CATEGORY_ID}>
+                          {category.CATEGORY_NAME}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Unit Price"
+                    type="number"
+                    value={formData.UNIT_COST}
+                    onChange={(e) => setFormData({ ...formData, UNIT_COST: parseFloat(e.target.value) || 0 })}
+                    placeholder="0.00"
+                    variant="outlined"
+                    size="medium"
+                    InputProps={{
+                      startAdornment: <span className="text-gray-500 mr-2">฿</span>,
+                    }}
+                    helperText="Enter the price per unit"
+                  />
+                </Grid>
+
+                {/* Unit */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Unit *"
+                    value={formData.ORDER_UNIT}
+                    onChange={(e) => setFormData({ ...formData, ORDER_UNIT: e.target.value })}
+                    placeholder="Piece, Box, Pack, etc."
+                    required
+                    variant="outlined"
+                    size="medium"
+                    helperText="Required: Enter the unit of measurement"
+                  />
+                </Grid>
+
+                                 {/* Image Upload */}
+                 <Grid item xs={12} md={6}>
+                   <Box className="space-y-3">
+                     {/* Image Preview */}
+                     {formData.PHOTO_URL && (
+                       <Box className="relative">
+                         <Image
+                           src={formData.PHOTO_URL}
+                           alt="Product preview"
+                           width={120}
+                           height={120}
+                           className="rounded-lg object-cover border border-gray-200"
+                         />
+                         <IconButton
+                           size="small"
+                           onClick={() => setFormData({ ...formData, PHOTO_URL: "" })}
+                           className="absolute -top-2 -right-2 bg-red-500 text-white hover:bg-red-600"
+                           style={{ width: '20px', height: '20px' }}
+                         >
+                           <span className="text-xs">×</span>
+                         </IconButton>
+                       </Box>
+                     )}
+                     
+                     {/* File Upload */}
+                     <Box className="space-y-2">
+                       <input
+                         type="file"
+                         accept="image/*"
+                         onChange={handleImageUpload}
+                         className="hidden"
+                         id="image-upload"
+                       />
+                       <label htmlFor="image-upload">
+                         <Button
+                           variant="outlined"
+                           component="span"
+                           startIcon={imageUploading ? <Refresh className="animate-spin" /> : <ImageIcon />}
+                           className="w-full border border-gray-300 hover:border-gray-400"
+                           disabled={imageUploading}
+                           size="small"
+                         >
+                           {imageUploading ? "Uploading..." : (formData.PHOTO_URL ? "Change Image" : "Upload Image")}
+                         </Button>
+                       </label>
+                       <Typography variant="caption" className="text-gray-500 block text-center">
+                         JPEG, PNG, WebP (max 5MB)
+                       </Typography>
+                     </Box>
+                   </Box>
+                 </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Product Name *"
-                  value={formData.PRODUCT_NAME}
-                  onChange={(e) => setFormData({ ...formData, PRODUCT_NAME: e.target.value })}
-                  placeholder="Enter product name"
-                  required
-                  variant="outlined"
-                  size="medium"
-                  InputProps={{
-                    style: { borderRadius: '12px' }
-                  }}
-                  helperText="Required: Enter the name of the product"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth size="medium">
-                  <InputLabel>Category *</InputLabel>
-                  <Select
-                    value={formData.CATEGORY_ID}
-                    onChange={(e) => setFormData({ ...formData, CATEGORY_ID: e.target.value as number })}
-                    label="Category *"
-                    style={{ borderRadius: '12px' }}
-                  >
-                    {categories.map((category) => (
-                      <MenuItem key={category.CATEGORY_ID} value={category.CATEGORY_ID}>
-                        {category.CATEGORY_NAME}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Unit Price"
-                  type="number"
-                  value={formData.UNIT_COST}
-                  onChange={(e) => setFormData({ ...formData, UNIT_COST: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                  variant="outlined"
-                  size="medium"
-                  InputProps={{
-                    startAdornment: <span className="text-gray-500 mr-2 font-semibold">$</span>,
-                    style: { borderRadius: '12px' }
-                  }}
-                  helperText="Enter the price per unit"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Unit *"
-                  value={formData.ORDER_UNIT}
-                  onChange={(e) => setFormData({ ...formData, ORDER_UNIT: e.target.value })}
-                  placeholder="Piece, Box, Pack, Ream, Roll, Set, etc."
-                  required
-                  variant="outlined"
-                  size="medium"
-                  InputProps={{
-                    style: { borderRadius: '12px' }
-                  }}
-                  helperText="Required: Enter the unit of measurement (e.g., Piece, Box, Pack)"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Image URL"
-                  value={formData.PHOTO_URL}
-                  onChange={(e) => setFormData({ ...formData, PHOTO_URL: e.target.value })}
-                  placeholder="https://example.com/image.jpg"
-                  variant="outlined"
-                  size="medium"
-                  InputProps={{
-                    style: { borderRadius: '12px' }
-                  }}
-                  helperText="Optional: Enter product image URL"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Box className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                  <Typography variant="body2" className="text-blue-700 font-medium mb-2">
-                    💡 Tips for better product management:
-                  </Typography>
-                  <ul className="text-blue-600 text-sm space-y-1">
-                    <li>• Use descriptive product names for easy identification</li>
-                    <li>• Choose appropriate categories to organize your inventory</li>
-                    <li>• Set accurate unit prices for cost tracking</li>
-                    <li>• Use consistent unit formats (e.g., "Piece", "Box", "Pack")</li>
-                    <li>• Add product images to improve visual recognition</li>
-                  </ul>
-                </Box>
-              </Grid>
-            </Grid>
           </DialogContent>
           <DialogActions 
             className="p-6 bg-gray-50 rounded-b-2xl"

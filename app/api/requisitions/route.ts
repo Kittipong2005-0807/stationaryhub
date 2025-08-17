@@ -78,6 +78,13 @@ export async function GET(request: NextRequest) {
         where: { USER_ID: userId },
         orderBy: { SUBMITTED_AT: "desc" },
         include: {
+          USERS: {
+            select: {
+              USERNAME: true,
+              DEPARTMENT: true,
+              ROLE: true
+            }
+          },
           REQUISITION_ITEMS: {
             include: {
               PRODUCTS: {
@@ -98,6 +105,9 @@ export async function GET(request: NextRequest) {
         return {
           REQUISITION_ID: requisition.REQUISITION_ID,
           USER_ID: requisition.USER_ID,
+          USERNAME: requisition.USERS?.USERNAME || requisition.USER_ID,
+          DEPARTMENT: requisition.USERS?.DEPARTMENT,
+          USER_ROLE: requisition.USERS?.ROLE,
           SUBMITTED_AT: requisition.SUBMITTED_AT?.toISOString() || new Date().toISOString(),
           STATUS: latestStatus || requisition.STATUS || "PENDING",
           TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
@@ -120,6 +130,13 @@ export async function GET(request: NextRequest) {
       const requisitions = await prisma.rEQUISITIONS.findMany({
         orderBy: { SUBMITTED_AT: "desc" },
         include: {
+          USERS: {
+            select: {
+              USERNAME: true,
+              DEPARTMENT: true,
+              ROLE: true
+            }
+          },
           REQUISITION_ITEMS: {
             include: {
               PRODUCTS: {
@@ -135,6 +152,9 @@ export async function GET(request: NextRequest) {
       const result = requisitions.map(requisition => ({
         REQUISITION_ID: requisition.REQUISITION_ID,
         USER_ID: requisition.USER_ID,
+        USERNAME: requisition.USERS?.USERNAME || requisition.USER_ID,
+        DEPARTMENT: requisition.USERS?.DEPARTMENT,
+        USER_ROLE: requisition.USERS?.ROLE,
         SUBMITTED_AT: requisition.SUBMITTED_AT?.toISOString() || new Date().toISOString(),
         STATUS: requisition.STATUS || "PENDING",
         TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,

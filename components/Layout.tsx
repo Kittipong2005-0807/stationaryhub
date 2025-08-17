@@ -46,12 +46,13 @@ interface LayoutProps {
 }
 
 interface Notification {
-  EMAIL_ID: number
-  TO_USER_ID: string
-  SUBJECT: string
-  BODY: string
-  STATUS: string
-  SENT_AT: Date
+  id: number
+  userId: string
+  subject: string
+  body: string
+  status: string
+  isRead: boolean
+  sentAt: Date
 }
 
 export default function Layout({ children }: LayoutProps) {
@@ -69,7 +70,7 @@ export default function Layout({ children }: LayoutProps) {
   const [notifications, setNotifications] = React.useState<Notification[]>([])
   const [loadingNotifications, setLoadingNotifications] = React.useState(false)
 
-  const unreadCount = notifications.filter((n) => n.STATUS === 'SENT').length
+  const unreadCount = notifications.filter((n) => !n.isRead).length
 
   // ดึงข้อมูลแจ้งเตือนเมื่อ component โหลด
   React.useEffect(() => {
@@ -83,11 +84,16 @@ export default function Layout({ children }: LayoutProps) {
 
     try {
       setLoadingNotifications(true)
+      console.log('🔔 Fetching notifications for user:', user.AdLoginName)
+      
       const response = await fetch(`/api/notifications?userId=${user.AdLoginName}`)
       const data = await response.json()
 
+      console.log('🔔 API response:', data)
+
       if (response.ok) {
         setNotifications(data.notifications || [])
+        console.log('🔔 Set notifications:', data.notifications || [])
       } else {
         console.error('Error fetching notifications:', data.error)
       }
@@ -134,15 +140,15 @@ export default function Layout({ children }: LayoutProps) {
   const handleNotificationAction = async (notification: Notification) => {
     try {
       // Mark as read
-      await fetch(`/api/notifications/${notification.EMAIL_ID}/read`, {
+      await fetch(`/api/notifications/${notification.id}/read`, {
         method: 'POST'
       })
 
       // Update local state
       setNotifications(prev => 
         prev.map(n => 
-          n.EMAIL_ID === notification.EMAIL_ID 
-            ? { ...n, STATUS: 'READ' }
+          n.id === notification.id 
+            ? { ...n, isRead: true }
             : n
         )
       )
@@ -150,7 +156,7 @@ export default function Layout({ children }: LayoutProps) {
       setNotificationAnchor(null)
 
       // Navigate based on notification type
-      if (notification.SUBJECT.includes('requisition')) {
+      if (notification.subject.includes('requisition') || notification.subject.includes('เบิก')) {
         router.push("/orders")
       }
     } catch (error) {
@@ -166,7 +172,7 @@ export default function Layout({ children }: LayoutProps) {
 
       // Remove from local state
       setNotifications(prev => 
-        prev.filter(n => n.EMAIL_ID !== notificationId)
+        prev.filter(n => n.id !== notificationId)
       )
     } catch (error) {
       console.error('Error deleting notification:', error)
@@ -212,9 +218,11 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   const getNotificationIcon = (subject: string) => {
-    if (subject.includes('approved')) return "✅"
-    if (subject.includes('rejected')) return "❌"
-    if (subject.includes('created')) return "📦"
+    if (subject.includes('อนุมัติ')) return "✅"
+    if (subject.includes('ปฏิเสธ')) return "❌"
+    if (subject.includes('ใหม่')) return "📦"
+    if (subject.includes('พร้อม')) return "🎉"
+    if (subject.includes('มาแล้ว')) return "🚀"
     return "📋"
   }
 
@@ -399,28 +407,28 @@ export default function Layout({ children }: LayoutProps) {
                 ) : (
                   notifications.map((notification) => (
                     <MenuItem
-                      key={notification.EMAIL_ID}
+                      key={notification.id}
                       onClick={() => handleNotificationAction(notification)}
                       className={`rounded-lg my-1 px-3 py-2 hover:bg-blue-50 cursor-pointer ${
-                        notification.STATUS === 'READ' ? "opacity-60" : ""
+                        notification.isRead ? "opacity-60" : ""
                       }`}
                     >
                       <Box className="flex-shrink-0 mt-1">
-                        {getNotificationIcon(notification.SUBJECT)}
+                        {getNotificationIcon(notification.subject)}
                       </Box>
                       <Box className="flex-1">
                         <Typography variant="body2" className="mb-1 font-medium text-gray-800">
-                          {notification.BODY}
+                          {notification.body}
                         </Typography>
                         <Typography variant="caption" className="text-gray-400">
-                          {formatDate(notification.SENT_AT)}
+                          {formatDate(notification.sentAt)}
                         </Typography>
                       </Box>
                       <IconButton
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleDeleteNotification(notification.EMAIL_ID)
+                          handleDeleteNotification(notification.id)
                         }}
                         className="text-gray-400 hover:text-red-500"
                       >
