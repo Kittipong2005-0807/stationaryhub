@@ -98,9 +98,10 @@ export class OrgCode3Service {
         SET SITE_ID = ${siteId}
         WHERE USER_ID = ${userId}
       `
+      console.log(`✅ Updated SITE_ID for user ${userId} to ${siteId}`)
       return true
     } catch (error) {
-      console.error('Error updating user SITE_ID:', error)
+      console.error(`❌ Error updating SITE_ID for user ${userId}:`, error)
       return false
     }
   }
@@ -213,6 +214,46 @@ export class OrgCode3Service {
       `
       
       console.log("🔍 Found requisitions:", requisitions)
+      
+      // ดึงข้อมูล requisition items สำหรับแต่ละ requisition
+      if (Array.isArray(requisitions)) {
+        const enrichedRequisitions = await Promise.all(
+          requisitions.map(async (req: any) => {
+            try {
+              // ดึง requisition items
+              const items = await prisma.$queryRaw`
+                SELECT 
+                  ri.ITEM_ID,
+                  ri.REQUISITION_ID,
+                  ri.PRODUCT_ID,
+                  p.PRODUCT_NAME,
+                  p.ORDER_UNIT,
+                  ri.QUANTITY,
+                  ri.UNIT_PRICE,
+                  ri.TOTAL_PRICE
+                FROM REQUISITION_ITEMS ri
+                JOIN PRODUCTS p ON ri.PRODUCT_ID = p.PRODUCT_ID
+                WHERE ri.REQUISITION_ID = ${req.REQUISITION_ID}
+              `
+              
+              return {
+                ...req,
+                REQUISITION_ITEMS: Array.isArray(items) ? items : []
+              }
+            } catch (itemError) {
+              console.error(`Error fetching items for requisition ${req.REQUISITION_ID}:`, itemError)
+              return {
+                ...req,
+                REQUISITION_ITEMS: []
+              }
+            }
+          })
+        )
+        
+        console.log("🔍 Enriched requisitions with items:", enrichedRequisitions)
+        return enrichedRequisitions
+      }
+      
       return Array.isArray(requisitions) ? requisitions : []
     } catch (error) {
       console.error('Error fetching requisitions for manager:', error)
@@ -420,6 +461,7 @@ export class OrgCode3Service {
                   ri.REQUISITION_ID,
                   ri.PRODUCT_ID,
                   p.PRODUCT_NAME,
+                  p.ORDER_UNIT,
                   ri.QUANTITY,
                   ri.UNIT_PRICE,
                   ri.TOTAL_PRICE
@@ -472,4 +514,4 @@ export class OrgCode3Service {
       return []
     }
   }
-} 
+}

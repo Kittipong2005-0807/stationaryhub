@@ -24,6 +24,7 @@ interface RequisitionItem {
   QUANTITY: number
   UNIT_PRICE: number
   TOTAL_PRICE: number
+  ORDER_UNIT?: string
 }
 
 interface Requisition {
@@ -38,6 +39,7 @@ interface Requisition {
   REQUISITION_ITEMS: RequisitionItem[]
   APPROVALS?: unknown[]
   STATUS_HISTORY?: unknown[]
+  DEPARTMENT?: string
 }
 
 export default function ApprovalsPage() {
@@ -425,29 +427,30 @@ export default function ApprovalsPage() {
           <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
             <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${requisition.SITE_ID}</div>
             <div style="font-size: 11px; color: #666; margin-top: 2px;">UCHA ${requisition.SITE_ID} - ${requisition.USER_ID}</div>
+            <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisition.DEPARTMENT || 'N/A'}</div>
           </div>
           
-          <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; font-size: 10px;">
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; font-size: 10px; table-layout: fixed;">
             <thead>
               <tr>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 60px;">Itemnum</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 300px;">Description</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 60px;">Order</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 50px;">Unit</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 60px;">Cost</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 60px;">Sent</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 60px;">SRNum</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 10%;">Itemnum</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 40%;">Description</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 12%;">Order</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 10%;">Unit</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 12%;">Cost</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 8%;">Sent</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 8%;">SRNum</th>
               </tr>
             </thead>
             <tbody>
               ${requisition.REQUISITION_ITEMS.map((item, index) => `
                 <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'};">
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #1976d2;">SA${String(index + 1).padStart(3, '0')}</td>
-                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 9px;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
+                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 9px; word-wrap: break-word; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${item.PRODUCT_NAME || 'Unknown Product'}">${(item.PRODUCT_NAME || 'Unknown Product').length > 25 ? (item.PRODUCT_NAME || 'Unknown Product').substring(0, 25) + '...' : (item.PRODUCT_NAME || 'Unknown Product')}</td>
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${Math.round(item.QUANTITY)}</td>
-                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">EA</td>
+                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ORDER_UNIT || 'EA'}</td>
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>
-                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center; color: #999;">...</td>
+                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center; color: #1976d2; font-weight: bold;">${Math.round(item.QUANTITY)}</td>
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center; font-weight: bold; color: #1976d2;">${requisition.REQUISITION_ID}</td>
                 </tr>
               `).join('')}
@@ -460,6 +463,7 @@ export default function ApprovalsPage() {
           <div style="font-size: 18px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${Number(requisition.TOTAL_AMOUNT).toFixed(2)}</div>
           <p style="margin: 10px 0 0 0; color: #1976d2;">จำนวนรายการ: ${requisition.REQUISITION_ITEMS.length} รายการ</p>
           <p style="margin: 5px 0 0 0; color: #1976d2;">สถานะ: ${requisition.STATUS}</p>
+          <p style="margin: 5px 0 0 0; color: #1976d2;">แผนก: ${requisition.DEPARTMENT || 'N/A'}</p>
         </div>
         
         <div style="margin-top: 30px; text-align: center; color: #666; font-size: 10px; border-top: 1px solid #ddd; padding-top: 15px;">
@@ -1006,6 +1010,15 @@ export default function ApprovalsPage() {
                               : activeFilter === "rejected"
                               ? "text-red-800"
                               : "text-gray-700"
+                          }`}>Department</TableHead>
+                          <TableHead className={`font-semibold ${
+                            activeFilter === "pending" 
+                              ? "text-yellow-800"
+                              : activeFilter === "approved"
+                              ? "text-green-800"
+                              : activeFilter === "rejected"
+                              ? "text-red-800"
+                              : "text-gray-700"
                           }`}>Submitted Date</TableHead>
                           <TableHead className={`font-semibold ${
                             activeFilter === "pending" 
@@ -1083,6 +1096,12 @@ export default function ApprovalsPage() {
                                 </div>
                               </TableCell>
                               <TableCell>
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium text-gray-700">{requisition.DEPARTMENT || "N/A"}</p>
+                                  <p className="text-xs text-gray-500">{requisition.SITE_ID || "N/A"}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
                                 <div className="flex items-center gap-2">
                                   <Clock className="h-4 w-4 text-gray-400" />
                                   <span className="text-sm text-gray-600">{formatDate(requisition.SUBMITTED_AT)}</span>
@@ -1133,31 +1152,31 @@ export default function ApprovalsPage() {
                                       </Button>
                                     </>
                                   )}
-                                                                     {user?.ROLE === "ADMIN" && (
-                                     <>
-                                       <Button
-                                         size="sm"
-                                         variant="outline"
-                                         onClick={() => handleEdit(requisition)}
-                                         disabled={!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0}
-                                         className="hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-600"
-                                       >
-                                         <FileText className="h-4 w-4 mr-2" />
-                                         แก้ไข & PDF
-                                       </Button>
-                                       
-                                       {/* ปุ่มแจ้งเตือนว่าสินค้ามาแล้ว */}
-                                       <Button
-                                         size="sm"
-                                         onClick={() => handleNotifyArrival(requisition)}
-                                         disabled={requisition.STATUS !== "APPROVED"}
-                                         className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
-                                       >
-                                         <span className="mr-2">📦</span>
-                                         แจ้งเตือน
-                                       </Button>
-                                     </>
-                                   )}
+                                                                      {user?.ROLE === "ADMIN" && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleEdit(requisition)}
+                                          disabled={!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0}
+                                          className="hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-600"
+                                        >
+                                          <FileText className="h-4 w-4 mr-2" />
+                                          แก้ไข & PDF
+                                        </Button>
+                                        
+                                        {/* ปุ่มแจ้งเตือนว่าสินค้ามาแล้ว */}
+                                        <Button
+                                          size="sm"
+                                          onClick={() => handleNotifyArrival(requisition)}
+                                          disabled={requisition.STATUS !== "APPROVED"}
+                                          className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
+                                        >
+                                          <span className="mr-2">📦</span>
+                                          แจ้งเตือน
+                                        </Button>
+                                      </>
+                                    )}
                                 </div>
                               </TableCell>
                             </motion.tr>
@@ -1263,7 +1282,7 @@ export default function ApprovalsPage() {
             </DialogHeader>
             <div className="space-y-8">
               {/* Header Info Cards */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="space-y-4">
                   <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
@@ -1309,6 +1328,28 @@ export default function ApprovalsPage() {
                       {getStatusIcon(selectedRequisition?.STATUS || "")}
                       {selectedRequisition?.STATUS}
                     </Badge>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="p-6 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl border border-indigo-200 shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+                        <span className="text-white text-sm font-semibold">🏢</span>
+                      </div>
+                      <p className="text-sm font-medium text-indigo-700">Department</p>
+                    </div>
+                    <p className="text-lg font-semibold text-indigo-900">{selectedRequisition?.DEPARTMENT || "N/A"}</p>
+                    <p className="text-sm text-indigo-600 mt-1">Site: {selectedRequisition?.SITE_ID || "N/A"}</p>
+                  </div>
+                  <div className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200 shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                        <span className="text-white text-sm font-semibold">📦</span>
+                      </div>
+                      <p className="text-sm font-medium text-orange-700">Items Count</p>
+                    </div>
+                    <p className="text-2xl font-bold text-orange-900">{selectedRequisition?.REQUISITION_ITEMS?.length || 0}</p>
+                    <p className="text-sm text-orange-600 mt-1">Total Items</p>
                   </div>
                 </div>
               </div>
@@ -1386,17 +1427,19 @@ export default function ApprovalsPage() {
                 {selectedRequisition?.REQUISITION_ITEMS && selectedRequisition.REQUISITION_ITEMS.length > 0 ? (
                   <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                     <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
-                      <div className="grid grid-cols-4 gap-4 text-sm font-semibold text-gray-700">
+                      <div className="grid grid-cols-6 gap-4 text-sm font-semibold text-gray-700">
                         <div>Product Name</div>
                         <div className="text-center">Quantity</div>
+                        <div className="text-center">Unit</div>
                         <div className="text-right">Unit Price</div>
                         <div className="text-right">Total Price</div>
+                        <div className="text-center">Product ID</div>
                       </div>
                     </div>
                     <div className="divide-y divide-gray-100">
                       {selectedRequisition.REQUISITION_ITEMS.map((item, idx) => (
                         <div key={idx} className="px-6 py-4 hover:bg-gray-50/50 transition-colors">
-                          <div className="grid grid-cols-4 gap-4 items-center">
+                          <div className="grid grid-cols-6 gap-4 items-center">
                             <div className="font-medium text-gray-900">
                               {item.PRODUCT_NAME || "Unknown Product"}
                             </div>
@@ -1405,11 +1448,21 @@ export default function ApprovalsPage() {
                                 {item.QUANTITY}
                               </Badge>
                             </div>
+                            <div className="text-center">
+                              <Badge variant="outline" className="bg-gray-50 text-gray-700 font-medium">
+                                {item.ORDER_UNIT || 'EA'}
+                              </Badge>
+                            </div>
                             <div className="text-right text-gray-600 font-medium">
                               ฿{Number(item.UNIT_PRICE || 0).toFixed(2)}
                             </div>
                             <div className="text-right font-bold text-green-600 text-lg">
                               ฿{Number(item.TOTAL_PRICE || 0).toFixed(2)}
+                            </div>
+                            <div className="text-center">
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 font-medium text-xs">
+                                #{item.PRODUCT_ID}
+                              </Badge>
                             </div>
                           </div>
                         </div>

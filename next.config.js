@@ -4,6 +4,9 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   
+  // Output configuration for Docker
+  output: 'standalone',
+  
   // Image optimization
   images: {
     domains: [],
