@@ -52,14 +52,26 @@ export default function TestEmailPage() {
         setSubject('')
         setMessage('')
       } else {
+        // แสดง error message ที่ชัดเจน
+        const errorMessage = data.error || "เกิดข้อผิดพลาดในการส่งอีเมล"
+        const errorDetails = data.details
+        
+        console.error('Email sending failed:', { error: errorMessage, details: errorDetails })
+        
         toast({
           type: "error",
           title: "ส่งอีเมลไม่สำเร็จ",
-          message: data.error || "เกิดข้อผิดพลาดในการส่งอีเมล",
+          message: errorMessage,
           onClose: () => {}
         })
+        
+        // แสดง error details ใน console สำหรับ debugging
+        if (errorDetails) {
+          console.error('Error details:', errorDetails)
+        }
       }
     } catch (error) {
+      console.error('Network error:', error)
       toast({
         type: "error",
         title: "เกิดข้อผิดพลาด",
@@ -133,6 +145,16 @@ export default function TestEmailPage() {
               <li>• สำหรับ Gmail ต้องใช้ App Password</li>
               <li>• ตรวจสอบ firewall และ port 587</li>
               <li>• อีเมลจะถูกส่งจาก {process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}</li>
+            </ul>
+          </div>
+          
+          <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
+            <h3 className="font-semibold text-yellow-900 mb-2">🔧 การแก้ไขปัญหา:</h3>
+            <ul className="text-sm text-yellow-800 space-y-1">
+              <li>• <strong>EAUTH:</strong> ตรวจสอบ SMTP_USER และ SMTP_PASS</li>
+              <li>• <strong>ECONNECTION:</strong> ตรวจสอบ SMTP_HOST และ SMTP_PORT</li>
+              <li>• <strong>ETIMEDOUT:</strong> ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต</li>
+              <li>• เปิด Developer Console (F12) เพื่อดู logs เพิ่มเติม</li>
             </ul>
           </div>
         </CardContent>

@@ -62,6 +62,7 @@ export default function AdminDashboard() {
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false)
   const [notifyMessage, setNotifyMessage] = useState("")
   const [notifying, setNotifying] = useState(false)
+  const [sendEmail, setSendEmail] = useState(true) // เพิ่มตัวเลือกส่งอีเมล
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
   
@@ -135,10 +136,14 @@ export default function AdminDashboard() {
   }
 
   const handleSubmitNotification = async () => {
-    if (!selectedRequisition) return
-    
+    if (!selectedRequisition || !notifyMessage.trim()) {
+      alert("กรุณาเลือก requisition และพิมพ์ข้อความแจ้งเตือน")
+      return
+    }
+
     setNotifying(true)
     try {
+      // ส่งการแจ้งเตือนในระบบ (In-App Notification)
       const response = await fetch("/api/notifications/arrival", {
         method: "POST",
         headers: {
@@ -151,10 +156,48 @@ export default function AdminDashboard() {
       })
 
       if (response.ok) {
-        alert("ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ!")
+        let emailStatus = "ไม่ส่งอีเมล"
+        
+        // ส่งอีเมลแจ้งเตือนไปยัง user (ถ้าเลือกส่งอีเมล)
+        if (sendEmail) {
+          try {
+            const emailResponse = await fetch("/api/send-arrival-email", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                requisitionId: selectedRequisition.REQUISITION_ID,
+                userId: selectedRequisition.USER_ID,
+                message: notifyMessage,
+                adminName: getUserDisplayName()
+              }),
+            })
+
+            if (emailResponse.ok) {
+              const emailData = await emailResponse.json()
+              if (emailData.emailSent) {
+                emailStatus = "ส่งอีเมลสำเร็จ"
+                console.log("📧 Email sent successfully to:", emailData.userEmail)
+              } else {
+                emailStatus = "ส่งอีเมลไม่สำเร็จ: " + emailData.reason
+                console.log("⚠️ Email not sent:", emailData.reason)
+              }
+            } else {
+              emailStatus = "ส่งอีเมลไม่สำเร็จ: API Error"
+              console.log("⚠️ Email API error:", await emailResponse.text())
+            }
+          } catch (emailError) {
+            console.error("❌ Error sending email:", emailError)
+            emailStatus = "ส่งอีเมลไม่สำเร็จ: Network Error"
+          }
+        }
+
+        alert(`✅ ส่งการแจ้งเตือนสำเร็จ!\n\n📱 In-App: สำเร็จ\n📧 อีเมล: ${emailStatus}`)
         setNotifyDialogOpen(false)
         setNotifyMessage("")
         setSelectedRequisition(null)
+        setSendEmail(true) // รีเซ็ตเป็นค่าเริ่มต้น
       } else {
         const errorData = await response.json()
         alert(`เกิดข้อผิดพลาด: ${errorData.error}`)
@@ -740,6 +783,29 @@ export default function AdminDashboard() {
                 หรือใช้ข้อความเริ่มต้นที่แนะนำไว้
               </p>
             </div>
+            
+            {/* ตัวเลือกส่งอีเมล */}
+            <div className="flex items-center justify-center space-x-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+              <input
+                type="checkbox"
+                id="sendEmail"
+                checked={sendEmail}
+                onChange={(e) => setSendEmail(e.target.checked)}
+                className="w-5 h-5 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+              />
+              <label htmlFor="sendEmail" className="text-sm font-medium text-blue-800">
+                📧 ส่งอีเมลแจ้งเตือนไปยังผู้ใช้ด้วย
+              </label>
+            </div>
+            
+            {/* ข้อมูลเพิ่มเติม */}
+            {sendEmail && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-xs text-yellow-800 text-center">
+                  💡 <strong>หมายเหตุ:</strong> ระบบจะส่งอีเมลไปยัง email ที่ผู้ใช้ลงทะเบียนไว้ในระบบ LDAP
+                </p>
+              </div>
+            )}
           </div>
         </DialogContent>
         
@@ -765,7 +831,7 @@ export default function AdminDashboard() {
             ) : (
               <div className="flex items-center gap-2">
                 <span className="text-lg">📦</span>
-                ส่งการแจ้งเตือน
+                {sendEmail ? "ส่งการแจ้งเตือน + อีเมล" : "ส่งการแจ้งเตือน"}
               </div>
             )}
           </Button>

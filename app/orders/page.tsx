@@ -60,8 +60,11 @@ export default function OrdersPage() {
       }
       setError(null)
       
-      console.log("Fetching orders...")
-      const response = await fetch("/api/requisitions?mine=1", {
+      console.log("🔍 Fetching orders for user:", user?.USER_ID || user?.AdLoginName || user?.id)
+      console.log("🔍 User authentication status:", isAuthenticated)
+      console.log("🔍 User data:", user)
+      
+      const response = await fetch("/api/my-orders", {
         // เพิ่ม cache headers
         headers: {
           'Cache-Control': 'max-age=60' // cache 1 นาที
@@ -69,28 +72,29 @@ export default function OrdersPage() {
       })
       const data = await response.json()
       
-      console.log("Orders API response:", response.status, data)
+      console.log("📊 Orders API response:", response.status, data)
       
       if (response.ok) {
         if (Array.isArray(data)) {
           if (data.length > 0) {
-            console.log("First order details:", data[0])
-            console.log("REQUISITION_ITEMS:", data[0].REQUISITION_ITEMS)
+            console.log("✅ First order details:", data[0])
+            console.log("📦 REQUISITION_ITEMS:", data[0].REQUISITION_ITEMS)
+            console.log("👤 Order belongs to user:", data[0].USER_ID)
           }
           setOrders(data)
           setLastUpdated(new Date())
         } else {
-          console.log("Data is not an array, setting empty array")
+          console.log("📭 No orders found for user")
           setOrders([])
           setLastUpdated(new Date())
         }
       } else {
-        console.error("API error:", data)
+        console.error("❌ API error:", data)
         setError(data.error || "ไม่สามารถดึงข้อมูลได้")
         setOrders([])
       }
     } catch (error) {
-      console.error("Error fetching orders:", error)
+      console.error("❌ Error fetching orders:", error)
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
       setOrders([])
     } finally {
@@ -100,7 +104,7 @@ export default function OrdersPage() {
         setUpdating(false)
       }
     }
-  }, [])
+  }, [user, isAuthenticated])
 
   useEffect(() => {
     if (!isAuthenticated || user?.ROLE !== "USER") {
@@ -148,35 +152,30 @@ export default function OrdersPage() {
     setSelectedOrder(null)
   }
 
-  const handleRefresh = async () => {
+  const refreshOrders = async () => {
     try {
-      setLoading(true)
+      setUpdating(true)
       setError(null)
       
-      console.log("Refreshing orders...")
-      const response = await fetch("/api/requisitions?mine=1")
+      const response = await fetch("/api/my-orders")
       const data = await response.json()
-      
-      console.log("Orders refresh response:", response.status, data)
       
       if (response.ok) {
         if (Array.isArray(data)) {
           setOrders(data)
           setLastUpdated(new Date())
         } else {
-          console.log("Refreshed data is not an array, setting empty array")
           setOrders([])
           setLastUpdated(new Date())
         }
       } else {
-        console.error("API error:", data)
         setError(data.error || "ไม่สามารถดึงข้อมูลได้")
       }
     } catch (error) {
       console.error("Error refreshing orders:", error)
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
     } finally {
-      setLoading(false)
+      setUpdating(false)
     }
   }
 
@@ -206,7 +205,22 @@ export default function OrdersPage() {
     }
   }
 
-  if (!isAuthenticated || user?.ROLE !== "USER") return null
+  if (!isAuthenticated || !user) return null
+
+  // ตรวจสอบว่าเป็น USER หรือ MANAGER
+  const allowedRoles = ["USER", "MANAGER", "ADMIN"]
+  if (!allowedRoles.includes(user.ROLE)) {
+    return (
+      <Box className="text-center py-20">
+        <Typography variant="h6" className="text-gray-600 mb-4">
+          🚫 Access Denied
+        </Typography>
+        <Typography variant="body1">
+          This page is only accessible to users, managers, and administrators.
+        </Typography>
+      </Box>
+    )
+  }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
@@ -217,7 +231,7 @@ export default function OrdersPage() {
         </Typography>
         <Button
           variant="outlined"
-          onClick={handleRefresh}
+          onClick={refreshOrders}
           disabled={loading}
           startIcon={<RefreshIcon className={loading ? "animate-spin" : ""} />}
         >
@@ -235,7 +249,7 @@ export default function OrdersPage() {
       {/* Debug Info */}
       <Box className="mb-4 p-3 glass-card rounded">
         <Typography variant="body2" className="text-blue-700">
-          🔍 Debug: Found {orders.length} orders
+          🔍 Debug: Found {orders.length} orders for user: <strong>{user?.USERNAME || user?.AdLoginName || user?.id || 'Unknown'}</strong>
           {lastUpdated && (
             <span className="ml-2 text-xs">
               (Last updated: {lastUpdated.toLocaleTimeString('th-TH', { hour12: false })})
@@ -246,6 +260,9 @@ export default function OrdersPage() {
               🔄 Auto-updating...
             </span>
           )}
+        </Typography>
+        <Typography variant="body2" className="text-green-700 mt-1">
+          👤 User ID: {user?.USER_ID || 'N/A'} | Role: {user?.ROLE || 'N/A'}
         </Typography>
       </Box>
 

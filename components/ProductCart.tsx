@@ -222,6 +222,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             src={product.PHOTO_URL || "/placeholder.svg"}
             alt={product.PRODUCT_NAME}
             fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             style={{ objectFit: "cover", borderRadius: 12 }}
             onLoad={() => setImageLoading(false)}
             onError={() => setImageLoading(false)}
