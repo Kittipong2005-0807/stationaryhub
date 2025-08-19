@@ -110,3 +110,5 @@ echo "- ตรวจสอบการเชื่อมต่อฐานข้
 echo "- ตรวจสอบ firewall และ port"
 echo "- ใช้ PM2 หรือ systemd สำหรับ production"
 
+
+
