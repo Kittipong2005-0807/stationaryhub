@@ -42,20 +42,6 @@ model EXPORT_LOGS {
   REQUISITIONS   REQUISITIONS @relation(fields: [REQUISITION_ID], references: [REQUISITION_ID], onUpdate: NoAction, map: "FK__EXPORT_LO__REQUI__571DF1D5")
 }
 
-model NOTIFICATIONS {
-  NOTIFICATION_ID                     Int           @id(map: "PK__NOTIFICA__83A4A446C148D203") @default(autoincrement())
-  USER_ID                             String        @db.VarChar(50)
-  ACTOR_ID                            String?       @db.VarChar(50)
-  REQUISITION_ID                      Int?
-  TYPE                                String        @db.NVarChar(50)
-  MESSAGE                             String        @db.NVarChar(Max)
-  IS_READ                             Boolean?      @default(false, map: "DF__NOTIFICAT__IS_RE__0880433F")
-  CREATED_AT                          DateTime?     @default(now(), map: "DF__NOTIFICAT__CREAT__09746778") @db.DateTime
-  USERS_NOTIFICATIONS_ACTOR_IDToUSERS USERS?        @relation("NOTIFICATIONS_ACTOR_IDToUSERS", fields: [ACTOR_ID], references: [USER_ID], onDelete: NoAction, onUpdate: NoAction, map: "FK_NOTIFICATIONS_ACTOR")
-  REQUISITIONS                        REQUISITIONS? @relation(fields: [REQUISITION_ID], references: [REQUISITION_ID], onDelete: NoAction, onUpdate: NoAction, map: "FK_NOTIFICATIONS_REQ")
-  USERS_NOTIFICATIONS_USER_IDToUSERS  USERS         @relation("NOTIFICATIONS_USER_IDToUSERS", fields: [USER_ID], references: [USER_ID], onUpdate: NoAction, map: "FK_NOTIFICATIONS_USER")
-}
-
 model PRODUCT_CATEGORIES {
   CATEGORY_ID   Int        @id(map: "PK__PRODUCT___E7DA297C64E80E18") @default(autoincrement())
   CATEGORY_NAME String     @db.VarChar(255)
@@ -96,7 +82,6 @@ model REQUISITIONS {
   ISSUE_NOTE        String?             @db.VarChar(1000)
   APPROVALS         APPROVALS[]
   EXPORT_LOGS       EXPORT_LOGS[]
-  NOTIFICATIONS     NOTIFICATIONS[]
   REQUISITION_ITEMS REQUISITION_ITEMS[]
   USERS             USERS               @relation(fields: [USER_ID], references: [USER_ID], onUpdate: NoAction, map: "FK__REQUISITI__USER___48CFD27E")
   STATUS_HISTORY    STATUS_HISTORY[]
@@ -125,8 +110,6 @@ model USERS {
   APPROVALS                                   APPROVALS[]
   EMAIL_LOGS                                  EMAIL_LOGS[]
   EXPORT_LOGS                                 EXPORT_LOGS[]
-  NOTIFICATIONS_NOTIFICATIONS_ACTOR_IDToUSERS NOTIFICATIONS[]  @relation("NOTIFICATIONS_ACTOR_IDToUSERS")
-  NOTIFICATIONS_NOTIFICATIONS_USER_IDToUSERS  NOTIFICATIONS[]  @relation("NOTIFICATIONS_USER_IDToUSERS")
   REQUISITIONS                                REQUISITIONS[]
   STATUS_HISTORY                              STATUS_HISTORY[]
 }

@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      return NextResponse.json({ success: true }, { status: 201 })
+      // return NextResponse.json({ success: true }, { status: 201 })
     }
     
     // กรณีสร้าง requisition ใหม่ (จะใช้ OrgCode3Service แทน)
