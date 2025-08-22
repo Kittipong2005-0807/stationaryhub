@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CheckCircle, XCircle, Eye, ClipboardList, TrendingUp, Clock, CheckSquare, AlertTriangle, RefreshCw, Download, FileText } from "lucide-react"
+import { ShoppingCart, Person, CalendarToday, Note, Inventory, Category } from "@mui/icons-material"
+import { Typography } from "@mui/material"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import jsPDF from 'jspdf'
@@ -25,6 +27,8 @@ interface RequisitionItem {
   UNIT_PRICE: number
   TOTAL_PRICE: number
   ORDER_UNIT?: string
+  PHOTO_URL?: string
+  CATEGORY_NAME?: string
 }
 
 interface Requisition {
@@ -1266,254 +1270,212 @@ export default function ApprovalsPage() {
           </DialogContent>
         </Dialog>
 
-                 {/* Dialog แสดงรายละเอียด */}
-         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-           <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto bg-white">
-            <DialogHeader className="pb-6">
-              <DialogTitle className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <span className="text-white text-lg font-bold">#{selectedRequisition?.REQUISITION_ID}</span>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Requisition Details</h2>
-                  <p className="text-sm text-gray-500 mt-1">Complete information about this request</p>
-                </div>
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-8">
-              {/* Header Info Cards */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="space-y-4">
-                  <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white text-sm font-semibold">👤</span>
-                      </div>
-                      <p className="text-sm font-medium text-blue-700">Requested By</p>
-                    </div>
-                    <p className="text-xl font-bold text-blue-900">{selectedRequisition?.USERNAME || selectedRequisition?.USER_ID}</p>
-                  </div>
-                  <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white text-sm font-semibold">💰</span>
-                      </div>
-                      <p className="text-sm font-medium text-green-700">Total Amount</p>
-                    </div>
-                    <p className="text-3xl font-bold text-green-900">
-                      ฿{Number(selectedRequisition?.TOTAL_AMOUNT || 0).toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white text-sm font-semibold">📅</span>
-                      </div>
-                      <p className="text-sm font-medium text-purple-700">Submitted</p>
-                    </div>
-                    <p className="text-lg font-semibold text-purple-900">
-                      {selectedRequisition?.SUBMITTED_AT && formatDate(selectedRequisition.SUBMITTED_AT)}
-                    </p>
-                  </div>
-                  <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-gray-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white text-sm font-semibold">🏷️</span>
-                      </div>
-                      <p className="text-sm font-medium text-gray-700">Status</p>
-                    </div>
-                    <Badge className={`${getStatusColor(selectedRequisition?.STATUS || "")} border px-4 py-2 rounded-full flex items-center gap-2 w-fit text-sm font-semibold`}>
-                      {getStatusIcon(selectedRequisition?.STATUS || "")}
-                      {selectedRequisition?.STATUS}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="p-6 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl border border-indigo-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white text-sm font-semibold">🏢</span>
-                      </div>
-                      <p className="text-sm font-medium text-indigo-700">Department</p>
-                    </div>
-                    <p className="text-lg font-semibold text-indigo-900">{selectedRequisition?.DEPARTMENT || "N/A"}</p>
-                    <p className="text-sm text-indigo-600 mt-1">Site: {selectedRequisition?.SITE_ID || "N/A"}</p>
-                  </div>
-                  <div className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white text-sm font-semibold">📦</span>
-                      </div>
-                      <p className="text-sm font-medium text-orange-700">Items Count</p>
-                    </div>
-                    <p className="text-2xl font-bold text-orange-900">{selectedRequisition?.REQUISITION_ITEMS?.length || 0}</p>
-                    <p className="text-sm text-orange-600 mt-1">Total Items</p>
-                  </div>
-                </div>
-              </div>
+                         {/* Dialog แสดงรายละเอียด */}
+        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-white">
+           <DialogHeader className="pb-4">
+             <DialogTitle className="flex items-center gap-3 border-b border-gray-200 pb-4">
+               <ShoppingCart className="text-blue-600" />
+               <div>
+                 <Typography variant="h5" className="font-bold">
+                   Requisition Details #{selectedRequisition?.REQUISITION_ID}
+                 </Typography>
+                 <Typography variant="body2" className="text-gray-600">
+                   รายละเอียดคำขอเบิก
+                 </Typography>
+               </div>
+             </DialogTitle>
+           </DialogHeader>
+                       <div className="space-y-6 pt-6">
+             {/* Order Information */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <Card className="bg-blue-50 border border-blue-200">
+                 <CardContent>
+                   <Typography variant="h6" className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                     <Person className="h-5 w-5" />
+                     ข้อมูลผู้ขอ
+                   </Typography>
+                   <div className="space-y-2">
+                     <div className="flex justify-between">
+                       <span className="text-gray-600">User ID:</span>
+                       <span className="font-medium">{selectedRequisition?.USER_ID}</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-600">Username:</span>
+                       <span className="font-medium">{selectedRequisition?.USERNAME || "N/A"}</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-600">Department:</span>
+                       <span className="font-medium">{selectedRequisition?.DEPARTMENT || "N/A"}</span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-600">Site ID:</span>
+                       <span className="font-medium">{selectedRequisition?.SITE_ID || "N/A"}</span>
+                     </div>
+                   </div>
+                 </CardContent>
+               </Card>
 
-              {/* Note Section */}
-              {selectedRequisition?.ISSUE_NOTE && (
-                <div className="p-6 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl border border-yellow-200 shadow-sm">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
-                      <span className="text-white text-sm font-semibold">📝</span>
-                    </div>
-                    <p className="text-sm font-medium text-yellow-700">Note</p>
-                  </div>
-                  <p className="text-gray-800 text-lg leading-relaxed">{selectedRequisition.ISSUE_NOTE}</p>
-                </div>
-              )}
+               <Card className="bg-green-50 border border-green-200">
+                 <CardContent>
+                   <Typography variant="h6" className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                     <CalendarToday className="h-5 w-5" />
+                     ข้อมูลคำขอ
+                   </Typography>
+                   <div className="space-y-2">
+                     <div className="flex justify-between">
+                       <span className="text-gray-600">Status:</span>
+                       <Badge className={`${getStatusColor(selectedRequisition?.STATUS || "")} border px-3 py-1 rounded-full flex items-center gap-1 w-fit`}>
+                         {getStatusIcon(selectedRequisition?.STATUS || "")}
+                         {selectedRequisition?.STATUS}
+                       </Badge>
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-600">Submitted:</span>
+                       <span className="font-medium">
+                         {selectedRequisition?.SUBMITTED_AT && formatDate(selectedRequisition.SUBMITTED_AT)}
+                       </span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-600">Total Amount:</span>
+                       <span className="font-bold text-green-600">
+                         ฿{Number(selectedRequisition?.TOTAL_AMOUNT || 0).toFixed(2)}
+                       </span>
+                     </div>
+                     <div className="flex justify-between">
+                       <span className="text-gray-600">Items:</span>
+                       <span className="font-medium">
+                         {selectedRequisition?.REQUISITION_ITEMS?.length || 0} รายการ
+                       </span>
+                     </div>
+                   </div>
+                 </CardContent>
+               </Card>
+             </div>
 
-              {/* Approval History Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-sm font-semibold">✅</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Approval History</h3>
-                </div>
-                
-                <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
-                  <p className="text-sm text-gray-600 mb-4">
-                    This requisition uses the integrated approval system. Status is managed through both APPROVALS and STATUS_HISTORY tables.
-                  </p>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Badge className={`${getStatusColor(selectedRequisition?.STATUS || "")} border px-3 py-1 rounded-full flex items-center gap-1 w-fit`}>
-                      {getStatusIcon(selectedRequisition?.STATUS || "")}
-                      {selectedRequisition?.STATUS || "PENDING"}
-                    </Badge>
-                    <span className="text-sm text-gray-500">(Latest status from integrated system)</span>
-                  </div>
-                  
-                  {/* แสดงข้อมูลจาก APPROVALS และ STATUS_HISTORY */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-white rounded-lg border">
-                      <h4 className="font-semibold text-blue-700 mb-2">📋 APPROVALS Table</h4>
-                      <p className="text-sm text-gray-600">
-                        Records: {selectedRequisition?.APPROVALS?.length || 0}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Latest: {(selectedRequisition?.APPROVALS?.[0] as { STATUS?: string })?.STATUS || "None"}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-white rounded-lg border">
-                      <h4 className="font-semibold text-green-700 mb-2">📊 STATUS_HISTORY Table</h4>
-                      <p className="text-sm text-gray-600">
-                        Records: {selectedRequisition?.STATUS_HISTORY?.length || 0}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Latest: {(selectedRequisition?.STATUS_HISTORY?.[0] as { STATUS?: string })?.STATUS || "None"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                           {/* Issue Note */}
+             {selectedRequisition?.ISSUE_NOTE && (
+               <Card className="bg-yellow-50 border border-yellow-200">
+                 <CardContent>
+                   <Typography variant="h6" className="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
+                     <Note className="h-5 w-5" />
+                     หมายเหตุ
+                   </Typography>
+                   <Typography variant="body1" className="text-gray-700">
+                     {selectedRequisition.ISSUE_NOTE}
+                   </Typography>
+                 </CardContent>
+               </Card>
+             )}
 
-              {/* Items Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-sm font-semibold">📦</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Items</h3>
-                  <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">
-                    {selectedRequisition?.REQUISITION_ITEMS?.length || 0} items
-                  </Badge>
-                </div>
+                           {/* Order Items */}
+             <Card className="border border-gray-200">
+               <CardContent>
+                 <Typography variant="h6" className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                   <Inventory className="h-5 w-5" />
+                   รายการสินค้า ({selectedRequisition?.REQUISITION_ITEMS?.length || 0} รายการ)
+                 </Typography>
 
-                {selectedRequisition?.REQUISITION_ITEMS && selectedRequisition.REQUISITION_ITEMS.length > 0 ? (
-                  <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
-                      <div className="grid grid-cols-6 gap-4 text-sm font-semibold text-gray-700">
-                        <div>Product Name</div>
-                        <div className="text-center">Quantity</div>
-                        <div className="text-center">Unit</div>
-                        <div className="text-right">Unit Price</div>
-                        <div className="text-right">Total Price</div>
-                        <div className="text-center">Product ID</div>
-                      </div>
-                    </div>
-                    <div className="divide-y divide-gray-100">
-                      {selectedRequisition.REQUISITION_ITEMS.map((item, idx) => (
-                        <div key={idx} className="px-6 py-4 hover:bg-gray-50/50 transition-colors">
-                          <div className="grid grid-cols-6 gap-4 items-center">
-                            <div className="font-medium text-gray-900">
-                              {item.PRODUCT_NAME || "Unknown Product"}
-                            </div>
-                            <div className="text-center">
-                              <Badge variant="secondary" className="bg-blue-100 text-blue-700 font-semibold">
-                                {item.QUANTITY}
-                              </Badge>
-                            </div>
-                            <div className="text-center">
-                              <Badge variant="outline" className="bg-gray-50 text-gray-700 font-medium">
-                                {item.ORDER_UNIT || 'EA'}
-                              </Badge>
-                            </div>
-                            <div className="text-right text-gray-600 font-medium">
-                              ฿{Number(item.UNIT_PRICE || 0).toFixed(2)}
-                            </div>
-                            <div className="text-right font-bold text-green-600 text-lg">
-                              ฿{Number(item.TOTAL_PRICE || 0).toFixed(2)}
-                            </div>
-                            <div className="text-center">
-                              <Badge variant="outline" className="bg-purple-50 text-purple-700 font-medium text-xs">
-                                #{item.PRODUCT_ID}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {/* Summary */}
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-t border-gray-200">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-green-700">Total Items:</span>
-                        <span className="font-bold text-green-900">{selectedRequisition.REQUISITION_ITEMS.length}</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-8 text-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                    <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <span className="text-2xl">📦</span>
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-600 mb-2">No items found</h4>
-                    <p className="text-gray-500">This requisition does not have any items or the data has not been loaded properly.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-            <DialogFooter className="gap-3 pt-6 border-t border-gray-200">
-              <Button 
-                variant="outline" 
-                onClick={() => setViewDialogOpen(false)}
-                className="flex-1 h-12 text-base font-medium"
-              >
-                Close
-              </Button>
-              {user?.ROLE === "MANAGER" && selectedRequisition?.STATUS === "PENDING" && (
-                <>
-                  <Button 
-                    onClick={() => { setDialogOpen(true); setActionType("approve") }} 
-                    className="flex-1 h-12 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base font-medium"
-                  >
-                    <CheckCircle className="h-5 w-5 mr-2" />
-                    Approve
-                  </Button>
-                  <Button 
-                    onClick={() => { setDialogOpen(true); setActionType("reject") }} 
-                    className="flex-1 h-12 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base font-medium"
-                  >
-                    <XCircle className="h-5 w-5 mr-2" />
-                    Reject
-                  </Button>
-                </>
-              )}
-            </DialogFooter>
+                               {selectedRequisition?.REQUISITION_ITEMS && selectedRequisition.REQUISITION_ITEMS.length > 0 ? (
+                 <div className="space-y-3">
+                   {selectedRequisition.REQUISITION_ITEMS.map((item, idx) => (
+                     <div key={item.ITEM_ID || idx} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                       <div className="flex-shrink-0">
+                         <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                           {item.PHOTO_URL ? (
+                             <img 
+                               src={item.PHOTO_URL} 
+                               alt={item.PRODUCT_NAME}
+                               className="w-full h-full object-cover rounded-lg"
+                             />
+                           ) : (
+                             <Category className="h-8 w-8 text-gray-400" />
+                           )}
+                         </div>
+                       </div>
+                       
+                       <div className="flex-1 min-w-0">
+                         <Typography variant="subtitle1" className="font-semibold text-gray-800 truncate">
+                           {item.PRODUCT_NAME || "Unknown Product"}
+                         </Typography>
+                         {item.CATEGORY_NAME && (
+                           <Typography variant="body2" className="text-gray-500">
+                             {item.CATEGORY_NAME}
+                           </Typography>
+                         )}
+                         {item.ORDER_UNIT && (
+                           <Typography variant="body2" className="text-gray-500">
+                             Unit: {item.ORDER_UNIT}
+                           </Typography>
+                         )}
+                       </div>
+                       
+                       <div className="flex items-center gap-4 text-right">
+                         <div>
+                           <Typography variant="body2" className="text-gray-500">
+                             Quantity
+                           </Typography>
+                           <Typography variant="h6" className="font-bold text-blue-600">
+                             {item.QUANTITY}
+                           </Typography>
+                         </div>
+                         
+                         <div>
+                           <Typography variant="body2" className="text-gray-500">
+                             Unit Price
+                           </Typography>
+                           <Typography variant="h6" className="font-bold text-green-600">
+                             ฿{Number(item.UNIT_PRICE || 0).toFixed(2)}
+                           </Typography>
+                         </div>
+                         
+                         <div>
+                           <Typography variant="body2" className="text-gray-500">
+                             Total
+                           </Typography>
+                           <Typography variant="h6" className="font-bold text-purple-600">
+                             ฿{Number(item.TOTAL_PRICE || 0).toFixed(2)}
+                           </Typography>
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               ) : (
+                 <div className="text-center py-8 text-gray-500">
+                   <Inventory className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                   <Typography variant="body1">ไม่พบรายการสินค้า</Typography>
+                 </div>
+                              )}
+               </CardContent>
+             </Card>
+           </div>
+                       <DialogFooter className="px-6 py-4 border-t border-gray-200">
+             <Button 
+               variant="outline" 
+               onClick={() => setViewDialogOpen(false)}
+             >
+               ปิด
+             </Button>
+             {user?.ROLE === "MANAGER" && selectedRequisition?.STATUS === "PENDING" && (
+               <>
+                 <Button 
+                   onClick={() => { setDialogOpen(true); setActionType("approve") }} 
+                   className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0"
+                 >
+                   <CheckCircle className="h-4 w-4 mr-2" />
+                   อนุมัติ
+                 </Button>
+                 <Button 
+                   onClick={() => { setDialogOpen(true); setActionType("reject") }} 
+                   className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white border-0"
+                 >
+                   <XCircle className="h-4 w-4 mr-2" />
+                   ปฏิเสธ
+                 </Button>
+               </>
+             )}
+           </DialogFooter>
           </DialogContent>
                  </Dialog>
 

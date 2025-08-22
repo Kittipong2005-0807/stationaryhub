@@ -20,6 +20,7 @@ import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import React from "react"
+import { ShoppingCart, Person, CalendarToday, Note, Inventory, Category } from "@mui/icons-material"
 
 interface RequisitionItem {
   REQUISITION_ITEM_ID: string
@@ -347,78 +348,175 @@ export default function OrdersPage() {
       <Dialog 
         open={detailDialogOpen} 
         onClose={handleCloseDialog}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
+        PaperProps={{
+          className: "glass-card"
+        }}
       >
-        <DialogTitle>
-          Order Details #{selectedOrder?.REQUISITION_ID}
+        <DialogTitle className="flex items-center gap-3 border-b border-gray-200 pb-4">
+          <ShoppingCart className="text-blue-600" />
+          <div>
+            <Typography variant="h5" className="font-bold">
+              Order Details #{selectedOrder?.REQUISITION_ID}
+            </Typography>
+            <Typography variant="body2" className="text-gray-600">
+              รายละเอียดคำขอเบิก
+            </Typography>
+          </div>
         </DialogTitle>
-        <DialogContent>
+        
+        <DialogContent className="pt-6">
           {selectedOrder && (
-            <Box>
-              <Box className="mb-4">
-                <Box className="flex justify-between items-center mb-2">
-                  <Typography variant="body2" className="text-gray-600">Status:</Typography>
-                  <Chip 
-                    label={getStatusText(selectedOrder.STATUS)} 
-                    color={getStatusColor(selectedOrder.STATUS) as "success" | "warning" | "error" | "default"}
-                    size="small"
-                  />
-                </Box>
-                <Box className="flex justify-between items-center mb-2">
-                  <Typography variant="body2" className="text-gray-600">Date:</Typography>
-                  <Typography variant="body2">
-                    {new Date(selectedOrder.SUBMITTED_AT).toLocaleDateString('th-TH', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false
-                    })}
-                  </Typography>
-                </Box>
-                <Box className="flex justify-between items-center mb-2">
-                  <Typography variant="body2" className="text-gray-600">Total Amount:</Typography>
-                  <Typography variant="body2" className="font-semibold">฿{(Number(selectedOrder.TOTAL_AMOUNT) || 0).toFixed(2)}</Typography>
-                </Box>
-                {selectedOrder.ISSUE_NOTE && (
-                  <Box className="mt-3 p-2 bg-gray-50 rounded">
-                    <Typography variant="body2" className="text-gray-700">
-                      📝 {selectedOrder.ISSUE_NOTE}
+            <div className="space-y-6">
+              {/* Order Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="bg-blue-50 border border-blue-200">
+                  <CardContent>
+                    <Typography variant="h6" className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                      <Person className="h-5 w-5" />
+                      ข้อมูลผู้ขอ
                     </Typography>
-                  </Box>
-                )}
-              </Box>
-              
-              {/* Product List */}
-              {Array.isArray(selectedOrder.REQUISITION_ITEMS) && selectedOrder.REQUISITION_ITEMS.length > 0 && (
-                <Box>
-                  <Typography variant="h6" className="mb-3">Product List</Typography>
-                  <Box className="space-y-2">
-                    {selectedOrder.REQUISITION_ITEMS.map((item) => (
-                      <Box key={item.REQUISITION_ITEM_ID} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <Box>
-                          <Typography variant="body2" className="font-medium">
-                            {item.PRODUCT_NAME}
-                          </Typography>
-                          <Typography variant="body2" className="text-gray-600">
-                            Quantity: {item.QUANTITY} x ฿{item.UNIT_PRICE}
-                          </Typography>
-                        </Box>
-                        <Typography variant="body2" className="font-semibold">
-                          ฿{item.TOTAL_PRICE}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">User ID:</span>
+                        <span className="font-medium">{selectedOrder.USER_ID}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Status:</span>
+                        <Chip 
+                          label={getStatusText(selectedOrder.STATUS)} 
+                          color={getStatusColor(selectedOrder.STATUS) as "success" | "warning" | "error" | "default"}
+                          size="small"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-green-50 border border-green-200">
+                  <CardContent>
+                    <Typography variant="h6" className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                      <CalendarToday className="h-5 w-5" />
+                      ข้อมูลคำขอ
+                    </Typography>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Submitted:</span>
+                        <span className="font-medium">
+                          {new Date(selectedOrder.SUBMITTED_AT).toLocaleDateString('th-TH', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Amount:</span>
+                        <span className="font-bold text-green-600">
+                          ฿{(Number(selectedOrder.TOTAL_AMOUNT) || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Items:</span>
+                        <span className="font-medium">
+                          {Array.isArray(selectedOrder.REQUISITION_ITEMS) ? selectedOrder.REQUISITION_ITEMS.length : 0} รายการ
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Issue Note */}
+              {selectedOrder.ISSUE_NOTE && (
+                <Card className="bg-yellow-50 border border-yellow-200">
+                  <CardContent>
+                    <Typography variant="h6" className="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
+                      <Note className="h-5 w-5" />
+                      หมายเหตุ
+                    </Typography>
+                    <Typography variant="body1" className="text-gray-700">
+                      {selectedOrder.ISSUE_NOTE}
+                    </Typography>
+                  </CardContent>
+                </Card>
               )}
-            </Box>
+
+              {/* Order Items */}
+              <Card className="border border-gray-200">
+                <CardContent>
+                  <Typography variant="h6" className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <Inventory className="h-5 w-5" />
+                    รายการสินค้า ({Array.isArray(selectedOrder.REQUISITION_ITEMS) ? selectedOrder.REQUISITION_ITEMS.length : 0} รายการ)
+                  </Typography>
+
+                  {Array.isArray(selectedOrder.REQUISITION_ITEMS) && selectedOrder.REQUISITION_ITEMS.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedOrder.REQUISITION_ITEMS.map((item) => (
+                        <div key={item.ITEM_ID || item.REQUISITION_ITEM_ID} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                          <div className="flex-shrink-0">
+                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                              <Category className="h-8 w-8 text-gray-400" />
+                            </div>
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <Typography variant="subtitle1" className="font-semibold text-gray-800 truncate">
+                              {item.PRODUCT_NAME}
+                            </Typography>
+                          </div>
+                          
+                          <div className="flex items-center gap-4 text-right">
+                            <div>
+                              <Typography variant="body2" className="text-gray-500">
+                                Quantity
+                              </Typography>
+                              <Typography variant="h6" className="font-bold text-blue-600">
+                                {item.QUANTITY}
+                              </Typography>
+                            </div>
+                            
+                            <div>
+                              <Typography variant="body2" className="text-gray-500">
+                                Unit Price
+                              </Typography>
+                              <Typography variant="h6" className="font-bold text-green-600">
+                                ฿{item.UNIT_PRICE}
+                              </Typography>
+                            </div>
+                            
+                            <div>
+                              <Typography variant="body2" className="text-gray-500">
+                                Total
+                              </Typography>
+                              <Typography variant="h6" className="font-bold text-purple-600">
+                                ฿{item.TOTAL_PRICE}
+                              </Typography>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Inventory className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                      <Typography variant="body1">ไม่พบรายการสินค้า</Typography>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Close</Button>
+        
+        <DialogActions className="px-6 py-4 border-t border-gray-200">
+          <Button onClick={handleCloseDialog} variant="outlined">
+            ปิด
+          </Button>
         </DialogActions>
       </Dialog>
     </motion.div>

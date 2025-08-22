@@ -35,6 +35,7 @@ import {
   Close,
   Person,
   Settings,
+  Check,
 } from "@mui/icons-material"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
@@ -53,6 +54,11 @@ interface Notification {
   status: string
   isRead: boolean
   sentAt: Date
+  type?: string
+  requisitionId?: number
+  actorId?: string
+  priority?: 'low' | 'medium' | 'high'
+  timestamp?: string
 }
 
 export default function Layout({ children }: LayoutProps) {
@@ -91,9 +97,25 @@ export default function Layout({ children }: LayoutProps) {
 
       console.log('🔔 API response:', data)
 
-      if (response.ok) {
-        setNotifications(data.notifications || [])
-        console.log('🔔 Set notifications:', data.notifications || [])
+      if (response.ok && data.success) {
+        // แปลงข้อมูลจาก API ให้ตรงกับ interface
+        const formattedNotifications = (data.data.notifications || []).map((notification: any) => ({
+          id: notification.id || notification.EMAIL_ID,
+          userId: notification.userId || notification.TO_USER_ID,
+          subject: notification.subject || notification.SUBJECT,
+          body: notification.message || notification.BODY,
+          status: notification.status || notification.STATUS,
+          isRead: notification.isRead || notification.IS_READ || false,
+          sentAt: new Date(notification.sentAt || notification.SENT_AT),
+          type: notification.type,
+          requisitionId: notification.requisitionId,
+          actorId: notification.actorId,
+          priority: notification.priority || 'medium',
+          timestamp: notification.timestamp
+        }))
+        
+        setNotifications(formattedNotifications)
+        console.log('🔔 Set formatted notifications:', formattedNotifications)
       } else {
         console.error('Error fetching notifications:', data.error)
       }
@@ -141,7 +163,7 @@ export default function Layout({ children }: LayoutProps) {
     try {
       // Mark as read
       await fetch(`/api/notifications/${notification.id}/read`, {
-        method: 'POST'
+        method: 'PUT'
       })
 
       // Update local state
@@ -380,6 +402,7 @@ export default function Layout({ children }: LayoutProps) {
               onClick={handleNotificationClick}
               size="small"
               disabled={loadingNotifications}
+              className="relative"
             >
               <Badge badgeContent={unreadCount} color="error">
                 <NotificationsNone />
@@ -389,55 +412,139 @@ export default function Layout({ children }: LayoutProps) {
               anchorEl={notificationAnchor}
               open={Boolean(notificationAnchor)}
               onClose={handleNotificationClose}
-              PaperProps={{ className: "mt-2 min-w-[320px] max-h-[400px] overflow-y-auto" }}
+              PaperProps={{ className: "mt-2 min-w-[380px] max-h-[500px] overflow-y-auto" }}
               transformOrigin={{ horizontal: "right", vertical: "top" }}
               anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
             >
-              <Box className="px-4 py-2">
-                <Typography variant="subtitle1" className="font-bold mb-2">รายการแจ้งเตือน</Typography>
-                
+              <Box className="px-4 py-3 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <Typography variant="h6" className="font-bold text-gray-800">
+                    🔔 การแจ้งเตือน
+                  </Typography>
+                  <div className="flex items-center gap-2">
+                    {unreadCount > 0 && (
+                      <Typography variant="caption" className="text-blue-600 font-medium">
+                        {unreadCount} รายการใหม่
+                      </Typography>
+                    )}
+                    <IconButton
+                      size="small"
+                      onClick={handleNotificationClose}
+                      className="h-6 w-6"
+                    >
+                      <Close fontSize="small" />
+                    </IconButton>
+                  </div>
+                </div>
+              </Box>
+              
+              <Box className="p-2">
                 {loadingNotifications ? (
-                  <Box className="flex items-center justify-center py-4">
-                    <LoadingSpinner size="sm" text="กำลังโหลด..." />
+                  <Box className="flex items-center justify-center py-8">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                      <Typography variant="body2" className="text-gray-500">
+                        กำลังโหลด...
+                      </Typography>
+                    </div>
                   </Box>
                 ) : notifications.length === 0 ? (
-                  <Typography variant="body2" className="text-gray-500 py-4 text-center">
-                    ไม่พบแจ้งเตือน
-                  </Typography>
+                  <Box className="text-center py-8">
+                    <Bell className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                    <Typography variant="body2" className="text-gray-500">
+                      ไม่พบการแจ้งเตือน
+                    </Typography>
+                  </Box>
                 ) : (
                   notifications.map((notification) => (
                     <MenuItem
                       key={notification.id}
                       onClick={() => handleNotificationAction(notification)}
-                      className={`rounded-lg my-1 px-3 py-2 hover:bg-blue-50 cursor-pointer ${
-                        notification.isRead ? "opacity-60" : ""
+                      className={`rounded-lg my-1 px-3 py-3 hover:bg-blue-50 cursor-pointer transition-all duration-200 ${
+                        notification.isRead ? "opacity-70 bg-gray-50" : "bg-blue-50 border-l-4 border-l-blue-500"
                       }`}
                     >
-                      <Box className="flex-shrink-0 mt-1">
-                        {getNotificationIcon(notification.subject)}
+                      <Box className="flex items-start gap-3 w-full">
+                        <Box className="flex-shrink-0 mt-1">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            notification.isRead ? 'bg-gray-200' : 'bg-blue-100'
+                          }`}>
+                            <span className="text-lg">
+                              {getNotificationIcon(notification.subject)}
+                            </span>
+                          </div>
+                        </Box>
+                        <Box className="flex-1 min-w-0">
+                          <Typography 
+                            variant="body2" 
+                            className={`mb-1 font-medium ${
+                              notification.isRead ? 'text-gray-600' : 'text-gray-800'
+                            }`}
+                          >
+                            {notification.body}
+                          </Typography>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Typography variant="caption" className="text-gray-400">
+                              {formatDate(notification.sentAt)}
+                            </Typography>
+                            {!notification.isRead && (
+                              <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
+                            )}
+                          </div>
+                          {notification.type && (
+                            <Badge 
+                              variant="outline" 
+                              size="small"
+                              className="text-xs"
+                            >
+                              {notification.type}
+                            </Badge>
+                          )}
+                        </Box>
+                        <Box className="flex items-center gap-1">
+                          {!notification.isRead && (
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleNotificationAction(notification)
+                              }}
+                              className="h-6 w-6 text-blue-600 hover:text-blue-700"
+                            >
+                              <Check fontSize="small" />
+                            </IconButton>
+                          )}
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteNotification(notification.id)
+                            }}
+                            className="h-6 w-6 text-gray-400 hover:text-red-500"
+                          >
+                            <Close fontSize="small" />
+                          </IconButton>
+                        </Box>
                       </Box>
-                      <Box className="flex-1">
-                        <Typography variant="body2" className="mb-1 font-medium text-gray-800">
-                          {notification.body}
-                        </Typography>
-                        <Typography variant="caption" className="text-gray-400">
-                          {formatDate(notification.sentAt)}
-                        </Typography>
-                      </Box>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteNotification(notification.id)
-                        }}
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        <Close fontSize="small" />
-                      </IconButton>
                     </MenuItem>
                   ))
                 )}
               </Box>
+              
+              {notifications.length > 0 && (
+                <Box className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <Typography variant="caption" className="text-gray-500">
+                      แสดง {notifications.length} รายการ
+                    </Typography>
+                    <Link href="/notifications" style={{ textDecoration: 'none' }}>
+                      <Button size="small" variant="outlined">
+                        ดูทั้งหมด
+                      </Button>
+                    </Link>
+                  </div>
+                </Box>
+              )}
             </Menu>
 
             {/* User Menu */}

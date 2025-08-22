@@ -18,6 +18,7 @@ import {
   TextField,
 } from "@mui/material"
 import { Delete, Add, Remove, ShoppingCart } from "@mui/icons-material"
+import { RefreshCw } from "lucide-react"
 import { useCart } from "@/src/contexts/CartContext"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
@@ -26,15 +27,71 @@ import { motion } from "framer-motion"
 import Image from "next/image"
 
 export default function CartPage() {
-  const { items, removeFromCart, updateQuantity, getTotalAmount, clearCart } = useCart()
+  console.log('🛒 CartPage component rendering...')
+  
+  const { 
+    items, 
+    removeFromCart, 
+    updateQuantity, 
+    getTotalAmount, 
+    clearCart, 
+    isLoading, 
+    error, 
+    refreshCart 
+  } = useCart()
+  
+  console.log('🛒 Cart context values:', { 
+    items: items?.length, 
+    isLoading, 
+    error, 
+    hasRefreshCart: !!refreshCart 
+  })
+  
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
+
+  console.log('🛒 Auth context values:', { 
+    isAuthenticated, 
+    userRole: user?.ROLE,
+    hasUser: !!user 
+  })
 
   React.useEffect(() => {
     if (!isAuthenticated || user?.ROLE !== "USER") {
       router.push("/login")
     }
   }, [isAuthenticated, user, router])
+
+  // แสดง Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">กำลังโหลดข้อมูลตะกร้า...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // แสดง Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">เกิดข้อผิดพลาด</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={refreshCart}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            ลองใหม่
+          </button>
+        </div>
+      </div>
+    )
+  }
   
   const handleSubmitRequisition = async () => {
     if (items.length === 0) return
@@ -164,12 +221,51 @@ export default function CartPage() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
       <Box className="mb-8">
-        <Typography variant="h3" className="font-bold text-gray-800 mb-2">
-          🧾 Requisition Cart
-        </Typography>
-        <Typography variant="body1" className="text-gray-600">
-          Review your selected items before submitting
-        </Typography>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <Typography variant="h3" className="font-bold text-gray-800 mb-2">
+              🧾 Requisition Cart
+            </Typography>
+            <Typography variant="body1" className="text-gray-600">
+              Review your selected items before submitting
+            </Typography>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outlined"
+              onClick={refreshCart}
+              disabled={isLoading}
+              startIcon={<RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />}
+            >
+              รีเฟรช
+            </Button>
+          </div>
+        </div>
+        
+        {/* แสดงสถานะการโหลดข้อมูล */}
+        {isLoading && (
+          <div className="flex items-center gap-2 text-blue-600 mb-4">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span className="text-sm">กำลังโหลดข้อมูลตะกร้า...</span>
+          </div>
+        )}
+        
+        {/* แสดงข้อผิดพลาด */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            <div className="flex items-center gap-2 text-red-600">
+              <span className="text-sm">⚠️ {error}</span>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={refreshCart}
+                className="ml-auto"
+              >
+                ลองใหม่
+              </Button>
+            </div>
+          </div>
+        )}
       </Box>
 
       <Card className="glass-card">
@@ -187,8 +283,9 @@ export default function CartPage() {
               </TableHead>
               <TableBody>
                 {items.map((item, index) => (
-                  <motion.tr
+                  <TableRow
                     key={item.PRODUCT_ID}
+                    component={motion.tr}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
@@ -250,7 +347,7 @@ export default function CartPage() {
                         <Delete />
                       </IconButton>
                     </TableCell>
-                  </motion.tr>
+                  </TableRow>
                 ))}
               </TableBody>
             </Table>
@@ -258,31 +355,61 @@ export default function CartPage() {
 
           <Divider className="my-4" />
 
-          <Box style={{ marginTop: 32, marginBottom: 24 }}>
-            <Box className="flex items-end justify-between mb-4 w-full">
-              <Typography variant="h5" className="font-bold">
-                Total Amount:
-              </Typography>
-              <Typography variant="h4" className="font-bold text-green-600" style={{ lineHeight: 1, marginRight: 12 }}>
-                ฿{getTotalAmount().toFixed(2)}
-              </Typography>
-            </Box>
-            <Box className="flex gap-2 md:gap-4 justify-end">
-              <Button variant="outlined" onClick={clearCart} color="error" style={{ minWidth: 120 }}>
-                Clear Cart
+          {/* ข้อมูลสรุปตะกร้า */}
+          <Box className="bg-gray-50 rounded-lg p-4 mb-4">
+            <Typography variant="h6" className="font-semibold mb-3 text-gray-700">
+              📊 สรุปข้อมูลตะกร้า
+            </Typography>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <Typography variant="h4" className="font-bold text-blue-600">
+                  {items.length}
+                </Typography>
+                <Typography variant="body2" className="text-gray-600">
+                  รายการสินค้า
+                </Typography>
+              </div>
+              <div className="text-center">
+                <Typography variant="h4" className="font-bold text-green-600">
+                  {items.reduce((sum, item) => sum + item.quantity, 0)}
+                </Typography>
+                <Typography variant="body2" className="text-gray-600">
+                  จำนวนรวม
+                </Typography>
+              </div>
+              <div className="text-center">
+                <Typography variant="h4" className="font-bold text-purple-600">
+                  ฿{getTotalAmount().toFixed(2)}
+                </Typography>
+                <Typography variant="body2" className="text-gray-600">
+                  จำนวนเงินรวม
+                </Typography>
+              </div>
+            </div>
+          </Box>
+
+          <Box className="flex gap-2 md:gap-4 justify-end">
+            <Button 
+              variant="outlined" 
+              onClick={clearCart} 
+              color="error" 
+              style={{ minWidth: 120 }}
+              disabled={isLoading}
+            >
+              Clear Cart
+            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={handleSubmitRequisition}
+                className="btn-gradient-primary"
+                style={{ minWidth: 180 }}
+                disabled={isLoading || items.length === 0}
+              >
+                Submit Requisition
               </Button>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="contained"
-                  size="large"
-                  onClick={handleSubmitRequisition}
-                  className="btn-gradient-success"
-                  style={{ minWidth: 180 }}
-                >
-                  Submit Requisition
-                </Button>
-              </motion.div>
-            </Box>
+            </motion.div>
           </Box>
         </CardContent>
       </Card>

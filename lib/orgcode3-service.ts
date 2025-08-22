@@ -228,11 +228,14 @@ export class OrgCode3Service {
                   ri.PRODUCT_ID,
                   p.PRODUCT_NAME,
                   p.ORDER_UNIT,
+                  p.PHOTO_URL,
+                  pc.CATEGORY_NAME,
                   ri.QUANTITY,
                   ri.UNIT_PRICE,
                   ri.TOTAL_PRICE
                 FROM REQUISITION_ITEMS ri
                 JOIN PRODUCTS p ON ri.PRODUCT_ID = p.PRODUCT_ID
+                LEFT JOIN PRODUCT_CATEGORIES pc ON p.CATEGORY_ID = pc.CATEGORY_ID
                 WHERE ri.REQUISITION_ID = ${req.REQUISITION_ID}
               `
               
@@ -462,11 +465,14 @@ export class OrgCode3Service {
                   ri.PRODUCT_ID,
                   p.PRODUCT_NAME,
                   p.ORDER_UNIT,
+                  p.PHOTO_URL,
+                  pc.CATEGORY_NAME,
                   ri.QUANTITY,
                   ri.UNIT_PRICE,
                   ri.TOTAL_PRICE
                 FROM REQUISITION_ITEMS ri
                 JOIN PRODUCTS p ON ri.PRODUCT_ID = p.PRODUCT_ID
+                LEFT JOIN PRODUCT_CATEGORIES pc ON p.CATEGORY_ID = pc.CATEGORY_ID
                 WHERE ri.REQUISITION_ID = ${req.REQUISITION_ID}
               `
               
