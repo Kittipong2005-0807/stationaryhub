@@ -29,6 +29,12 @@ interface RequisitionItem {
   QUANTITY: number
   UNIT_PRICE: number
   TOTAL_PRICE: number
+  PRODUCTS?: {
+    PHOTO_URL?: string
+    PRODUCT_CATEGORIES?: {
+      CATEGORY_NAME?: string
+    }
+  }
 }
 
 interface Requisition {
@@ -459,7 +465,19 @@ export default function OrdersPage() {
                       {selectedOrder.REQUISITION_ITEMS.map((item) => (
                         <div key={item.ITEM_ID || item.REQUISITION_ITEM_ID} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                           <div className="flex-shrink-0">
-                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                            {item.PRODUCTS?.PHOTO_URL ? (
+                              <img 
+                                src={item.PRODUCTS.PHOTO_URL} 
+                                alt={item.PRODUCT_NAME}
+                                className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement
+                                  target.style.display = 'none'
+                                  target.nextElementSibling?.classList.remove('hidden')
+                                }}
+                              />
+                            ) : null}
+                            <div className={`w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center ${item.PRODUCTS?.PHOTO_URL ? 'hidden' : ''}`}>
                               <Category className="h-8 w-8 text-gray-400" />
                             </div>
                           </div>
@@ -468,6 +486,12 @@ export default function OrdersPage() {
                             <Typography variant="subtitle1" className="font-semibold text-gray-800 truncate">
                               {item.PRODUCT_NAME}
                             </Typography>
+                            {item.PRODUCTS?.PRODUCT_CATEGORIES?.CATEGORY_NAME && (
+                              <Typography variant="body2" className="text-gray-500 flex items-center gap-1 mt-1">
+                                <Category className="h-3 w-3" />
+                                {item.PRODUCTS.PRODUCT_CATEGORIES.CATEGORY_NAME}
+                              </Typography>
+                            )}
                           </div>
                           
                           <div className="flex items-center gap-4 text-right">

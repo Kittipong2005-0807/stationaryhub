@@ -112,6 +112,12 @@ export default function ManagerOrdersPage() {
       const data = await response.json()
       
       if (response.ok) {
+        console.log("📦 Requisition details:", data)
+        console.log("🖼️ Items with photos:", data.REQUISITION_ITEMS?.map(item => ({
+          name: item.PRODUCT_NAME,
+          photo: item.PHOTO_URL,
+          category: item.CATEGORY_NAME
+        })))
         setSelectedRequisition(data)
         setDetailDialogOpen(true)
       } else {

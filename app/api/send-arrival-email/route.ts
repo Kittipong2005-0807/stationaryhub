@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         emailSent: false, 
         reason: "Failed to send email",
-        error: emailError.message,
+        error: emailError instanceof Error ? emailError.message : String(emailError),
         userEmail 
       })
     }

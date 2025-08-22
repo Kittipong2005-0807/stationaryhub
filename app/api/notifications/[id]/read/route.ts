@@ -21,21 +21,16 @@ export async function PUT(
 
     // อัปเดตสถานะการอ่าน
     const success = await NotificationService.markNotificationAsRead(notificationId)
-
+    
     if (success) {
       return NextResponse.json({
         success: true,
-        message: 'Notification marked as read',
-        data: {
-          notificationId,
-          isRead: true
-        }
+        message: 'Notification marked as read'
       })
     } else {
-      return NextResponse.json(
-        { error: 'Failed to mark notification as read' }, 
-        { status: 500 }
-      )
+      return NextResponse.json({
+        error: 'Failed to mark notification as read'
+      }, { status: 500 })
     }
 
   } catch (error) {

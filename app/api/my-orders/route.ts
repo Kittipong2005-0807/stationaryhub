@@ -30,7 +30,11 @@ export async function GET(request: NextRequest) {
         USERS: true, 
         REQUISITION_ITEMS: {
           include: {
-            PRODUCTS: true
+            PRODUCTS: {
+              include: {
+                PRODUCT_CATEGORIES: true
+              }
+            }
           }
         }
       },

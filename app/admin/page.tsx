@@ -23,10 +23,16 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  Box,
+  Paper,
+  FormControl,
+  InputLabel,
+  Select,
 } from "@mui/material"
 import {
   Dashboard,
   TrendingUp,
+  TrendingDown,
   Assignment,
   Inventory,
   GetApp,
@@ -38,6 +44,7 @@ import {
   Settings,
   Analytics,
   Speed,
+  Schedule,
 } from "@mui/icons-material"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
@@ -45,8 +52,23 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import type { Requisition } from "@/lib/database"
 
+// Interface สำหรับข้อมูลราคาสินค้า
+interface ProductPrice {
+  PRODUCT_ID: number
+  PRODUCT_NAME: string
+  CATEGORY_NAME: string
+  UNIT_COST: number
+  YEAR: number
+  MONTH: number
+  CHANGE_PERCENTAGE: number
+}
+
 export default function AdminDashboard() {
   const [requisitions, setRequisitions] = useState<Requisition[]>([])
+  const [productPrices, setProductPrices] = useState<ProductPrice[]>([])
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [priceComparisonData, setPriceComparisonData] = useState<any[]>([])
   const [stats, setStats] = useState({
     totalRequisitions: 0,
     pendingApprovals: 0,
@@ -55,6 +77,9 @@ export default function AdminDashboard() {
     monthlyGrowth: 15.3,
     activeUsers: 24,
     lowStockItems: 8,
+    avgPriceChange: 0,
+    topPriceIncrease: 0,
+    topPriceDecrease: 0,
   })
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [selectedRequisition, setSelectedRequisition] = useState<Requisition | null>(null)
@@ -70,6 +95,32 @@ export default function AdminDashboard() {
   const getUserDisplayName = () => {
     if (!user) return 'User';
     return user.FullNameThai || user.FullNameEng || user.USERNAME || user.AdLoginName || user.name || 'User';
+  }
+
+  // ฟังก์ชันดึงข้อมูลราคาสินค้า
+  const fetchProductPrices = async () => {
+    try {
+      const response = await fetch(`/api/products/price-comparison?year=${selectedYear}&category=${selectedCategory}`)
+      if (response.ok) {
+        const data = await response.json()
+        setProductPrices(data.prices)
+        setPriceComparisonData(data.comparison)
+        
+        // คำนวณ stats ราคา
+        const avgChange = data.prices.reduce((sum: number, p: ProductPrice) => sum + p.CHANGE_PERCENTAGE, 0) / data.prices.length
+        const topIncrease = Math.max(...data.prices.map((p: ProductPrice) => p.CHANGE_PERCENTAGE))
+        const topDecrease = Math.min(...data.prices.map((p: ProductPrice) => p.CHANGE_PERCENTAGE))
+        
+        setStats(prev => ({
+          ...prev,
+          avgPriceChange: avgChange,
+          topPriceIncrease: topIncrease,
+          topPriceDecrease: topDecrease,
+        }))
+      }
+    } catch (error) {
+      console.error("Error fetching product prices:", error)
+    }
   }
 
   useEffect(() => {
@@ -105,6 +156,9 @@ export default function AdminDashboard() {
           monthlyGrowth: 15.3,
           activeUsers: 24,
           lowStockItems: 8,
+          avgPriceChange: 0,
+          topPriceIncrease: 0,
+          topPriceDecrease: 0,
         })
         setLoading(false)
       })
@@ -113,6 +167,13 @@ export default function AdminDashboard() {
         setLoading(false)
       })
   }, [isAuthenticated, user, router])
+
+  // ดึงข้อมูลราคาสินค้าเมื่อปีหรือหมวดหมู่เปลี่ยน
+  useEffect(() => {
+    if (isAuthenticated && user?.ROLE === "ADMIN") {
+      fetchProductPrices()
+    }
+  }, [selectedYear, selectedCategory, isAuthenticated, user])
 
   const handleExportMenu = (event: React.MouseEvent<HTMLElement>, requisition: Requisition) => {
     setAnchorEl(event.currentTarget)
@@ -318,123 +379,186 @@ export default function AdminDashboard() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 w-full">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
-        className="w-full"
-      >
-        {/* Floating Background Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 right-10 w-40 h-40 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-full floating blur-3xl"></div>
-          <div className="absolute bottom-20 left-10 w-32 h-32 bg-gradient-to-r from-pink-400/10 to-red-400/10 rounded-full floating-delayed blur-3xl"></div>
-        </div>
+    <Box className="p-6">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
+        
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.6 }}
+          className="mb-8"
+        >
+          <Typography variant="h3" className="font-bold text-gray-800 mb-2">
+            🛠️ Admin Dashboard
+          </Typography>
+          <Typography variant="h6" className="text-gray-600">
+            {`Welcome back, ${getUserDisplayName()}! Here's your overview.`}
+          </Typography>
+          
+          {/* Debug Info */}
+          <Box className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <Typography variant="body2" className="text-blue-700">
+              {`🔍 Debug: Total Requisitions: ${stats.totalRequisitions} | Pending: ${stats.pendingApprovals} | Approved: ${stats.approvedRequisitions} | Total Value: ฿${stats.totalValue.toFixed(2)}`}
+            </Typography>
+            <Typography variant="body2" className="text-blue-700 mt-1">
+              {`🏢 Role: ${user?.ROLE || 'Not set'} | Department: ${user?.DEPARTMENT || 'Not set'}`}
+            </Typography>
+          </Box>
+        </motion.div>
 
-      {/* Header Section */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="w-full px-6 py-6"
-      >
-        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-2xl">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
-            <div className="mb-4 md:mb-0 text-left">
-              <Typography variant="h3" className="font-bold text-white mb-2">
-                🛠️ Admin Dashboard
-              </Typography>
-              <Typography variant="h6" className="text-blue-100">
-                Welcome back, {getUserDisplayName()}! Here&apos;s what&apos;s happening today.
-              </Typography>
-            </div>
-
-            <div className="flex items-center gap-4 justify-center">
-              <div className="bg-white/10 border-white/30 rounded-2xl p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="bg-gradient-to-r from-green-500 to-teal-600">
-                    <Speed />
+        {/* Stats Grid */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mb-8"
+        >
+          <Grid container spacing={3}>
+            {/* Total Requisitions */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper elevation={0} className="glass-card p-6 rounded-2xl hover:shadow-lg transition-shadow">
+                <Box className="flex items-center justify-between">
+                  <Box>
+                    <Typography variant="h4" className="font-bold text-blue-600">
+                      {stats.totalRequisitions}
+                    </Typography>
+                    <Typography variant="body2" className="text-gray-600">
+                      Total Requisitions
+                    </Typography>
+                  </Box>
+                  <Avatar className="bg-blue-100 text-blue-600">
+                    <Assignment />
                   </Avatar>
-                  <div>
-                    <Typography variant="body2" className="text-white/80">
-                      System Status
-                    </Typography>
-                    <Typography variant="h6" className="font-bold text-white">
-                      All Systems Operational
-                    </Typography>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Stats Cards */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="w-full px-6 mb-6"
-      >
-        <Grid container spacing={3} justifyContent="center">
-          {statCards.map((stat, index) => (
-            <Grid item xs={12} sm={6} md={3} key={stat.title}>
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: 0.4 + index * 0.1 }}
-                whileHover={{ y: -8, scale: 1.02 }}
-                className="h-full"
-              >
-                <Card
-                  className={`modern-card h-full bg-gradient-to-br ${stat.bgGradient} border-0 overflow-hidden relative`}
-                >
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-white/20 to-transparent rounded-bl-3xl"></div>
-                  <CardContent className="p-6 relative z-10">
-                    <div className="flex items-start justify-between mb-4">
-                      <div
-                        className={`w-12 h-12 rounded-2xl bg-gradient-to-r ${stat.gradient} flex items-center justify-center shadow-lg`}
-                      >
-                        <stat.icon className="text-white text-xl" />
-                      </div>
-                      <div className="text-right">
-                        <Typography variant="body2" className={`font-semibold ${stat.changeColor}`}>
-                          {stat.change}
-                        </Typography>
-                        <Typography variant="caption" className="text-gray-500">
-                          vs last month
-                        </Typography>
-                      </div>
-                    </div>
-
-                    <Typography variant="h3" className="font-bold text-gray-800 mb-1">
-                      {stat.value}
-                    </Typography>
-                    <Typography variant="body2" className="text-gray-600 font-medium">
-                      {stat.title}
-                    </Typography>
-
-                    <div className="mt-4">
-                      <LinearProgress
-                        variant="determinate"
-                        value={75}
-                        className="h-2 rounded-full bg-white/30"
-                        sx={{
-                          "& .MuiLinearProgress-bar": {
-                            background: `linear-gradient(90deg, ${stat.gradient.replace("from-", "").replace("to-", "").replace("-500", "").replace("-600", "")})`,
-                            borderRadius: "10px",
-                          },
-                        }}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                </Box>
+              </Paper>
             </Grid>
-          ))}
-        </Grid>
-      </motion.div>
+
+            {/* Pending Approvals */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper elevation={0} className="glass-card p-6 rounded-2xl hover:shadow-lg transition-shadow">
+                <Box className="flex items-center justify-between">
+                  <Box>
+                    <Typography variant="h4" className="font-bold text-orange-600">
+                      {stats.pendingApprovals}
+                    </Typography>
+                    <Typography variant="body2" className="text-gray-600">
+                      Pending
+                    </Typography>
+                  </Box>
+                  <Avatar className="bg-orange-100 text-orange-600">
+                    <Schedule />
+                  </Avatar>
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* Approved Value */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper elevation={0} className="glass-card p-6 rounded-2xl hover:shadow-lg transition-shadow">
+                <Box className="flex items-center justify-between">
+                  <Box>
+                    <Typography variant="h4" className="font-bold text-green-600">
+                      ฿{stats.approvedRequisitions}
+                    </Typography>
+                    <Typography variant="body2" className="text-gray-600">
+                      Approved Today
+                    </Typography>
+                  </Box>
+                  <Avatar className="bg-green-100 text-green-600">
+                    <TrendingUp />
+                  </Avatar>
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* Total Value */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper elevation={0} className="glass-card p-6 rounded-2xl hover:shadow-lg transition-shadow">
+                <Box className="flex items-center justify-between">
+                  <Box>
+                    <Typography variant="h4" className="font-bold text-purple-600">
+                      ฿{(stats.totalValue || 0).toFixed(0)}
+                    </Typography>
+                    <Typography variant="body2" className="text-gray-600">
+                      Total Value
+                    </Typography>
+                  </Box>
+                  <Avatar className="bg-purple-100 text-purple-600">
+                    <AttachMoney />
+                  </Avatar>
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
+        </motion.div>
+
+        {/* Price Comparison Stats */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.6, delay: 0.15 }}
+          className="mb-8"
+        >
+          <Grid container spacing={3}>
+            {/* Average Price Change */}
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper elevation={0} className="glass-card p-6 rounded-2xl hover:shadow-lg transition-shadow">
+                <Box className="flex items-center justify-between">
+                  <Box>
+                    <Typography variant="h4" className={`font-bold ${stats.avgPriceChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {stats.avgPriceChange >= 0 ? '+' : ''}{stats.avgPriceChange.toFixed(1)}%
+                    </Typography>
+                    <Typography variant="body2" className="text-gray-600">
+                      Avg. Price Change
+                    </Typography>
+                  </Box>
+                  <Avatar className="bg-green-100 text-green-600">
+                    <TrendingUp />
+                  </Avatar>
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* Top Price Increase */}
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper elevation={0} className="glass-card p-6 rounded-2xl hover:shadow-lg transition-shadow">
+                <Box className="flex items-center justify-between">
+                  <Box>
+                    <Typography variant="h4" className="font-bold text-red-600">
+                      +{stats.topPriceIncrease.toFixed(1)}%
+                    </Typography>
+                    <Typography variant="body2" className="text-gray-600">
+                      Top Price Increase
+                    </Typography>
+                  </Box>
+                  <Avatar className="bg-red-100 text-red-600">
+                    <TrendingUp />
+                  </Avatar>
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* Top Price Decrease */}
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper elevation={0} className="glass-card p-6 rounded-2xl hover:shadow-lg transition-shadow">
+                <Box className="flex items-center justify-between">
+                  <Box>
+                    <Typography variant="h4" className="font-bold text-green-600">
+                      {stats.topPriceDecrease.toFixed(1)}%
+                    </Typography>
+                    <Typography variant="body2" className="text-gray-600">
+                      Top Price Decrease
+                    </Typography>
+                  </Box>
+                  <Avatar className="bg-green-100 text-green-600">
+                    <TrendingDown />
+                  </Avatar>
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
+        </motion.div>
 
       {/* Quick Actions & Analytics */}
       <div className="w-full px-6 mb-6">
@@ -838,6 +962,6 @@ export default function AdminDashboard() {
         </div>
       </Dialog>
         </motion.div>
-      </div>
+      </Box>
     )
   }

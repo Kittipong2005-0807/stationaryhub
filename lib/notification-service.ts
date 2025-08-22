@@ -18,11 +18,11 @@ export class NotificationService {
   /**
    * ส่งการแจ้งเตือนเมื่อสร้าง requisition ใหม่
    */
-  static async notifyRequisitionCreated(requisitionId: number, userId: string) {
-    console.log(`zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz`)
+    static async notifyRequisitionCreated(requisitionId: number, userId: string) {
+    console.log(`🔔 ===== NOTIFICATION SERVICE START =====`)
+    console.log(`🔔 Notifying requisition created: ${requisitionId} by ${userId}`)
+    
     try {
-      console.log(`🔔 Notifying requisition created: ${requisitionId} by ${userId}`)
-      
       // ดึงข้อมูล requisition
       const requisition = await prisma.rEQUISITIONS.findUnique({
         where: { REQUISITION_ID: requisitionId },
@@ -42,19 +42,37 @@ export class NotificationService {
       }
 
       // สร้างข้อความแจ้งเตือน
-      const message = `คำขอเบิกของคุณ (เลขที่ ${requisitionId}) ได้รับการส่งเรียบร้อยแล้ว จำนวนเงิน: ฿${requisition.TOTAL_AMOUNT?.toFixed(2)}`
+      const message = `คำขอเบิกของคุณ (เลขที่ ${requisitionId}) ได้ทำการส่งเรียบร้อยแล้ว จำนวนเงิน: ฿${requisition.TOTAL_AMOUNT?.toFixed(2)}`
 
-      // บันทึกการแจ้งเตือนในฐานข้อมูล
-      await this.logNotification({
-        type: 'requisition_created',
-        userId,
-        requisitionId,
-        message
+      // ตรวจสอบว่าเคยสร้าง notification สำหรับ requisition นี้แล้วหรือไม่
+      const existingNotification = await prisma.eMAIL_LOGS.findFirst({
+        where: {
+          TO_USER_ID: userId,
+          BODY: {
+            contains: `requisition_created`
+          },
+          SUBJECT: {
+            contains: `requisition_created`
+          }
+        }
       })
+
+      if (!existingNotification) {
+        // บันทึกการแจ้งเตือนในฐานข้อมูล
+        await this.logNotification({
+          type: 'requisition_created',
+          userId,
+          requisitionId,
+          message
+        })
+        console.log(`📝 Created new notification for requisition ${requisitionId}`)
+      } else {
+        console.log(`⚠️ Notification already exists for requisition ${requisitionId}`)
+      }
 
       // ดึง email จาก LDAP
       const userEmail = await this.getUserEmailFromLDAP(userId)
-      console.log(`xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
+      console.log(`📧 User email from LDAP: ${userEmail}`)
 
       // ส่งอีเมลแจ้งเตือน (ถ้ามี email)
       if (userEmail) {
@@ -199,12 +217,16 @@ export class NotificationService {
    */
   static async notifyManagers(requisitionId: number, userId: string) {
     try {
+      console.log(`🔔 ===== MANAGER NOTIFICATION START =====`)
       console.log(`🔔 Notifying managers for requisition ${requisitionId} from user ${userId}`)
       
       // ดึงข้อมูล user เพื่อหา orgcode3
+      console.log(`🔍 Looking up user ${userId} in UserWithRoles...`)
       const user = await prisma.$queryRaw<{ orgcode3: string }[]>`
-        SELECT orgcode3 FROM userWithRoles WHERE EmpCode = ${userId}
+        SELECT orgcode3 FROM UserWithRoles WHERE EmpCode = ${userId}
       `
+
+      console.log(`🔍 User query result:`, user)
 
       if (!user || user.length === 0 || !user[0].orgcode3) {
         console.log(`❌ User ${userId} not found or no orgcode3`)
@@ -215,14 +237,21 @@ export class NotificationService {
       console.log(`🔔 User orgcode3: ${orgcode3}`)
 
       // หา managers ในแผนกเดียวกันจาก LDAP (รวม Manager และ Admin)
+      console.log(`🔍 Looking for managers in orgcode3 ${orgcode3}...`)
       const managers = await prisma.$queryRaw<{ USER_ID: string, CurrentEmail: string, AdLoginName: string, PostNameEng: string }[]>`
         SELECT EmpCode, CurrentEmail, AdLoginName, PostNameEng
-        FROM userWithRoles 
+        FROM UserWithRoles 
         WHERE orgcode3 = ${orgcode3} 
-        AND (PostNameEng LIKE '%Manager%' OR PostNameEng LIKE '%Admin%' OR PostNameEng LIKE '%หัวหน้า%')
+        AND (PostNameEng LIKE '%Manager%' OR PostNameEng LIKE '%Admin%' OR PostNameEng LIKE '%หัวหน้า%' OR PostNameEng LIKE '%หัวหน้าส่วน%')
       `
 
       console.log(`🔔 Found ${managers.length} managers in orgcode3 ${orgcode3}:`, managers)
+      console.log(`🔍 Manager details:`, managers.map(m => ({
+        EmpCode: m.USER_ID,
+        Email: m.CurrentEmail,
+        LoginName: m.AdLoginName,
+        Position: m.PostNameEng
+      })))
 
       // ส่งอีเมลแจ้งเตือน managers และบันทึกลงฐานข้อมูล
       console.log(`📧 Notifying managers for requisition ${requisitionId}`)
@@ -240,9 +269,12 @@ export class NotificationService {
             // )
 
             // ตรวจสอบว่า user นี้มีอยู่ในตาราง USERS หรือไม่
+            console.log(`🔍 Checking if manager ${manager.AdLoginName} exists in USERS table...`)
             const existingUser = await prisma.uSERS.findUnique({
               where: { USER_ID: manager.AdLoginName }
             })
+
+            console.log(`🔍 Manager ${manager.AdLoginName} in USERS table:`, existingUser)
 
             if (!existingUser) {
               console.log(`⚠️ Manager ${manager.AdLoginName} ไม่มีอยู่ในตาราง USERS, ส่งเฉพาะ email เท่านั้น`)
@@ -272,14 +304,26 @@ export class NotificationService {
             // )
 
             // บันทึกการแจ้งเตือนลงฐานข้อมูลสำหรับ Manager
-            await this.logNotification({
+            console.log(`📝 Creating In-App notification for manager: ${manager.AdLoginName}`)
+            console.log(`📝 Notification data:`, {
+              type: 'requisition_pending',
+              userId: manager.AdLoginName,
+              requisitionId,
+              message: `มีคำขอเบิกใหม่ (เลขที่ ${requisitionId}) จาก ${userId} รอการอนุมัติ`
+            })
+            
+            const notificationResult = await this.logNotification({
               type: 'requisition_pending',
               userId: manager.AdLoginName, // ใช้ AdLoginName ของ Manager
               requisitionId,
               message: `มีคำขอเบิกใหม่ (เลขที่ ${requisitionId}) จาก ${userId} รอการอนุมัติ`
             })
 
-            console.log(`✅ ส่งการแจ้งเตือนและบันทึกลงฐานข้อมูลสำหรับ manager ${manager.AdLoginName}`)
+            if (notificationResult) {
+              console.log(`✅ ส่งการแจ้งเตือนและบันทึกลงฐานข้อมูลสำหรับ manager ${manager.AdLoginName}, Notification ID: ${notificationResult.EMAIL_ID}`)
+            } else {
+              console.log(`❌ ไม่สามารถสร้าง notification สำหรับ manager ${manager.AdLoginName}`)
+            }
           } catch (error) {
             console.error(`❌ เกิดข้อผิดพลาดในการแจ้งเตือน manager ${manager.AdLoginName}:`, error)
           }
@@ -292,36 +336,36 @@ export class NotificationService {
       if (managers.length === 0) {
         console.log(`🔔 No managers found in orgcode3 ${orgcode3}, notifying admins only`)
         
-        const admins = await prisma.$queryRaw<{ CurrentEmail: string, AdLoginName: string }[]>`
-          SELECT CurrentEmail, AdLoginName
-          FROM userWithRoles 
-          WHERE PostNameEng LIKE '%Admin%'
+        const admins = await prisma.$queryRaw<{ USER_ID: string, EMAIL: string, USERNAME: string, ROLE: string, DEPARTMENT: string }[]>`
+          SELECT USER_ID, EMAIL, USERNAME, ROLE, DEPARTMENT
+          FROM USERS 
+          WHERE ROLE = 'ADMIN'
         `
 
         for (const admin of admins) {
-          if (admin.CurrentEmail) {
+          if (admin.EMAIL) {
             try {
               // ตรวจสอบว่า admin นี้มีอยู่ในตาราง USERS หรือไม่
               const existingAdmin = await prisma.uSERS.findUnique({
-                where: { USER_ID: admin.AdLoginName }
+                where: { USER_ID: admin.USER_ID }
               })
 
               if (!existingAdmin) {
-                console.log(`⚠️ Admin ${admin.AdLoginName} ไม่มีอยู่ในตาราง USERS, ส่งเฉพาะ email เท่านั้น`)
+                console.log(`⚠️ Admin ${admin.USER_ID} ไม่มีอยู่ในตาราง USERS, ส่งเฉพาะ email เท่านั้น`)
                 
                 // ส่ง email แม้ว่าจะไม่มี user ในตาราง USERS
                 try {
                   await this.sendEmail(
-                    admin.CurrentEmail,
-                    'มีคำขอเบิกใหม่รอการอนุมัติ',
+                    admin.EMAIL,
+                    'มีรายการสินค้าใหม่รอการจัดซื้อ',
                     this.createEmailTemplate('requisition_pending', {
                       requisitionId,
                       userId
                     })
                   )
-                  console.log(`📧 ส่ง email ไปยัง admin ${admin.CurrentEmail} สำเร็จ (ไม่มี user ในระบบ)`)
+                  console.log(`📧 ส่ง email ไปยัง admin ${admin.EMAIL} สำเร็จ (ไม่มี user ในระบบ)`)
                 } catch (emailError) {
-                  console.error(`❌ เกิดข้อผิดพลาดในการส่ง email ไปยัง admin ${admin.CurrentEmail}:`, emailError)
+                  console.error(`❌ เกิดข้อผิดพลาดในการส่ง email ไปยัง admin ${admin.EMAIL}:`, emailError)
                 }
                 
                 continue // ข้ามการสร้าง email log
@@ -329,14 +373,14 @@ export class NotificationService {
 
               await this.logNotification({
                 type: 'requisition_pending',
-                userId: admin.AdLoginName,
+                userId: admin.USER_ID,
                 requisitionId,
-                message: `มีคำขอเบิกใหม่ (เลขที่ ${requisitionId}) จาก ${userId} รอการอนุมัติ (ไม่มี Manager ในแผนก)`
+                message: `มีรายการสินค้าใหม่รอการจัดซื้อ (เลขที่ ${requisitionId}) จาก ${userId} รอการอนุมัติ (ไม่มี Manager ในแผนก)`
               })
 
-              console.log(`✅ ส่งการแจ้งเตือนไปยัง admin ${admin.AdLoginName}`)
+              console.log(`✅ ส่งการแจ้งเตือนไปยัง admin ${admin.USER_ID}`)
             } catch (error) {
-              console.error(`❌ เกิดข้อผิดพลาดในการแจ้งเตือน admin ${admin.AdLoginName}:`, error)
+              console.error(`❌ เกิดข้อผิดพลาดในการแจ้งเตือน admin ${admin.USER_ID}:`, error)
             }
           }
         }
@@ -366,44 +410,44 @@ export class NotificationService {
         return
       }
 
-      // หาคนที่มีตำแหน่งเป็น admin
-      const admins = await prisma.$queryRaw<{ CurrentEmail: string, FullNameThai: string, AdLoginName: string }[]>`
-        SELECT CurrentEmail, FullNameThai, AdLoginName
-        FROM userWithRoles 
-        WHERE PostNameEng LIKE '%Admin%'
+      // หาคนที่มี role เป็น admin จากตาราง USERS
+      const admins = await prisma.$queryRaw<{ USER_ID: string, EMAIL: string, USERNAME: string, ROLE: string, DEPARTMENT: string }[]>`
+        SELECT USER_ID, EMAIL, USERNAME, ROLE, DEPARTMENT
+        FROM USERS 
+        WHERE ROLE = 'ADMIN'
       `
 
       console.log(`🔔 Found ${admins.length} admins (role = 'admin') to notify`)
 
       // ส่งอีเมลแจ้งเตือน admins และบันทึกลงฐานข้อมูล
       for (const admin of admins) {
-        if (admin.CurrentEmail) {
+        if (admin.EMAIL) {
           try {
             // ตรวจสอบว่า admin นี้มีอยู่ในตาราง USERS หรือไม่
             const existingAdmin = await prisma.uSERS.findUnique({
-              where: { USER_ID: admin.AdLoginName }
+              where: { USER_ID: admin.USER_ID }
             })
 
             if (!existingAdmin) {
-              console.log(`⚠️ Admin ${admin.AdLoginName} ไม่มีอยู่ในตาราง USERS, ส่งเฉพาะ email เท่านั้น`)
+              console.log(`⚠️ Admin ${admin.USER_ID} ไม่มีอยู่ในตาราง USERS, ส่งเฉพาะ email เท่านั้น`)
               
               // ส่ง email แม้ว่าจะไม่มี user ในตาราง USERS
               // await this.sendEmail(
-              //   admin.CurrentEmail,
+              //   admin.EMAIL,
               //   'มีคำขอเบิกใหม่รอการอนุมัติ',
               //   this.createEmailTemplate('requisition_pending', {
               //     requisitionId,
               //     userId
               //   })
               // )
-              console.log(`📧 ส่ง email ไปยัง admin ${admin.CurrentEmail} สำเร็จ (ไม่มี user ในระบบ)`)
+              console.log(`📧 ส่ง email ไปยัง admin ${admin.EMAIL} สำเร็จ (ไม่มี user ในระบบ)`)
               
               continue // ข้ามการสร้าง email log
             }
 
             // ส่งอีเมลแจ้งเตือน
             // await this.sendEmail(
-            //   admin.CurrentEmail,
+            //   admin.EMAIL,
             //   'มีการอนุมัติคำขอเบิกใหม่',
             //   this.createEmailTemplate('requisition_approved_admin', {
             //     requisitionId,
@@ -417,7 +461,7 @@ export class NotificationService {
             // บันทึกการแจ้งเตือนลงฐานข้อมูล
             await this.logNotification({
               type: 'requisition_pending',
-              userId: admin.AdLoginName,
+              userId: admin.USER_ID,
               requisitionId,
               message: `มีการอนุมัติคำขอเบิกใหม่ (เลขที่ ${requisitionId}) จาก ${(requisition.USERS as any)?.FullNameThai || (requisition.USERS as any)?.FullNameEng || requisition.USER_ID} โดย ${approvedBy} จำนวนเงิน: ฿${requisition.TOTAL_AMOUNT?.toFixed(2)}`,
               notificationType: 'both', // ส่งทั้ง email และ in-app
@@ -425,12 +469,12 @@ export class NotificationService {
               priority: 'medium'
             })
 
-            console.log(`✅ ส่งการแจ้งเตือน admin ไปยัง ${admin.AdLoginName} ที่ ${admin.CurrentEmail}`)
+            console.log(`✅ ส่งการแจ้งเตือน admin ไปยัง ${admin.USER_ID} ที่ ${admin.EMAIL}`)
           } catch (error) {
-            console.error(`❌ เกิดข้อผิดพลาดในการแจ้งเตือน admin ${admin.AdLoginName}:`, error)
+            console.error(`❌ เกิดข้อผิดพลาดในการแจ้งเตือน admin ${admin.USER_ID}:`, error)
           }
         } else {
-          console.log(`⚠️ Admin ${admin.AdLoginName} ไม่มีอีเมล`)
+          console.log(`⚠️ Admin ${admin.USER_ID} ไม่มีอีเมล`)
         }
       }
 
@@ -527,29 +571,54 @@ export class NotificationService {
         }
       })
       
-      // แยกข้อมูลเพิ่มเติมจาก BODY
+      // แยกข้อมูลเพิ่มเติมจาก BODY และสร้างข้อความที่อ่านง่าย
       return notifications.map(notification => {
-        const bodyLines = notification.BODY?.split('\n') || []
-        const additionalDataIndex = bodyLines.findIndex(line => line.includes('ข้อมูลเพิ่มเติม:'))
+        console.log(`🔍 Processing notification ${notification.EMAIL_ID}:`, notification.BODY?.substring(0, 100))
         
+        // แยกข้อมูลเพิ่มเติมจาก BODY
         let additionalData: any = {}
         let cleanMessage = notification.BODY || ''
         
-        if (additionalDataIndex !== -1) {
+        // หาตำแหน่งของข้อมูลเพิ่มเติม
+        const additionalDataMatch = notification.BODY?.match(/ข้อมูลเพิ่มเติม:\s*({.*})/s)
+        
+        if (additionalDataMatch) {
           try {
-            const jsonStr = bodyLines[additionalDataIndex].replace('ข้อมูลเพิ่มเติม: ', '')
+            const jsonStr = additionalDataMatch[1]
+            console.log(`🔍 JSON string: ${jsonStr}`)
             additionalData = JSON.parse(jsonStr)
-            cleanMessage = bodyLines.slice(0, additionalDataIndex).join('\n').trim()
+            
+            // แยกข้อความหลักออกจากข้อมูลเพิ่มเติม
+            cleanMessage = notification.BODY?.replace(/---\s*\nข้อมูลเพิ่มเติม:\s*{.*}/s, '').trim() || ''
+            
+            console.log(`🔍 Clean message: ${cleanMessage}`)
+            console.log(`🔍 Additional data:`, additionalData)
           } catch (error) {
             console.error('Error parsing additional data:', error)
           }
+        } else {
+          console.log(`⚠️ No additional data found in notification ${notification.EMAIL_ID}`)
         }
+        
+        // สร้างข้อความที่อ่านง่ายตามประเภทการแจ้งเตือน
+        let readableMessage = cleanMessage
+        if (additionalData.type === 'requisition_created') {
+          readableMessage = `คำขอเบิกใหม่ (เลขที่ ${additionalData.requisitionId}) ได้รับการส่งเรียบร้อยแล้ว`
+        } else if (additionalData.type === 'requisition_approved') {
+          readableMessage = `คำขอเบิก (เลขที่ ${additionalData.requisitionId}) ได้รับการอนุมัติแล้ว`
+        } else if (additionalData.type === 'requisition_rejected') {
+          readableMessage = `คำขอเบิก (เลขที่ ${additionalData.requisitionId}) ถูกปฏิเสธ`
+        } else if (additionalData.type === 'requisition_pending') {
+          readableMessage = `มีคำขอเบิกใหม่ (เลขที่ ${additionalData.requisitionId}) รอการอนุมัติ`
+        }
+        
+        console.log(`🔍 Final readable message: ${readableMessage}`)
         
         return {
           id: notification.EMAIL_ID,
           userId: notification.TO_USER_ID,
           subject: notification.SUBJECT,
-          message: cleanMessage,
+          message: readableMessage,
           sentAt: notification.SENT_AT,
           isRead: notification.IS_READ || false,
           type: additionalData.type || 'unknown',
@@ -612,7 +681,7 @@ export class NotificationService {
       console.log('  - SMTP_PORT:', process.env.SMTP_PORT || 587)
       console.log('  - SMTP_USER:', process.env.SMTP_USER ? '***configured***' : '❌ NOT CONFIGURED')
       console.log('  - SMTP_PASS:', process.env.SMTP_PASS ? '***configured***' : '❌ NOT CONFIGURED')
-      console.log('  - SMTP_FROM:', process.env.SMTP_FROM || 'noreply@stationaryhub.com')
+      console.log('  - SMTP_FROM:', process.env.SMTP_FROM || 'stationaryhub@ube.co.th')
 
       // ตรวจสอบว่ามีการตั้งค่า SMTP หรือไม่
       if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
@@ -650,10 +719,10 @@ export class NotificationService {
       console.log('📤 Sending email...')
       console.log('  - To:', to)
       console.log('  - Subject:', subject)
-      console.log('  - From:', process.env.SMTP_FROM || 'noreply@stationaryhub.com')
+      console.log('  - From:', process.env.SMTP_FROM || 'stationaryhub@ube.co.th')
 
       const mailOptions = {
-        from: process.env.SMTP_FROM || 'noreply@stationaryhub.com',
+        from: process.env.SMTP_FROM || 'stationaryhub@ube.co.th',
         to,
         subject,
         html,

@@ -1,4 +1,5 @@
 import { prisma } from "./prisma"
+import { NotificationService } from "./notification-service"
 
 export interface SiteIdUser {
   USER_ID: string
@@ -165,7 +166,19 @@ export class OrgCode3Service {
       
       console.log("Retrieved requisition ID:", requisitionId)
       
-      return requisitionId && requisitionId.length > 0 ? requisitionId[0].REQUISITION_ID : null
+      const finalRequisitionId = requisitionId && requisitionId.length > 0 ? requisitionId[0].REQUISITION_ID : null
+      
+      // สร้างการแจ้งเตือนเมื่อสร้าง requisition สำเร็จ
+      if (finalRequisitionId) {
+        try {
+          await NotificationService.notifyRequisitionCreated(finalRequisitionId, userId)
+          console.log(`✅ Notification created for requisition ${finalRequisitionId}`)
+        } catch (notificationError) {
+          console.error(`❌ Error creating notification for requisition ${finalRequisitionId}:`, notificationError)
+        }
+      }
+      
+      return finalRequisitionId
     } catch (error: unknown) {
       console.error('Error creating requisition with SITE_ID:', error)
       if (error instanceof Error) {

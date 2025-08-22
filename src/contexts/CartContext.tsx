@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import type { Product } from "@/lib/database"
+import { useSession } from "next-auth/react"
 
 interface CartItem extends Product {
   quantity: number
@@ -23,26 +24,67 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
-// localStorage key สำหรับเก็บข้อมูลตะกร้า
-const CART_STORAGE_KEY = 'stationaryhub_cart'
+// localStorage key สำหรับเก็บข้อมูลตะกร้า (รวม user ID)
+const getCartStorageKey = (userId: string | null) => {
+  return userId ? `stationaryhub_cart_${userId}` : 'stationaryhub_cart_guest'
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession()
   const [items, setItems] = useState<CartItem[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   // โหลดข้อมูลตะกร้าจาก localStorage เมื่อ component โหลด
   useEffect(() => {
     loadCartFromStorage()
   }, [])
 
+  // ตรวจสอบ user session และล้างข้อมูลตะกร้าเมื่อ user เปลี่ยน
+  useEffect(() => {
+    const userId = session?.user?.name || null
+    
+    // ถ้า user เปลี่ยน ให้ล้างข้อมูลตะกร้า
+    if (userId !== currentUserId) {
+      if (currentUserId !== null) {
+        console.log(`🔄 User changed from ${currentUserId} to ${userId}, clearing cart`)
+        clearCart()
+        
+        // ล้างข้อมูลตะกร้าเก่าทั้งหมดใน localStorage
+        try {
+          const oldCartKey = getCartStorageKey(currentUserId)
+          localStorage.removeItem(oldCartKey)
+          console.log(`🗑️ Removed old cart data for user ${currentUserId}`)
+        } catch (error) {
+          console.error('❌ Error removing old cart data:', error)
+        }
+      }
+      
+      // ถ้า logout (userId เป็น null) ให้ล้างข้อมูลตะกร้าทั้งหมด
+      if (userId === null && currentUserId !== null) {
+        console.log(`🚪 User ${currentUserId} logged out, clearing all cart data`)
+        try {
+          // ล้างข้อมูลตะกร้าของ user ที่ logout
+          const logoutCartKey = getCartStorageKey(currentUserId)
+          localStorage.removeItem(logoutCartKey)
+          console.log(`🗑️ Removed cart data for logged out user ${currentUserId}`)
+        } catch (error) {
+          console.error('❌ Error removing logout user cart data:', error)
+        }
+      }
+      
+      setCurrentUserId(userId)
+    }
+  }, [session?.user?.name, currentUserId])
+
   const loadCartFromStorage = () => {
     try {
       setIsLoading(true)
       setError(null)
       
-      const savedCart = localStorage.getItem(CART_STORAGE_KEY)
+      const savedCart = localStorage.getItem(getCartStorageKey(currentUserId))
       if (savedCart) {
         const parsedCart = JSON.parse(savedCart)
         
@@ -84,7 +126,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCartFromStorage = () => {
     try {
-      localStorage.removeItem(CART_STORAGE_KEY)
+      localStorage.removeItem(getCartStorageKey(currentUserId))
       setItems([])
       console.log('🗑️ Cleared cart from localStorage')
     } catch (error) {
@@ -96,7 +138,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isInitialized && !isLoading) {
       try {
-        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+        localStorage.setItem(getCartStorageKey(currentUserId), JSON.stringify(items))
         console.log('💾 Saved cart to localStorage:', items.length, 'items')
       } catch (error) {
         console.error('❌ Error saving cart to localStorage:', error)
