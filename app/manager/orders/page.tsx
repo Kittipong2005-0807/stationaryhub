@@ -113,7 +113,7 @@ export default function ManagerOrdersPage() {
       
       if (response.ok) {
         console.log("📦 Requisition details:", data)
-        console.log("🖼️ Items with photos:", data.REQUISITION_ITEMS?.map(item => ({
+        console.log("🖼️ Items with photos:", data.REQUISITION_ITEMS?.map((item: any) => ({
           name: item.PRODUCT_NAME,
           photo: item.PHOTO_URL,
           category: item.CATEGORY_NAME

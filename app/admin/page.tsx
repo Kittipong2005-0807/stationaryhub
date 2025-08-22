@@ -69,6 +69,7 @@ export default function AdminDashboard() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [priceComparisonData, setPriceComparisonData] = useState<any[]>([])
+  const [realPriceHistory, setRealPriceHistory] = useState<any[]>([])
   const [stats, setStats] = useState({
     totalRequisitions: 0,
     pendingApprovals: 0,
@@ -100,26 +101,38 @@ export default function AdminDashboard() {
   // ฟังก์ชันดึงข้อมูลราคาสินค้า
   const fetchProductPrices = async () => {
     try {
+      console.log(`🔍 Fetching price comparison data for year: ${selectedYear}, category: ${selectedCategory}`)
+      
       const response = await fetch(`/api/products/price-comparison?year=${selectedYear}&category=${selectedCategory}`)
-      if (response.ok) {
-        const data = await response.json()
-        setProductPrices(data.prices)
-        setPriceComparisonData(data.comparison)
+      const data = await response.json()
+      
+      console.log(`📊 Price comparison response:`, data)
+      
+      if (data.success && data.data) {
+        setPriceComparisonData(data.data)
         
-        // คำนวณ stats ราคา
-        const avgChange = data.prices.reduce((sum: number, p: ProductPrice) => sum + p.CHANGE_PERCENTAGE, 0) / data.prices.length
-        const topIncrease = Math.max(...data.prices.map((p: ProductPrice) => p.CHANGE_PERCENTAGE))
-        const topDecrease = Math.min(...data.prices.map((p: ProductPrice) => p.CHANGE_PERCENTAGE))
+        // คำนวณ stats จากข้อมูลราคาจริง
+        const validData = data.data.filter((item: any) => item.PERCENTAGE_CHANGE !== null)
         
-        setStats(prev => ({
-          ...prev,
-          avgPriceChange: avgChange,
-          topPriceIncrease: topIncrease,
-          topPriceDecrease: topDecrease,
-        }))
+        if (validData.length > 0) {
+          const avgChange = validData.reduce((sum: number, item: any) => sum + (parseFloat(item.PERCENTAGE_CHANGE) || 0), 0) / validData.length
+          const maxIncrease = Math.max(...validData.map((item: any) => parseFloat(item.PERCENTAGE_CHANGE) || 0))
+          const maxDecrease = Math.min(...validData.map((item: any) => parseFloat(item.PERCENTAGE_CHANGE) || 0))
+          
+          console.log(`📈 Price stats calculated:`, { avgChange, maxIncrease, maxDecrease })
+          
+          setStats(prev => ({
+            ...prev,
+            avgPriceChange: Math.round(avgChange * 100) / 100,
+            topPriceIncrease: Math.round(maxIncrease * 100) / 100,
+            topPriceDecrease: Math.round(maxDecrease * 100) / 100,
+          }))
+        }
+      } else {
+        console.warn('No price data received or API call failed')
       }
     } catch (error) {
-      console.error("Error fetching product prices:", error)
+      console.error('❌ Error fetching product prices:', error)
     }
   }
 
@@ -168,10 +181,101 @@ export default function AdminDashboard() {
       })
   }, [isAuthenticated, user, router])
 
+  // ดึงข้อมูลหมวดหมู่สินค้าจริง
+  const fetchCategories = async () => {
+    try {
+      console.log(`🔍 Fetching product categories...`)
+      const response = await fetch('/api/categories')
+      const data = await response.json()
+      
+      if (data.success && data.data) {
+        console.log(`✅ Categories fetched:`, data.data)
+        // อัปเดต categories ใน UI ถ้าต้องการ
+      }
+    } catch (error) {
+      console.error('❌ Error fetching categories:', error)
+    }
+  }
+
+  // ดึงประวัติราคาจริง
+  const fetchRealPriceHistory = async () => {
+    try {
+      console.log(`🔍 Fetching real price history...`);
+      const response = await fetch('/api/products/real-price-history');
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log(`✅ Real price history:`, data.data);
+        // อัปเดต state สำหรับประวัติราคาจริง
+        setRealPriceHistory(data.data);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching real price history:', error);
+    }
+  };
+
+  // อัปเดตราคาแบบ Bulk
+  const handleBulkPriceUpdate = async (prices: any[]) => {
+    try {
+      const response = await fetch('/api/products/bulk-update-prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prices: prices,
+          year: selectedYear,
+          notes: 'Bulk update from Admin Dashboard'
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert(`Bulk update completed: ${data.summary.successful} successful, ${data.summary.errors} errors`);
+        // รีเฟรชข้อมูล
+        await fetchProductPrices();
+        await fetchRealPriceHistory();
+      } else {
+        alert('Bulk update failed: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error in bulk update:', error);
+      alert('Bulk update failed');
+    }
+  };
+
+  // Import ราคาจากไฟล์
+  const handlePriceImport = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('year', selectedYear.toString());
+      formData.append('notes', 'Imported from Admin Dashboard');
+      
+      const response = await fetch('/api/products/import-prices', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert(`Import completed: ${data.summary.successful} successful, ${data.summary.errors} errors`);
+        // รีเฟรชข้อมูล
+        await fetchProductPrices();
+        await fetchRealPriceHistory();
+      } else {
+        alert('Import failed: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error in price import:', error);
+      alert('Import failed');
+    }
+  };
+
   // ดึงข้อมูลราคาสินค้าเมื่อปีหรือหมวดหมู่เปลี่ยน
   useEffect(() => {
     if (isAuthenticated && user?.ROLE === "ADMIN") {
       fetchProductPrices()
+      fetchCategories()
+      fetchRealPriceHistory()
     }
   }, [selectedYear, selectedCategory, isAuthenticated, user])
 
@@ -703,6 +807,357 @@ export default function AdminDashboard() {
           </Grid>
         </Grid>
       </div>
+
+      {/* Price Comparison Table */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ duration: 0.6, delay: 0.75 }}
+        className="w-full px-6 mb-6"
+      >
+        <Card className="modern-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-green-500 to-blue-600 flex items-center justify-center">
+                  <AttachMoney className="text-white" />
+                </div>
+                <Typography variant="h5" className="font-bold text-gray-800">
+                  Price Comparison ({selectedYear})
+                </Typography>
+              </div>
+
+              <div className="flex gap-3">
+                <FormControl size="small" className="min-w-32">
+                  <InputLabel>Year</InputLabel>
+                  <Select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    label="Year"
+                  >
+                    <MenuItem value={2023}>2023</MenuItem>
+                    <MenuItem value={2024}>2024</MenuItem>
+                    <MenuItem value={2025}>2025</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <FormControl size="small" className="min-w-40">
+                  <InputLabel>Category</InputLabel>
+                  <Select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    label="Category"
+                  >
+                    <MenuItem value="all">All Categories</MenuItem>
+                    <MenuItem value="Office Supplies">Office Supplies</MenuItem>
+                    <MenuItem value="Stationery">Stationery</MenuItem>
+                    <MenuItem value="Electronics">Electronics</MenuItem>
+                    <MenuItem value="Furniture">Furniture</MenuItem>
+                    <MenuItem value="Cleaning Supplies">Cleaning Supplies</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={fetchProductPrices}
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                >
+                  Refresh
+                </Button>
+
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    // ตัวอย่าง Bulk Update
+                    const samplePrices = [
+                      { productId: 1, newPrice: 125.00 },
+                      { productId: 2, newPrice: 26.00 },
+                      { productId: 3, newPrice: 19.00 }
+                    ];
+                    handleBulkPriceUpdate(samplePrices);
+                  }}
+                  className="border-gray-300 hover:border-gray-400"
+                >
+                  Bulk Update
+                </Button>
+
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handlePriceImport(file);
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                  id="csv-import"
+                />
+                <label htmlFor="csv-import">
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    component="span"
+                    className="border-green-300 hover:border-green-400 text-green-600"
+                  >
+                    Import CSV
+                  </Button>
+                </label>
+              </div>
+            </div>
+
+            {priceComparisonData.length > 0 ? (
+              <TableContainer className="glass-button rounded-2xl">
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell className="font-bold text-gray-700">Product</TableCell>
+                      <TableCell className="font-bold text-gray-700">Category</TableCell>
+                      <TableCell className="font-bold text-gray-700">Current Price</TableCell>
+                      <TableCell className="font-bold text-gray-700">Previous Price</TableCell>
+                      <TableCell className="font-bold text-gray-700">Change</TableCell>
+                      <TableCell className="font-bold text-gray-700">% Change</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {priceComparisonData.slice(0, 10).map((item, index) => (
+                      <TableRow
+                        key={item.PRODUCT_ID || index}
+                        className="hover:bg-white/50 transition-colors"
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            {item.PHOTO_URL ? (
+                              <img 
+                                src={item.PHOTO_URL} 
+                                alt={item.PRODUCT_NAME}
+                                className="w-8 h-8 rounded-lg object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = '/placeholder.jpg'
+                                }}
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center">
+                                <Inventory className="w-4 h-4 text-gray-500" />
+                              </div>
+                            )}
+                            <div>
+                              <Typography variant="body2" className="font-semibold">
+                                {item.PRODUCT_NAME}
+                              </Typography>
+                              <Typography variant="caption" className="text-gray-500">
+                                ID: {item.PRODUCT_ID}
+                              </Typography>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={item.CATEGORY_NAME || 'N/A'} 
+                            size="small" 
+                            className="bg-blue-100 text-blue-800"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" className="font-semibold text-green-600">
+                            ฿{parseFloat(item.CURRENT_PRICE || 0).toFixed(2)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" className="text-gray-600">
+                            ฿{parseFloat(item.PREVIOUS_PRICE || 0).toFixed(2)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography 
+                            variant="body2" 
+                            className={`font-semibold ${
+                              parseFloat(item.PRICE_CHANGE || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}
+                          >
+                            {parseFloat(item.PRICE_CHANGE || 0) >= 0 ? '+' : ''}
+                            ฿{parseFloat(item.PRICE_CHANGE || 0).toFixed(2)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {parseFloat(item.PERCENTAGE_CHANGE || 0) >= 0 ? (
+                              <TrendingUp className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <TrendingDown className="w-4 h-4 text-red-600" />
+                            )}
+                            <Typography 
+                              variant="body2" 
+                              className={`font-bold ${
+                                parseFloat(item.PERCENTAGE_CHANGE || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                              }`}
+                            >
+                              {parseFloat(item.PERCENTAGE_CHANGE || 0) >= 0 ? '+' : ''}
+                              {parseFloat(item.PERCENTAGE_CHANGE || 0).toFixed(1)}%
+                            </Typography>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <div className="text-center py-8">
+                <Typography variant="body1" className="text-gray-500">
+                  No price comparison data available. Click "Refresh" to load data.
+                </Typography>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Real Price History Table */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ duration: 0.6, delay: 0.8 }}
+        className="w-full px-6 mb-6"
+      >
+        <Card className="modern-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 flex items-center justify-center">
+                  <Timeline className="text-white" />
+                </div>
+                <Typography variant="h5" className="font-bold text-gray-800">
+                  Real Price History
+                </Typography>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={fetchRealPriceHistory}
+                  className="border-gray-300 hover:border-gray-400"
+                >
+                  Refresh History
+                </Button>
+              </div>
+            </div>
+
+            {realPriceHistory.length > 0 ? (
+              <TableContainer className="glass-button rounded-2xl">
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell className="font-bold text-gray-700">Product</TableCell>
+                      <TableCell className="font-bold text-gray-700">Year</TableCell>
+                      <TableCell className="font-bold text-gray-700">Price</TableCell>
+                      <TableCell className="font-bold text-gray-700">Price Change</TableCell>
+                      <TableCell className="font-bold text-gray-700">% Change</TableCell>
+                      <TableCell className="font-bold text-gray-700">Date</TableCell>
+                      <TableCell className="font-bold text-gray-700">Notes</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {realPriceHistory.slice(0, 10).map((item, index) => (
+                      <TableRow
+                        key={item.HISTORY_ID || index}
+                        className="hover:bg-white/50 transition-colors"
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            {item.PHOTO_URL ? (
+                              <img 
+                                src={item.PHOTO_URL} 
+                                alt={item.PRODUCT_NAME}
+                                className="w-8 h-8 rounded-lg object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = '/placeholder.jpg'
+                                }}
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center">
+                                <Inventory className="w-4 h-4 text-gray-500" />
+                              </div>
+                            )}
+                            <div>
+                              <Typography variant="body2" className="font-semibold">
+                                {item.PRODUCT_NAME}
+                              </Typography>
+                              <Typography variant="caption" className="text-gray-500">
+                                ID: {item.PRODUCT_ID}
+                              </Typography>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={item.YEAR} 
+                            size="small" 
+                            className="bg-blue-100 text-blue-800"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" className="font-semibold text-green-600">
+                            ฿{parseFloat(item.PRICE || 0).toFixed(2)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography 
+                            variant="body2" 
+                            className={`font-semibold ${
+                              parseFloat(item.PRICE_CHANGE || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}
+                          >
+                            {parseFloat(item.PRICE_CHANGE || 0) >= 0 ? '+' : ''}
+                            ฿{parseFloat(item.PRICE_CHANGE || 0).toFixed(2)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {parseFloat(item.PERCENTAGE_CHANGE || 0) >= 0 ? (
+                              <TrendingUp className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <TrendingDown className="w-4 h-4 text-red-600" />
+                            )}
+                            <Typography 
+                              variant="body2" 
+                              className={`font-bold ${
+                                parseFloat(item.PERCENTAGE_CHANGE || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                              }`}
+                            >
+                              {parseFloat(item.PERCENTAGE_CHANGE || 0) >= 0 ? '+' : ''}
+                              {parseFloat(item.PERCENTAGE_CHANGE || 0).toFixed(1)}%
+                            </Typography>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" className="text-gray-600">
+                            {new Date(item.RECORDED_DATE).toLocaleDateString('th-TH')}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" className="text-gray-600 max-w-32 truncate">
+                            {item.NOTES || '-'}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <div className="text-center py-8">
+                <Typography variant="body1" className="text-gray-500">
+                  No real price history available. Update some prices to see history.
+                </Typography>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Recent Requisitions */}
       <motion.div

@@ -1,153 +1,94 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { 
-  Box, 
-  Typography, 
-  Card, 
-  CardContent, 
-  Button, 
-  Chip, 
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Alert
-} from "@mui/material"
+import { Box, Typography, Button, Card, CardContent, Chip, Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress, Alert } from "@mui/material"
 import { Refresh as RefreshIcon, Visibility as VisibilityIcon } from "@mui/icons-material"
 import { useAuth } from "@/src/contexts/AuthContext"
-import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import React from "react"
-import { ShoppingCart, Person, CalendarToday, Note, Inventory, Category } from "@mui/icons-material"
 
 interface RequisitionItem {
-  REQUISITION_ITEM_ID: string
-  PRODUCT_ID: string
-  PRODUCT_NAME: string
+  ITEM_ID: number
+  PRODUCT_ID: number
   QUANTITY: number
   UNIT_PRICE: number
   TOTAL_PRICE: number
-  PRODUCTS?: {
-    PHOTO_URL?: string
-    PRODUCT_CATEGORIES?: {
-      CATEGORY_NAME?: string
+  PRODUCTS: {
+    PRODUCT_NAME: string
+    PHOTO_URL: string
+    PRODUCT_CATEGORIES: {
+      CATEGORY_NAME: string
     }
   }
 }
 
 interface Requisition {
-  REQUISITION_ID: string
+  REQUISITION_ID: number
   USER_ID: string
-  SUBMITTED_AT: string
   STATUS: string
+  SUBMITTED_AT: string
   TOTAL_AMOUNT: number
   ISSUE_NOTE?: string
-  REQUISITION_ITEMS?: RequisitionItem[]
+  REQUISITION_ITEMS: RequisitionItem[]
 }
 
 export default function OrdersPage() {
   const { user, isAuthenticated } = useAuth()
-  const router = useRouter()
   const [orders, setOrders] = useState<Requisition[]>([])
   const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [selectedOrder, setSelectedOrder] = useState<Requisition | null>(null)
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [updating, setUpdating] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<Requisition | null>(null)
 
-  const fetchOrders = React.useCallback(async (isInitialLoad = false) => {
+  // ดึงข้อมูลคำขอเบิก
+  const fetchOrders = async () => {
+    if (!isAuthenticated || !user) return
+
     try {
-      if (isInitialLoad) {
-        setLoading(true)
-      } else {
-        setUpdating(true)
-      }
+      setLoading(true)
       setError(null)
       
-      console.log("🔍 Fetching orders for user:", user?.USER_ID || user?.AdLoginName || user?.id)
-      console.log("🔍 User authentication status:", isAuthenticated)
-      console.log("🔍 User data:", user)
-      
-      const response = await fetch("/api/my-orders", {
-        // เพิ่ม cache headers
-        headers: {
-          'Cache-Control': 'max-age=60' // cache 1 นาที
-        }
-      })
+      const response = await fetch('/api/my-orders')
       const data = await response.json()
       
-      console.log("📊 Orders API response:", response.status, data)
-      
       if (response.ok) {
-        if (Array.isArray(data)) {
-          if (data.length > 0) {
-            console.log("✅ First order details:", data[0])
-            console.log("📦 REQUISITION_ITEMS:", data[0].REQUISITION_ITEMS)
-            console.log("👤 Order belongs to user:", data[0].USER_ID)
-          }
-          setOrders(data)
-          setLastUpdated(new Date())
-        } else {
-          console.log("📭 No orders found for user")
-          setOrders([])
-          setLastUpdated(new Date())
-        }
+        setOrders(data)
+        setLastUpdated(new Date())
+        console.log(`✅ Fetched ${data.length} orders`)
       } else {
-        console.error("❌ API error:", data)
-        setError(data.error || "ไม่สามารถดึงข้อมูลได้")
-        setOrders([])
+        setError(data.error || 'Failed to fetch orders')
+        console.error('❌ Error fetching orders:', data.error)
       }
     } catch (error) {
-      console.error("❌ Error fetching orders:", error)
-      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
-      setOrders([])
+      setError('Network error occurred')
+      console.error('❌ Network error:', error)
     } finally {
-      if (isInitialLoad) {
-        setLoading(false)
-      } else {
-        setUpdating(false)
+      setLoading(false)
+    }
+  }
+
+  // Auto-refresh ทุก 30 วินาที
+  useEffect(() => {
+    if (!isAuthenticated || !user) return
+
+    fetchOrders()
+
+    const interval = setInterval(() => {
+      if (!loading) {
+        setUpdating(true)
+        fetchOrders().finally(() => setUpdating(false))
       }
-    }
-  }, [user, isAuthenticated])
+    }, 30000)
 
-  useEffect(() => {
-    if (!isAuthenticated || user?.ROLE !== "USER") {
-      router.push("/login")
-      return
-    }
-    
-    // ดึงข้อมูลครั้งแรก
-    fetchOrders(true)
-
-    // อัพเดทข้อมูลทุก 30 วินาที (แทน 10 วินาที)
-    const interval = setInterval(() => fetchOrders(false), 30000)
-
-    // Cleanup interval เมื่อ component unmount
     return () => clearInterval(interval)
-  }, [isAuthenticated, user, router, fetchOrders])
+  }, [isAuthenticated, user])
 
-  // อัพเดทข้อมูลเมื่อ focus กลับมาที่หน้า (ลดความถี่)
-  useEffect(() => {
-    let focusTimeout: NodeJS.Timeout
-    
-    const handleFocus = () => {
-      // เพิ่ม debounce เพื่อป้องกันการ fetch ซ้ำ
-      clearTimeout(focusTimeout)
-      focusTimeout = setTimeout(() => {
-        console.log("Page focused, refreshing orders...")
-        fetchOrders(false)
-      }, 2000) // รอ 2 วินาทีก่อน fetch
+  const refreshOrders = () => {
+    if (!loading) {
+      fetchOrders()
     }
-
-    window.addEventListener('focus', handleFocus)
-    return () => {
-      window.removeEventListener('focus', handleFocus)
-      clearTimeout(focusTimeout)
-    }
-  }, [fetchOrders])
+  }
 
   const handleViewDetails = (order: Requisition) => {
     setSelectedOrder(order)
@@ -159,39 +100,12 @@ export default function OrdersPage() {
     setSelectedOrder(null)
   }
 
-  const refreshOrders = async () => {
-    try {
-      setUpdating(true)
-      setError(null)
-      
-      const response = await fetch("/api/my-orders")
-      const data = await response.json()
-      
-      if (response.ok) {
-        if (Array.isArray(data)) {
-          setOrders(data)
-          setLastUpdated(new Date())
-        } else {
-          setOrders([])
-          setLastUpdated(new Date())
-        }
-      } else {
-        setError(data.error || "ไม่สามารถดึงข้อมูลได้")
-      }
-    } catch (error) {
-      console.error("Error refreshing orders:", error)
-      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
-    } finally {
-      setUpdating(false)
-    }
-  }
-
   const getStatusColor = (status: string) => {
     switch (status?.toUpperCase()) {
-      case "APPROVED":
-        return "success"
       case "PENDING":
         return "warning"
+      case "APPROVED":
+        return "success"
       case "REJECTED":
         return "error"
       default:
@@ -201,26 +115,34 @@ export default function OrdersPage() {
 
   const getStatusText = (status: string) => {
     switch (status?.toUpperCase()) {
-      case "APPROVED":
-        return "Approved"
       case "PENDING":
-        return "Pending Approval"
+        return "รอการอนุมัติ"
+      case "APPROVED":
+        return "อนุมัติแล้ว"
       case "REJECTED":
-        return "Rejected"
+        return "ถูกปฏิเสธ"
       default:
-        return status || "Pending Approval"
+        return status || "Unknown"
     }
   }
 
-  if (!isAuthenticated || !user) return null
-
-  // ตรวจสอบว่าเป็น USER หรือ MANAGER
-  const allowedRoles = ["USER", "MANAGER", "ADMIN"]
-  if (!allowedRoles.includes(user.ROLE)) {
+  if (!isAuthenticated) {
     return (
       <Box className="text-center py-20">
         <Typography variant="h6" className="text-gray-600 mb-4">
-          🚫 Access Denied
+          Please log in to view your orders
+        </Typography>
+      </Box>
+    )
+  }
+
+  // ตรวจสอบว่าเป็น USER หรือ MANAGER
+  const allowedRoles = ["USER", "MANAGER", "ADMIN"]
+  if (!user || !allowedRoles.includes(user.ROLE || '')) {
+    return (
+      <Box className="text-center py-20">
+        <Typography variant="h6" className="text-gray-600 mb-4">
+          Access Denied
         </Typography>
         <Typography variant="body1">
           This page is only accessible to users, managers, and administrators.
@@ -253,26 +175,6 @@ export default function OrdersPage() {
         </Alert>
       )}
 
-      {/* Debug Info */}
-      <Box className="mb-4 p-3 glass-card rounded">
-        <Typography variant="body2" className="text-blue-700">
-          🔍 Debug: Found {orders.length} orders for user: <strong>{user?.USERNAME || user?.AdLoginName || user?.id || 'Unknown'}</strong>
-          {lastUpdated && (
-            <span className="ml-2 text-xs">
-              (Last updated: {lastUpdated.toLocaleTimeString('th-TH', { hour12: false })})
-            </span>
-          )}
-          {updating && (
-            <span className="ml-2 text-xs text-orange-600">
-              🔄 Auto-updating...
-            </span>
-          )}
-        </Typography>
-        <Typography variant="body2" className="text-green-700 mt-1">
-          👤 User ID: {user?.USER_ID || 'N/A'} | Role: {user?.ROLE || 'N/A'}
-        </Typography>
-      </Box>
-
       {loading ? (
         <Box className="flex justify-center items-center min-h-[30vh]">
           <CircularProgress />
@@ -287,9 +189,9 @@ export default function OrdersPage() {
           </Typography>
           <Button 
             variant="outlined" 
-            onClick={() => window.location.href = "/test-data"}
+            onClick={() => window.location.href = "/"}
           >
-            Create Test Data
+            Go to Products
           </Button>
         </Box>
       ) : (
@@ -356,193 +258,84 @@ export default function OrdersPage() {
         onClose={handleCloseDialog}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          className: "glass-card"
-        }}
       >
-        <DialogTitle className="flex items-center gap-3 border-b border-gray-200 pb-4">
-          <ShoppingCart className="text-blue-600" />
-          <div>
-            <Typography variant="h5" className="font-bold">
-              Order Details #{selectedOrder?.REQUISITION_ID}
-            </Typography>
-            <Typography variant="body2" className="text-gray-600">
-              รายละเอียดคำขอเบิก
-            </Typography>
-          </div>
+        <DialogTitle>
+          Order Details #{selectedOrder?.REQUISITION_ID}
         </DialogTitle>
-        
-        <DialogContent className="pt-6">
+        <DialogContent>
           {selectedOrder && (
-            <div className="space-y-6">
-              {/* Order Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="bg-blue-50 border border-blue-200">
-                  <CardContent>
-                    <Typography variant="h6" className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                      <Person className="h-5 w-5" />
-                      ข้อมูลผู้ขอ
-                    </Typography>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">User ID:</span>
-                        <span className="font-medium">{selectedOrder.USER_ID}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Status:</span>
-                        <Chip 
-                          label={getStatusText(selectedOrder.STATUS)} 
-                          color={getStatusColor(selectedOrder.STATUS) as "success" | "warning" | "error" | "default"}
-                          size="small"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+            <Box className="space-y-4">
+              <Box>
+                <Typography variant="h6" className="font-semibold mb-2">
+                  Order Information
+                </Typography>
+                <Typography variant="body2" className="text-gray-600">
+                  <strong>Status:</strong> {getStatusText(selectedOrder.STATUS)}
+                </Typography>
+                <Typography variant="body2" className="text-gray-600">
+                  <strong>Submitted:</strong> {new Date(selectedOrder.SUBMITTED_AT).toLocaleDateString('th-TH')}
+                </Typography>
+                <Typography variant="body2" className="text-gray-600">
+                  <strong>Total Amount:</strong> ฿{(Number(selectedOrder.TOTAL_AMOUNT) || 0).toFixed(2)}
+                </Typography>
+              </Box>
 
-                <Card className="bg-green-50 border border-green-200">
-                  <CardContent>
-                    <Typography variant="h6" className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-                      <CalendarToday className="h-5 w-5" />
-                      ข้อมูลคำขอ
-                    </Typography>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Submitted:</span>
-                        <span className="font-medium">
-                          {new Date(selectedOrder.SUBMITTED_AT).toLocaleDateString('th-TH', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: false
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Total Amount:</span>
-                        <span className="font-bold text-green-600">
-                          ฿{(Number(selectedOrder.TOTAL_AMOUNT) || 0).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Items:</span>
-                        <span className="font-medium">
-                          {Array.isArray(selectedOrder.REQUISITION_ITEMS) ? selectedOrder.REQUISITION_ITEMS.length : 0} รายการ
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              <Box>
+                <Typography variant="h6" className="font-semibold mb-2">
+                  Order Items
+                </Typography>
+                <Box className="space-y-2">
+                  {Array.isArray(selectedOrder.REQUISITION_ITEMS) && selectedOrder.REQUISITION_ITEMS.map((item, index) => (
+                    <Card key={index} variant="outlined" className="p-3">
+                      <Box className="flex items-center gap-3">
+                        {item.PRODUCTS?.PHOTO_URL ? (
+                          <img 
+                            src={item.PRODUCTS.PHOTO_URL} 
+                            alt={item.PRODUCTS.PRODUCT_NAME}
+                            className="w-12 h-12 rounded-lg object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = '/placeholder.jpg'
+                            }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center">
+                            <span className="text-gray-500 text-xs">No Image</span>
+                          </div>
+                        )}
+                        <Box className="flex-1">
+                          <Typography variant="body1" className="font-semibold">
+                            {item.PRODUCTS?.PRODUCT_NAME || 'Unknown Product'}
+                          </Typography>
+                          <Typography variant="body2" className="text-gray-600">
+                            Category: {item.PRODUCTS?.PRODUCT_CATEGORIES?.CATEGORY_NAME || 'N/A'}
+                          </Typography>
+                          <Typography variant="body2" className="text-gray-600">
+                            Quantity: {item.QUANTITY} × ฿{(Number(item.UNIT_PRICE) || 0).toFixed(2)} = ฿{(Number(item.TOTAL_PRICE) || 0).toFixed(2)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Card>
+                  ))}
+                </Box>
+              </Box>
 
-              {/* Issue Note */}
               {selectedOrder.ISSUE_NOTE && (
-                <Card className="bg-yellow-50 border border-yellow-200">
-                  <CardContent>
-                    <Typography variant="h6" className="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
-                      <Note className="h-5 w-5" />
-                      หมายเหตุ
-                    </Typography>
-                    <Typography variant="body1" className="text-gray-700">
-                      {selectedOrder.ISSUE_NOTE}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Order Items */}
-              <Card className="border border-gray-200">
-                <CardContent>
-                  <Typography variant="h6" className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <Inventory className="h-5 w-5" />
-                    รายการสินค้า ({Array.isArray(selectedOrder.REQUISITION_ITEMS) ? selectedOrder.REQUISITION_ITEMS.length : 0} รายการ)
+                <Box>
+                  <Typography variant="h6" className="font-semibold mb-2">
+                    Notes
                   </Typography>
-
-                  {Array.isArray(selectedOrder.REQUISITION_ITEMS) && selectedOrder.REQUISITION_ITEMS.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedOrder.REQUISITION_ITEMS.map((item) => (
-                        <div key={item.ITEM_ID || item.REQUISITION_ITEM_ID} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                          <div className="flex-shrink-0">
-                            {item.PRODUCTS?.PHOTO_URL ? (
-                              <img 
-                                src={item.PRODUCTS.PHOTO_URL} 
-                                alt={item.PRODUCT_NAME}
-                                className="w-16 h-16 object-cover rounded-lg border border-gray-200"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement
-                                  target.style.display = 'none'
-                                  target.nextElementSibling?.classList.remove('hidden')
-                                }}
-                              />
-                            ) : null}
-                            <div className={`w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center ${item.PRODUCTS?.PHOTO_URL ? 'hidden' : ''}`}>
-                              <Category className="h-8 w-8 text-gray-400" />
-                            </div>
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <Typography variant="subtitle1" className="font-semibold text-gray-800 truncate">
-                              {item.PRODUCT_NAME}
-                            </Typography>
-                            {item.PRODUCTS?.PRODUCT_CATEGORIES?.CATEGORY_NAME && (
-                              <Typography variant="body2" className="text-gray-500 flex items-center gap-1 mt-1">
-                                <Category className="h-3 w-3" />
-                                {item.PRODUCTS.PRODUCT_CATEGORIES.CATEGORY_NAME}
-                              </Typography>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center gap-4 text-right">
-                            <div>
-                              <Typography variant="body2" className="text-gray-500">
-                                Quantity
-                              </Typography>
-                              <Typography variant="h6" className="font-bold text-blue-600">
-                                {item.QUANTITY}
-                              </Typography>
-                            </div>
-                            
-                            <div>
-                              <Typography variant="body2" className="text-gray-500">
-                                Unit Price
-                              </Typography>
-                              <Typography variant="h6" className="font-bold text-green-600">
-                                ฿{item.UNIT_PRICE}
-                              </Typography>
-                            </div>
-                            
-                            <div>
-                              <Typography variant="body2" className="text-gray-500">
-                                Total
-                              </Typography>
-                              <Typography variant="h6" className="font-bold text-purple-600">
-                                ฿{item.TOTAL_PRICE}
-                              </Typography>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <Inventory className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                      <Typography variant="body1">ไม่พบรายการสินค้า</Typography>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                  <Typography variant="body2" className="text-gray-600 bg-gray-50 p-3 rounded">
+                    {selectedOrder.ISSUE_NOTE}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           )}
         </DialogContent>
-        
-        <DialogActions className="px-6 py-4 border-t border-gray-200">
-          <Button onClick={handleCloseDialog} variant="outlined">
-            ปิด
-          </Button>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Close</Button>
         </DialogActions>
       </Dialog>
     </motion.div>
   )
-} 
+}

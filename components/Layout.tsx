@@ -492,9 +492,7 @@ export default function Layout({ children }: LayoutProps) {
                             )}
                           </div>
                           {notification.type && (
-                            <Badge 
-                              variant="outline" 
-                              size="small"
+                                                        <Badge
                               className="text-xs"
                             >
                               {notification.type}

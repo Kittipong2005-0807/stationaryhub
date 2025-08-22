@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const userId = session.user.USER_ID || session.user.name
+    const userId = (session.user as any).USER_ID || session.user.name
 
     // นับจำนวนการแจ้งเตือนที่ยังไม่ได้อ่าน
     const unreadCount = await NotificationService.getUnreadNotificationCount(userId)

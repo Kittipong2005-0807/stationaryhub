@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ดึง USER_ID จาก session
-    const currentUserId = session.user.USER_ID || session.user.AdLoginName || session.user.id
+    const currentUserId = (session.user as any).USER_ID || (session.user as any).AdLoginName || session.user.name
     
     console.log("🔍 Fetching orders for user:", currentUserId)
     console.log("🔍 Session user data:", session.user)
