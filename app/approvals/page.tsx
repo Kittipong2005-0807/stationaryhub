@@ -93,7 +93,7 @@ export default function ApprovalsPage() {
         ROLE: user?.ROLE
       })
       
-      fetch(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
+      fetch(`/stationaryhub/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
         .then((res) => {
           console.log("Admin API response status:", res.status)
           if (!res.ok) {
@@ -129,7 +129,7 @@ export default function ApprovalsPage() {
         managerUserId 
       })
       
-      fetch(`/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
+      fetch(`/stationaryhub/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
         .then((res) => res.json())
         .then((data) => {
           console.log("Fetched requisitions for manager:", data)
@@ -171,7 +171,7 @@ export default function ApprovalsPage() {
         // อัปเดตสถานะใน UI โดยดึงข้อมูลใหม่จาก API orgcode3
         if (user?.ROLE === "ADMIN") {
           // Admin refresh ข้อมูล
-          const refreshResponse = await fetch(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
+          const refreshResponse = await fetch(`/stationaryhub/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
           if (refreshResponse.ok) {
             const data = await refreshResponse.json()
             if (data.requisitions && Array.isArray(data.requisitions)) {
@@ -183,7 +183,7 @@ export default function ApprovalsPage() {
         } else {
           // Manager refresh ข้อมูล
           const managerUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName
-          const refreshResponse = await fetch(`/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
+          const refreshResponse = await fetch(`/stationaryhub/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
           if (refreshResponse.ok) {
             const data = await refreshResponse.json()
             setRequisitions(data.requisitions || [])
@@ -209,7 +209,7 @@ export default function ApprovalsPage() {
     
     try {
       if (user?.ROLE === "ADMIN") {
-        const response = await fetch(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
+        const response = await fetch(`/stationaryhub/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
         if (response.ok) {
           const data = await response.json()
           if (data.requisitions && Array.isArray(data.requisitions)) {
@@ -220,7 +220,7 @@ export default function ApprovalsPage() {
         }
       } else {
         const managerUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName
-        const response = await fetch(`/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
+        const response = await fetch(`/stationaryhub/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
         if (response.ok) {
           const data = await response.json()
           setRequisitions(data.requisitions || [])
@@ -544,7 +544,7 @@ export default function ApprovalsPage() {
     
     setNotifying(true)
     try {
-      const response = await fetch("/api/notifications/arrival", {
+      const response = await fetch("/stationaryhub/api/notifications/arrival", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -676,6 +676,23 @@ export default function ApprovalsPage() {
 
   if (!isAuthenticated || (user?.ROLE !== "MANAGER" && user?.ROLE !== "ADMIN")) {
     return null
+  }
+
+  // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
+  const getImageUrl = (photoUrl: string | null | undefined) => {
+    if (!photoUrl) return '/stationaryhub/placeholder.jpg'
+    
+    // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+      return photoUrl
+    }
+    
+    // ถ้าเป็น filename ธรรมดา ให้เพิ่ม base path
+    if (photoUrl.startsWith('/')) {
+      return `/stationaryhub${photoUrl}`
+    }
+    
+    return `/stationaryhub/${photoUrl}`
   }
 
   return (
@@ -1384,7 +1401,7 @@ export default function ApprovalsPage() {
                          <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
                            {item.PHOTO_URL ? (
                              <img 
-                               src={item.PHOTO_URL} 
+                               src={getImageUrl(item.PHOTO_URL)} 
                                alt={item.PRODUCT_NAME}
                                className="w-full h-full object-cover rounded-lg"
                              />

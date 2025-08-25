@@ -94,7 +94,7 @@ export default function ManagerCartPage() {
 
     try {
       // ใช้ API orgcode3 เพื่อสร้าง requisition พร้อม orgcode3
-      const res = await fetch("/api/orgcode3", {
+      const res = await fetch("/stationaryhub/api/orgcode3", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requisitionData),
@@ -112,7 +112,7 @@ export default function ManagerCartPage() {
       
       // สร้าง requisition items
       if (result.requisitionId && requisitionData.REQUISITION_ITEMS.length > 0) {
-        const itemsRes = await fetch("/api/requisitions", {
+        const itemsRes = await fetch("/stationaryhub/api/requisitions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -134,6 +134,25 @@ export default function ManagerCartPage() {
       alert("เกิดข้อผิดพลาดในการส่งใบเบิก กรุณาลองใหม่")
     }
   }
+
+  // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
+  const getImageUrl = (photoUrl: string | null | undefined) => {
+    if (!photoUrl) return '/stationaryhub/placeholder.svg'
+    
+    // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+      return photoUrl
+    }
+    
+    // ถ้าเป็น filename ธรรมดา ให้เพิ่ม base path
+    if (photoUrl.startsWith('/')) {
+      return `/stationaryhub${photoUrl}`
+    }
+    
+    return `/stationaryhub/${photoUrl}`
+  }
+
+  const handleQuantityChange = (itemId: number, newQuantity: number) => {
 
   if (!isAuthenticated || user?.ROLE !== "MANAGER") {
     return null
@@ -208,7 +227,7 @@ export default function ManagerCartPage() {
                     <TableCell>
                       <Box className="flex items-center gap-3">
                         <Image
-                          src={item.PHOTO_URL || "/placeholder.svg"}
+                          src={getImageUrl(item.PHOTO_URL)}
                           alt={item.PRODUCT_NAME}
                           width={50}
                           height={50}

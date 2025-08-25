@@ -36,14 +36,14 @@ export default function OrgCode3InfoPage() {
       setError("")
 
       // ดึง SITE_ID ของ user
-      const siteIdResponse = await fetch(`/api/orgcode3?action=getUserSiteId&userId=${user?.AdLoginName}`)
+      const siteIdResponse = await fetch(`/stationaryhub/api/orgcode3?action=getUserSiteId&userId=${user?.AdLoginName}`)
       const siteIdData = await siteIdResponse.json()
       
       if (siteIdData.siteId) {
         setUserSiteId(siteIdData.siteId)
         
         // ดึงรายการ Manager ที่มี SITE_ID เดียวกัน
-        const managersResponse = await fetch(`/api/orgcode3?action=getAvailableManagers&userId=${user?.AdLoginName}`)
+        const managersResponse = await fetch(`/stationaryhub/api/orgcode3?action=getAvailableManagers&userId=${user?.AdLoginName}`)
         const managersData = await managersResponse.json()
         setAvailableManagers(managersData.managers || [])
       } else {

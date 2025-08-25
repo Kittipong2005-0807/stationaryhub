@@ -25,8 +25,9 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=sqlserver://sqlserver:1433;database=StationaryNew;user=sa;password=YourStrong@Passw0rd;trustServerCertificate=true
-      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_URL=http://localhost:3000/stationaryhub
       - NEXTAUTH_SECRET=your-secret-key-here
+      - NEXT_PUBLIC_BASE_PATH=/stationaryhub
       - LDAP_URL=ldap://your-ldap-server:389
       - LDAP_BIND_DN=cn=admin,dc=example,dc=com
       - LDAP_BIND_PASSWORD=password
@@ -61,6 +62,7 @@ volumes:
 networks:
   stationaryhub_network:
     driver: bridge
+
 
 
 

@@ -21,7 +21,7 @@ export default function ManagerProductsPage() {
   const router = useRouter()
   
   // Create categories array from products
-  const categories: (string | undefined)[] = Array.from(new Set((products ?? []).map((p: Product) => p.CATEGORY_NAME)));
+  const categories: (string | undefined)[] = Array.from(new Set((products || []).map((p: Product) => p.CATEGORY_NAME).filter(Boolean)));
   
   console.log("Manager Products - User:", user)
 

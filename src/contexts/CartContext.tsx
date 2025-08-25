@@ -139,7 +139,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (isInitialized && !isLoading) {
       try {
         localStorage.setItem(getCartStorageKey(currentUserId), JSON.stringify(items))
-        console.log('💾 Saved cart to localStorage:', items.length, 'items')
+        // console.log('💾 Saved cart to localStorage:', items.length, 'items')
       } catch (error) {
         console.error('❌ Error saving cart to localStorage:', error)
         setError('เกิดข้อผิดพลาดในการบันทึกข้อมูลตะกร้า')
@@ -163,14 +163,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return [...prev, { ...product, quantity }]
     })
     
-    console.log('➕ Added to cart:', product.PRODUCT_NAME, 'x', quantity)
+    // console.log('➕ Added to cart:', product.PRODUCT_NAME, 'x', quantity)
   }
 
   const removeFromCart = (productId: number) => {
     setItems((prev) => {
       const itemToRemove = prev.find(item => item.PRODUCT_ID === productId)
       if (itemToRemove) {
-        console.log('➖ Removed from cart:', itemToRemove.PRODUCT_NAME)
+        // console.log('➖ Removed from cart:', itemToRemove.PRODUCT_NAME)
       }
       return prev.filter((item) => item.PRODUCT_ID !== productId)
     })
@@ -189,7 +189,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       const updatedItem = updatedItems.find(item => item.PRODUCT_ID === productId)
       if (updatedItem) {
-        console.log('🔄 Updated quantity:', updatedItem.PRODUCT_NAME, 'x', quantity)
+        // console.log('🔄 Updated quantity:', updatedItem.PRODUCT_NAME, 'x', quantity)
       }
       
       return updatedItems
@@ -199,7 +199,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clearCart = () => {
     setItems([])
     clearCartFromStorage()
-    console.log('🗑️ Cart cleared')
+    // console.log('🗑️ Cart cleared')
   }
 
   const refreshCart = () => {

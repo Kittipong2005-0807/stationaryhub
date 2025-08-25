@@ -20,6 +20,23 @@ interface ExtendedUser {
 }
 
 export const authOptions: AuthOptions = {
+  // NextAuth configuration
+  pages: {
+    signIn: '/login',
+    error: '/login',
+  },
+  
+  // Session configuration
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  
+  // JWT configuration
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  
   providers: [
     CredentialsProvider({
       name: 'LDAP',
@@ -243,12 +260,6 @@ export const authOptions: AuthOptions = {
       },
     }),
   ],
-  session: {
-    strategy: 'jwt',
-  },
-  pages: {
-    signIn: '/login',
-  },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async jwt({ token, user }) {

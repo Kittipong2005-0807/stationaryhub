@@ -15,7 +15,6 @@ import {
   TableHead,
   TableRow,
   Chip,
-  IconButton,
   Menu,
   MenuItem,
   Avatar,
@@ -36,14 +35,11 @@ import {
   Assignment,
   Inventory,
   GetApp,
-  MoreVert,
   PictureAsPdf,
   TableChart,
   AttachMoney,
   Timeline,
-  Settings,
   Analytics,
-  Speed,
   Schedule,
 } from "@mui/icons-material"
 import { useAuth } from "@/src/contexts/AuthContext"
@@ -51,6 +47,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import type { Requisition } from "@/lib/database"
+import { apiGet, apiPost } from "@/lib/api-utils"
 
 // Interface สำหรับข้อมูลราคาสินค้า
 interface ProductPrice {
@@ -61,6 +58,11 @@ interface ProductPrice {
   YEAR: number
   MONTH: number
   CHANGE_PERCENTAGE: number
+  PHOTO_URL?: string
+  CURRENT_PRICE?: number
+  PREVIOUS_PRICE?: number
+  PRICE_CHANGE?: number
+  PERCENTAGE_CHANGE?: number
 }
 
 export default function AdminDashboard() {
@@ -68,8 +70,9 @@ export default function AdminDashboard() {
   const [productPrices, setProductPrices] = useState<ProductPrice[]>([])
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
-  const [priceComparisonData, setPriceComparisonData] = useState<any[]>([])
   const [realPriceHistory, setRealPriceHistory] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [arrivalMessage, setArrivalMessage] = useState<string>('')
   const [stats, setStats] = useState({
     totalRequisitions: 0,
     pendingApprovals: 0,
@@ -89,8 +92,9 @@ export default function AdminDashboard() {
   const [notifyMessage, setNotifyMessage] = useState("")
   const [notifying, setNotifying] = useState(false)
   const [sendEmail, setSendEmail] = useState(true) // เพิ่มตัวเลือกส่งอีเมล
+  const [bulkUpdating, setBulkUpdating] = useState(false)
+  const [importing, setImporting] = useState(false)
   const { user, isAuthenticated } = useAuth()
-  const router = useRouter()
   
   // Get user display name
   const getUserDisplayName = () => {
@@ -101,174 +105,142 @@ export default function AdminDashboard() {
   // ฟังก์ชันดึงข้อมูลราคาสินค้า
   const fetchProductPrices = async () => {
     try {
-      console.log(`🔍 Fetching price comparison data for year: ${selectedYear}, category: ${selectedCategory}`)
+      console.log('🔍 Fetching price comparison data for year:', selectedYear, 'category:', selectedCategory)
+      const response = await apiGet(`/stationaryhub/api/products/price-comparison?year=${selectedYear}&category=${selectedCategory}`)
       
-      const response = await fetch(`/api/products/price-comparison?year=${selectedYear}&category=${selectedCategory}`)
-      const data = await response.json()
-      
-      console.log(`📊 Price comparison response:`, data)
-      
-      if (data.success && data.data) {
-        setPriceComparisonData(data.data)
-        
-        // คำนวณ stats จากข้อมูลราคาจริง
-        const validData = data.data.filter((item: any) => item.PERCENTAGE_CHANGE !== null)
-        
-        if (validData.length > 0) {
-          const avgChange = validData.reduce((sum: number, item: any) => sum + (parseFloat(item.PERCENTAGE_CHANGE) || 0), 0) / validData.length
-          const maxIncrease = Math.max(...validData.map((item: any) => parseFloat(item.PERCENTAGE_CHANGE) || 0))
-          const maxDecrease = Math.min(...validData.map((item: any) => parseFloat(item.PERCENTAGE_CHANGE) || 0))
-          
-          console.log(`📈 Price stats calculated:`, { avgChange, maxIncrease, maxDecrease })
-          
-          setStats(prev => ({
-            ...prev,
-            avgPriceChange: Math.round(avgChange * 100) / 100,
-            topPriceIncrease: Math.round(maxIncrease * 100) / 100,
-            topPriceDecrease: Math.round(maxDecrease * 100) / 100,
-          }))
-        }
+      if (response && response.success && Array.isArray(response.data)) {
+        setProductPrices(response.data)
+        console.log('✅ Product prices loaded:', response.data.length, 'items')
       } else {
-        console.warn('No price data received or API call failed')
+        console.log('⚠️ No product prices data or invalid format')
+        setProductPrices([])
       }
     } catch (error) {
       console.error('❌ Error fetching product prices:', error)
+      setProductPrices([])
     }
   }
 
-  useEffect(() => {
-    if (!isAuthenticated || user?.ROLE !== "ADMIN") {
-      console.log("🔍 Admin access check:", { 
-        isAuthenticated, 
-        userRole: user?.ROLE, 
-        userId: user?.USER_ID,
-        empCode: user?.EmpCode 
-      })
-      router.push("/login")
-      return
+  const fetchRequisitions = async () => {
+    try {
+      const response = await apiGet("/stationaryhub/api/requisitions")
+      if (response && Array.isArray(response)) {
+        setRequisitions(response)
+        console.log('✅ Requisitions loaded:', response.length, 'items')
+      } else if (response && response.success && Array.isArray(response.data)) {
+        setRequisitions(response.data)
+        console.log('✅ Requisitions loaded:', response.data.length, 'items')
+      } else {
+        console.log('⚠️ No requisitions data or invalid format')
+        setRequisitions([])
+      }
+    } catch (error) {
+      console.error('❌ Error fetching requisitions:', error)
+      setRequisitions([])
     }
+  }
 
-    setLoading(true)
-    fetch("/api/requisitions")
-      .then((res) => res.json())
-      .then((data) => {
-        setRequisitions(data)
-        // คำนวณ stats จากข้อมูลจริง
-        const totalRequisitions = data.length
-        const pendingApprovals = data.filter((r: Requisition) => r.STATUS === "PENDING").length
-        const approvedRequisitions = data.filter((r: Requisition) => r.STATUS === "APPROVED").length
-        const totalValue = data.reduce((sum: number, r: Requisition) => {
-          const amount = parseFloat(r.TOTAL_AMOUNT?.toString() || '0') || 0
-          return sum + amount
-        }, 0)
-        setStats({
-          totalRequisitions,
-          pendingApprovals,
-          approvedRequisitions,
-          totalValue,
-          monthlyGrowth: 15.3,
-          activeUsers: 24,
-          lowStockItems: 8,
-          avgPriceChange: 0,
-          topPriceIncrease: 0,
-          topPriceDecrease: 0,
-        })
-        setLoading(false)
-      })
-      .catch(() => {
-        alert("โหลดข้อมูล requisitions ไม่สำเร็จ")
-        setLoading(false)
-      })
-  }, [isAuthenticated, user, router])
-
-  // ดึงข้อมูลหมวดหมู่สินค้าจริง
   const fetchCategories = async () => {
     try {
-      console.log(`🔍 Fetching product categories...`)
-      const response = await fetch('/api/categories')
-      const data = await response.json()
-      
-      if (data.success && data.data) {
-        console.log(`✅ Categories fetched:`, data.data)
-        // อัปเดต categories ใน UI ถ้าต้องการ
+      const response = await apiGet('/api/categories')
+      if (response.success && Array.isArray(response.data)) {
+        setCategories(response.data)
+        console.log('✅ Categories loaded:', response.data.length, 'items')
+      } else {
+        console.warn('⚠️ No categories data or invalid format')
+        setCategories([])
       }
     } catch (error) {
       console.error('❌ Error fetching categories:', error)
+      setCategories([])
     }
   }
 
-  // ดึงประวัติราคาจริง
   const fetchRealPriceHistory = async () => {
     try {
-      console.log(`🔍 Fetching real price history...`);
-      const response = await fetch('/api/products/real-price-history');
-      const data = await response.json();
-      
-      if (data.success) {
-        console.log(`✅ Real price history:`, data.data);
-        // อัปเดต state สำหรับประวัติราคาจริง
-        setRealPriceHistory(data.data);
-      }
-    } catch (error) {
-      console.error('❌ Error fetching real price history:', error);
-    }
-  };
-
-  // อัปเดตราคาแบบ Bulk
-  const handleBulkPriceUpdate = async (prices: any[]) => {
-    try {
-      const response = await fetch('/api/products/bulk-update-prices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prices: prices,
-          year: selectedYear,
-          notes: 'Bulk update from Admin Dashboard'
-        })
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        alert(`Bulk update completed: ${data.summary.successful} successful, ${data.summary.errors} errors`);
-        // รีเฟรชข้อมูล
-        await fetchProductPrices();
-        await fetchRealPriceHistory();
+      const response = await apiGet('/api/products/real-price-history');
+      if (response.success && Array.isArray(response.data)) {
+        setRealPriceHistory(response.data)
+        console.log('✅ Real price history loaded:', response.data.length, 'items')
       } else {
-        alert('Bulk update failed: ' + data.error);
+        console.warn('⚠️ No real price history data or invalid format')
+        setRealPriceHistory([])
       }
     } catch (error) {
-      console.error('Error in bulk update:', error);
-      alert('Bulk update failed');
+      console.error('❌ Error fetching real price history:', error)
+      setRealPriceHistory([])
     }
-  };
+  }
 
-  // Import ราคาจากไฟล์
-  const handlePriceImport = async (file: File) => {
+  const handleBulkUpdatePrices = async () => {
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('year', selectedYear.toString());
-      formData.append('notes', 'Imported from Admin Dashboard');
+      setBulkUpdating(true)
+      const response = await apiPost('/api/products/bulk-update-prices', {
+        updateValue: 0,
+        year: selectedYear,
+        category: selectedCategory
+      })
       
-      const response = await fetch('/api/products/import-prices', {
-        method: 'POST',
-        body: formData
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        alert(`Import completed: ${data.summary.successful} successful, ${data.summary.errors} errors`);
-        // รีเฟรชข้อมูล
-        await fetchProductPrices();
-        await fetchRealPriceHistory();
+      if (response.success) {
+        alert('Bulk price update completed successfully!')
+        fetchProductPrices()
       } else {
-        alert('Import failed: ' + data.error);
+        alert('Bulk price update failed: ' + response.error)
       }
     } catch (error) {
-      console.error('Error in price import:', error);
-      alert('Import failed');
+      console.error('Error updating prices:', error)
+      alert('Error updating prices')
+    } finally {
+      setBulkUpdating(false)
     }
-  };
+  }
+
+  const handleImportPrices = async (file: File) => {
+    try {
+      setImporting(true)
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      const response = await apiPost('/api/products/import-prices', formData)
+      
+      if (response.success) {
+        alert('Price import completed successfully!')
+        fetchProductPrices()
+      } else {
+        alert('Price import failed: ' + response.error)
+      }
+    } catch (error) {
+      console.error('Error importing prices:', error)
+      alert('Error importing prices')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImportPrices(file);
+    }
+  }
+
+  // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
+  const getImageUrl = (photoUrl: string | null | undefined) => {
+    if (!photoUrl) return '/stationaryhub/placeholder.jpg'
+    
+    // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+      return photoUrl
+    }
+    
+    // ถ้าเป็น filename ธรรมดา ให้เพิ่ม base path
+    if (photoUrl.startsWith('/')) {
+      return `/stationaryhub${photoUrl}`
+    }
+    
+    return `/stationaryhub/${photoUrl}`
+  }
+
 
   // ดึงข้อมูลราคาสินค้าเมื่อปีหรือหมวดหมู่เปลี่ยน
   useEffect(() => {
@@ -276,13 +248,60 @@ export default function AdminDashboard() {
       fetchProductPrices()
       fetchCategories()
       fetchRealPriceHistory()
+      fetchRequisitions()
     }
   }, [selectedYear, selectedCategory, isAuthenticated, user])
 
-  const handleExportMenu = (event: React.MouseEvent<HTMLElement>, requisition: Requisition) => {
-    setAnchorEl(event.currentTarget)
-    setSelectedRequisition(requisition)
-  }
+  // ดึงข้อมูลเริ่มต้นเมื่อ component mount
+  useEffect(() => {
+    if (isAuthenticated && user?.ROLE === "ADMIN") {
+      setLoading(true)
+      Promise.all([
+        fetchProductPrices(),
+        fetchCategories(),
+        fetchRealPriceHistory(),
+        fetchRequisitions()
+      ]).finally(() => {
+        setLoading(false)
+      })
+    }
+  }, [isAuthenticated, user])
+
+  // อัปเดต stats เมื่อข้อมูลเปลี่ยน
+  useEffect(() => {
+    if (requisitions.length > 0) {
+      const totalRequisitions = requisitions.length
+      const pendingApprovals = requisitions.filter(r => r.STATUS === 'PENDING').length
+      const approvedRequisitions = requisitions.filter(r => r.STATUS === 'APPROVED').length
+      const totalValue = requisitions.reduce((sum, r) => sum + (parseFloat(r.TOTAL_AMOUNT?.toString() || '0') || 0), 0)
+
+      setStats(prev => ({
+        ...prev,
+        totalRequisitions,
+        pendingApprovals,
+        approvedRequisitions,
+        totalValue
+      }))
+    }
+  }, [requisitions])
+
+  // อัปเดต price stats เมื่อข้อมูลราคาเปลี่ยน
+  useEffect(() => {
+    if (productPrices.length > 0) {
+      const avgPriceChange = productPrices.reduce((sum, p) => sum + (parseFloat(p.PERCENTAGE_CHANGE?.toString() || '0') || 0), 0) / productPrices.length
+      const topPriceIncrease = Math.max(...productPrices.map(p => parseFloat(p.PERCENTAGE_CHANGE?.toString() || '0') || 0))
+      const topPriceDecrease = Math.min(...productPrices.map(p => parseFloat(p.PERCENTAGE_CHANGE?.toString() || '0') || 0))
+
+      setStats(prev => ({
+        ...prev,
+        avgPriceChange: avgPriceChange || 0,
+        topPriceIncrease: topPriceIncrease || 0,
+        topPriceDecrease: topPriceDecrease || 0
+      }))
+    }
+  }, [productPrices])
+
+
 
   const handleExport = (format: "pdf" | "excel") => {
     if (!selectedRequisition) return
@@ -309,7 +328,7 @@ export default function AdminDashboard() {
     setNotifying(true)
     try {
       // ส่งการแจ้งเตือนในระบบ (In-App Notification)
-      const response = await fetch("/api/notifications/arrival", {
+      const response = await fetch("/stationaryhub/api/notifications/arrival", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -326,7 +345,7 @@ export default function AdminDashboard() {
         // ส่งอีเมลแจ้งเตือนไปยัง user (ถ้าเลือกส่งอีเมล)
         if (sendEmail) {
           try {
-            const emailResponse = await fetch("/api/send-arrival-email", {
+            const emailResponse = await fetch("/stationaryhub/api/send-arrival-email", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -375,6 +394,54 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleSendArrivalEmail = async (requisitionId: number) => {
+    try {
+      setNotifying(true)
+      
+      // ส่ง notification
+      const response = await fetch("/api/notifications/arrival", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requisitionId,
+          message: "สินค้าที่คุณสั่งซื้อได้มาถึงแล้ว กรุณาตรวจสอบที่แผนกจัดซื้อ",
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to send notification")
+      }
+
+      // ส่งอีเมล (ถ้าเปิดใช้งาน)
+      if (sendEmail) {
+        const emailResponse = await fetch("/api/send-arrival-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            requisitionId,
+            email: user?.EMAIL,
+            username: user?.USERNAME,
+          }),
+        })
+
+        if (!emailResponse.ok) {
+          console.warn("Failed to send email, but notification was sent")
+        }
+      }
+
+      alert("แจ้งเตือนเรียบร้อยแล้ว!")
+    } catch (error) {
+      console.error("Error sending arrival notification:", error)
+      alert("เกิดข้อผิดพลาดในการส่งแจ้งเตือน")
+    } finally {
+      setNotifying(false)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PENDING":
@@ -412,44 +479,7 @@ export default function AdminDashboard() {
     )
   }
 
-  const statCards = [
-    {
-      title: "Total Requisitions",
-      value: stats.totalRequisitions,
-      icon: Assignment,
-      gradient: "from-blue-500 to-blue-600",
-      bgGradient: "from-blue-50 to-blue-100",
-      change: "+12%",
-      changeColor: "text-green-600",
-    },
-    {
-      title: "Pending Approvals",
-      value: stats.pendingApprovals,
-      icon: Dashboard,
-      gradient: "from-orange-500 to-red-500",
-      bgGradient: "from-orange-50 to-red-100",
-      change: "-5%",
-      changeColor: "text-green-600",
-    },
-    {
-      title: "Approved Today",
-      value: stats.approvedRequisitions,
-      icon: TrendingUp,
-      gradient: "from-green-500 to-emerald-500",
-      bgGradient: "from-green-50 to-emerald-100",
-      change: "+18%",
-      changeColor: "text-green-600",
-    },
-    {
-      title: "Total Value",
-      value: `฿${(stats.totalValue || 0).toFixed(0)}`,
-      icon: AttachMoney,
-      gradient: "from-purple-500 to-pink-500",
-      bgGradient: "from-purple-50 to-pink-100",
-      change: "+23%",
-      changeColor: "text-green-600",
-    },
-  ]
+
 
   const quickActions = [
     {
@@ -476,7 +506,7 @@ export default function AdminDashboard() {
     {
       title: "System Settings",
       description: "Configure system preferences",
-      icon: Settings,
+      icon: Dashboard,
       color: "from-gray-500 to-gray-600",
       action: () => alert("Settings panel coming soon!"),
     },
@@ -849,11 +879,11 @@ export default function AdminDashboard() {
                     label="Category"
                   >
                     <MenuItem value="all">All Categories</MenuItem>
-                    <MenuItem value="Office Supplies">Office Supplies</MenuItem>
-                    <MenuItem value="Stationery">Stationery</MenuItem>
-                    <MenuItem value="Electronics">Electronics</MenuItem>
-                    <MenuItem value="Furniture">Furniture</MenuItem>
-                    <MenuItem value="Cleaning Supplies">Cleaning Supplies</MenuItem>
+                    {categories.map((category) => (
+                      <MenuItem key={category.CATEGORY_ID} value={category.CATEGORY_NAME}>
+                        {category.CATEGORY_NAME}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
 
@@ -869,29 +899,24 @@ export default function AdminDashboard() {
                 <Button
                   variant="outlined"
                   size="small"
-                  onClick={() => {
-                    // ตัวอย่าง Bulk Update
-                    const samplePrices = [
-                      { productId: 1, newPrice: 125.00 },
-                      { productId: 2, newPrice: 26.00 },
-                      { productId: 3, newPrice: 19.00 }
-                    ];
-                    handleBulkPriceUpdate(samplePrices);
-                  }}
+                  onClick={handleBulkUpdatePrices}
                   className="border-gray-300 hover:border-gray-400"
+                  disabled={bulkUpdating}
                 >
-                  Bulk Update
+                  {bulkUpdating ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      กำลังอัปเดต...
+                    </div>
+                  ) : (
+                    "Bulk Update"
+                  )}
                 </Button>
 
                 <input
                   type="file"
                   accept=".csv"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      handlePriceImport(file);
-                    }
-                  }}
+                  onChange={handleFileChange}
                   style={{ display: 'none' }}
                   id="csv-import"
                 />
@@ -901,14 +926,22 @@ export default function AdminDashboard() {
                     size="small"
                     component="span"
                     className="border-green-300 hover:border-green-400 text-green-600"
+                    disabled={importing}
                   >
-                    Import CSV
+                    {importing ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        กำลังนำเข้า...
+                      </div>
+                    ) : (
+                      "Import CSV"
+                    )}
                   </Button>
                 </label>
               </div>
             </div>
 
-            {priceComparisonData.length > 0 ? (
+            {productPrices.length > 0 ? (
               <TableContainer className="glass-button rounded-2xl">
                 <Table>
                   <TableHead>
@@ -922,7 +955,7 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {priceComparisonData.slice(0, 10).map((item, index) => (
+                    {productPrices.slice(0, 10).map((item, index) => (
                       <TableRow
                         key={item.PRODUCT_ID || index}
                         className="hover:bg-white/50 transition-colors"
@@ -931,11 +964,11 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-3">
                             {item.PHOTO_URL ? (
                               <img 
-                                src={item.PHOTO_URL} 
+                                src={getImageUrl(item.PHOTO_URL)} 
                                 alt={item.PRODUCT_NAME}
                                 className="w-8 h-8 rounded-lg object-cover"
                                 onError={(e) => {
-                                  e.currentTarget.src = '/placeholder.jpg'
+                                  e.currentTarget.src = '/stationaryhub/placeholder.jpg'
                                 }}
                               />
                             ) : (
@@ -962,28 +995,28 @@ export default function AdminDashboard() {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" className="font-semibold text-green-600">
-                            ฿{parseFloat(item.CURRENT_PRICE || 0).toFixed(2)}
+                            ฿{parseFloat(item.CURRENT_PRICE?.toString() || '0').toFixed(2)}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" className="text-gray-600">
-                            ฿{parseFloat(item.PREVIOUS_PRICE || 0).toFixed(2)}
+                            ฿{parseFloat(item.PREVIOUS_PRICE?.toString() || '0').toFixed(2)}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography 
                             variant="body2" 
                             className={`font-semibold ${
-                              parseFloat(item.PRICE_CHANGE || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                              parseFloat(item.PRICE_CHANGE?.toString() || '0') >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}
                           >
-                            {parseFloat(item.PRICE_CHANGE || 0) >= 0 ? '+' : ''}
-                            ฿{parseFloat(item.PRICE_CHANGE || 0).toFixed(2)}
+                            {parseFloat(item.PRICE_CHANGE?.toString() || '0') >= 0 ? '+' : ''}
+                            ฿{parseFloat(item.PRICE_CHANGE?.toString() || '0').toFixed(2)}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            {parseFloat(item.PERCENTAGE_CHANGE || 0) >= 0 ? (
+                            {parseFloat(item.PERCENTAGE_CHANGE?.toString() || '0') >= 0 ? (
                               <TrendingUp className="w-4 h-4 text-green-600" />
                             ) : (
                               <TrendingDown className="w-4 h-4 text-red-600" />
@@ -991,11 +1024,11 @@ export default function AdminDashboard() {
                             <Typography 
                               variant="body2" 
                               className={`font-bold ${
-                                parseFloat(item.PERCENTAGE_CHANGE || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                                parseFloat(item.PERCENTAGE_CHANGE?.toString() || '0') >= 0 ? 'text-green-600' : 'text-red-600'
                               }`}
                             >
-                              {parseFloat(item.PERCENTAGE_CHANGE || 0) >= 0 ? '+' : ''}
-                              {parseFloat(item.PERCENTAGE_CHANGE || 0).toFixed(1)}%
+                              {parseFloat(item.PERCENTAGE_CHANGE?.toString() || '0') >= 0 ? '+' : ''}
+                              {parseFloat(item.PERCENTAGE_CHANGE?.toString() || '0').toFixed(1)}%
                             </Typography>
                           </div>
                         </TableCell>
@@ -1070,11 +1103,11 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-3">
                             {item.PHOTO_URL ? (
                               <img 
-                                src={item.PHOTO_URL} 
+                                src={getImageUrl(item.PHOTO_URL)} 
                                 alt={item.PRODUCT_NAME}
                                 className="w-8 h-8 rounded-lg object-cover"
                                 onError={(e) => {
-                                  e.currentTarget.src = '/placeholder.jpg'
+                                  e.currentTarget.src = '/stationaryhub/placeholder.jpg'
                                 }}
                               />
                             ) : (

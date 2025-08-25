@@ -59,6 +59,21 @@ model PRODUCTS {
   CREATED_AT         DateTime?           @default(now(), map: "DF__PRODUCTS__CREATE__4316F928") @db.DateTime
   PRODUCT_CATEGORIES PRODUCT_CATEGORIES  @relation(fields: [CATEGORY_ID], references: [CATEGORY_ID], onUpdate: NoAction, map: "FK__PRODUCTS__CATEGO__440B1D61")
   REQUISITION_ITEMS  REQUISITION_ITEMS[]
+  PRICE_HISTORY      PRICE_HISTORY[]
+}
+
+model PRICE_HISTORY {
+  HISTORY_ID        Int      @id @default(autoincrement())
+  PRODUCT_ID        Int
+  OLD_PRICE         Decimal? @db.Decimal(18, 2)
+  NEW_PRICE         Decimal  @db.Decimal(18, 2)
+  PRICE_CHANGE      Decimal? @db.Decimal(18, 2)
+  PERCENTAGE_CHANGE Decimal? @db.Decimal(5, 2)
+  YEAR              Int
+  RECORDED_DATE     DateTime @default(now())
+  NOTES             String?  @db.VarChar(1000)
+  CREATED_BY        String   @db.VarChar(50)
+  PRODUCTS          PRODUCTS @relation(fields: [PRODUCT_ID], references: [PRODUCT_ID], onUpdate: NoAction)
 }
 
 model REQUISITION_ITEMS {

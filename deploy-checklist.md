@@ -1,158 +1,110 @@
-# 🚀 Deployment Checklist สำหรับ StationaryHub
+# 🚀 StationaryHub Deployment Checklist
 
-## 📋 **ก่อนการ Deploy**
+## ✅ Pre-Deployment Checklist
 
-### **1. ตรวจสอบ Dependencies**
-- [ ] Node.js version 18+ ในเซิร์ฟเวอร์
-- [ ] npm หรือ pnpm ในเซิร์ฟเวอร์
-- [ ] SQL Server connection string ที่ถูกต้อง
-- [ ] LDAP server ที่เข้าถึงได้
+### 1. Environment Configuration
+- [ ] สร้างไฟล์ `.env` จาก `.env.example`
+- [ ] ตั้งค่า `NEXTAUTH_URL` ให้มี base path `/stationaryhub`
+- [ ] ตั้งค่า `NEXT_PUBLIC_BASE_PATH=/stationaryhub`
+- [ ] ตั้งค่า `CORS_ORIGIN` ให้มี base path `/stationaryhub`
+- [ ] ตรวจสอบ `DATABASE_URL` ให้ถูกต้อง
 
-### **2. Environment Variables**
+### 2. Base Path Configuration
+- [ ] ตรวจสอบ `next.config.js` มี `basePath: '/stationaryhub'`
+- [ ] ตรวจสอบ environment variables รองรับ base path
+- [ ] ตรวจสอบ Docker configuration รองรับ base path
+- [ ] ตรวจสอบ Nginx configuration รองรับ base path
+
+### 3. Database Setup
+- [ ] ตรวจสอบการเชื่อมต่อฐานข้อมูล
+- [ ] รัน `npm run db:generate` เพื่อสร้าง Prisma client
+- [ ] ตรวจสอบ database schema ถูกต้อง
+
+### 4. Build & Test
+- [ ] รัน `npm run build` สำเร็จ
+- [ ] ตรวจสอบ TypeScript errors
+- [ ] รัน `npm run lint` ไม่มี errors
+- [ ] ทดสอบ application ใน local environment
+
+## 🐳 Docker Deployment
+
+### 1. Build Docker Image
 ```bash
-# Database
-DATABASE_URL="sqlserver://server:port;database=StationaryNew;user=username;password=password;trustServerCertificate=true"
-
-# NextAuth
-NEXTAUTH_URL="https://yourdomain.com"
-NEXTAUTH_SECRET="your-secret-key"
-
-# LDAP
-LDAP_URL="ldap://your-ldap-server:389"
-LDAP_BIND_DN="cn=admin,dc=example,dc=com"
-LDAP_BIND_PASSWORD="password"
-
-# SMTP
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT=587
-SMTP_USER="your-email@gmail.com"
-SMTP_PASS="your-app-password"
-```
-
-## 🔧 **ขั้นตอนการ Deploy**
-
-### **1. Upload Code**
-```bash
-# Clone หรือ upload โค้ดไปยังเซิร์ฟเวอร์
-git clone https://github.com/your-repo/stationaryhub.git
-cd stationaryhub
-```
-
-### **2. Install Dependencies**
-```bash
-npm install
-# หรือ
-pnpm install
-```
-
-### **3. Setup Environment**
-```bash
-# สร้างไฟล์ .env
-cp .env.example .env
-# แก้ไขค่าใน .env ให้ตรงกับเซิร์ฟเวอร์
-```
-
-### **4. Database Setup**
-```bash
-# Generate Prisma client
-npm run db:generate
-
-# Push schema (ถ้าจำเป็น)
-npm run db:push
-```
-
-### **5. Build Application**
-```bash
-npm run build
-```
-
-### **6. Start Application**
-```bash
-npm start
-```
-
-## 🚨 **ปัญหาที่อาจเกิดขึ้นและวิธีแก้ไข**
-
-### **1. Database Connection Error**
-```bash
-# ตรวจสอบ SQL Server
-- Firewall rules
-- Port 1433 (default)
-- Network access
-- Authentication mode
-```
-
-### **2. Prisma Error**
-```bash
-# ลบ node_modules และ install ใหม่
-rm -rf node_modules package-lock.json
-npm install
-npm run db:generate
-```
-
-### **3. Build Error**
-```bash
-# ตรวจสอบ Node.js version
-node --version
-# ต้องเป็น 18+
-
-# Clean build
-npm run clean
-npm run build
-```
-
-### **4. Port Already in Use**
-```bash
-# เปลี่ยน port ใน package.json
-"start": "next start -p 3001"
-```
-
-## 📁 **ไฟล์ที่ต้องมีในเซิร์ฟเวอร์**
-
-- [ ] `.env` (environment variables)
-- [ ] `next.config.js`
-- [ ] `package.json`
-- [ ] `prisma/schema.prisma`
-- [ ] `.next/` (build output)
-- [ ] `public/` (static files)
-
-## 🔒 **Security Checklist**
-
-- [ ] HTTPS enabled
-- [ ] Environment variables ไม่ commit ใน git
-- [ ] Database credentials ปลอดภัย
-- [ ] Firewall rules ถูกต้อง
-- [ ] Rate limiting (ถ้าจำเป็น)
-
-## 📊 **Performance Optimization**
-
-- [ ] Enable gzip compression
-- [ ] Static file caching
-- [ ] Database connection pooling
-- [ ] Image optimization
-- [ ] CDN สำหรับ static files
-
-## 🚀 **Production Commands**
-
-```bash
-# Start production server
-npm start
-
-# หรือใช้ PM2
-pm2 start npm --name "stationaryhub" -- start
-
-# หรือใช้ Docker
 docker build -t stationaryhub .
-docker run -p 3000:3000 stationaryhub
 ```
 
-## 📞 **Support**
+### 2. Run with Docker Compose
+```bash
+docker-compose up -d
+```
 
-หากมีปัญหาการ deploy กรุณาติดต่อ:
-- Database connection issues
-- Build errors
-- Runtime errors
-- Performance issues
+### 3. Verify Deployment
+- [ ] ตรวจสอบ application รันที่ `http://localhost:3000/stationaryhub`
+- [ ] ตรวจสอบ database connection
+- [ ] ตรวจสอบ authentication system
+
+## 🌐 Production Deployment
+
+### 1. Server Configuration
+- [ ] ตั้งค่า domain และ SSL certificate
+- [ ] ตั้งค่า reverse proxy (Nginx/Apache)
+- [ ] ตั้งค่า firewall และ security
+
+### 2. Environment Variables
+```env
+NODE_ENV=production
+NEXTAUTH_URL=https://your-domain.com/stationaryhub
+NEXT_PUBLIC_BASE_PATH=/stationaryhub
+CORS_ORIGIN=https://your-domain.com/stationaryhub
+```
+
+### 3. Nginx Configuration
+- [ ] ตั้งค่า proxy_pass ไปยัง application
+- [ ] ตั้งค่า location block สำหรับ `/stationaryhub`
+- [ ] ตั้งค่า SSL และ redirect rules
+
+## 🔍 Post-Deployment Verification
+
+### 1. Application Access
+- [ ] หน้าแรก: `https://your-domain.com/stationaryhub`
+- [ ] หน้า Login: `https://your-domain.com/stationaryhub/login`
+- [ ] หน้า Admin: `https://your-domain.com/stationaryhub/admin`
+
+### 2. Functionality Test
+- [ ] Authentication system
+- [ ] Database operations
+- [ ] File uploads
+- [ ] Email notifications
+- [ ] Role-based access control
+
+### 3. Performance & Security
+- [ ] ตรวจสอบ response times
+- [ ] ตรวจสอบ memory usage
+- [ ] ตรวจสอบ security headers
+- [ ] ตรวจสอบ SSL configuration
+
+## 🚨 Troubleshooting
+
+### Common Issues
+1. **Base Path Not Working**
+   - ตรวจสอบ `next.config.js`
+   - ตรวจสอบ environment variables
+   - ตรวจสอบ Nginx configuration
+
+2. **Authentication Issues**
+   - ตรวจสอบ `NEXTAUTH_URL`
+   - ตรวจสอบ LDAP configuration
+   - ตรวจสอบ database connection
+
+3. **Static Assets Not Loading**
+   - ตรวจสอบ `public` folder
+   - ตรวจสอบ base path configuration
+   - ตรวจสอบ Nginx static file serving
+
+## 📞 Support
+
+หากมีปัญหาหรือคำถาม กรุณาติดต่อทีมพัฒนา
+
 
 
 

@@ -49,7 +49,7 @@ export default function OrdersPage() {
       setLoading(true)
       setError(null)
       
-      const response = await fetch('/api/my-orders')
+      const response = await fetch('/stationaryhub/api/my-orders')
       const data = await response.json()
       
       if (response.ok) {
@@ -124,6 +124,23 @@ export default function OrdersPage() {
       default:
         return status || "Unknown"
     }
+  }
+
+  // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
+  const getImageUrl = (photoUrl: string | null | undefined) => {
+    if (!photoUrl) return '/stationaryhub/placeholder.jpg'
+    
+    // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+      return photoUrl
+    }
+    
+    // ถ้าเป็น filename ธรรมดา ให้เพิ่ม base path
+    if (photoUrl.startsWith('/')) {
+      return `/stationaryhub${photoUrl}`
+    }
+    
+    return `/stationaryhub/${photoUrl}`
   }
 
   if (!isAuthenticated) {
@@ -290,11 +307,11 @@ export default function OrdersPage() {
                       <Box className="flex items-center gap-3">
                         {item.PRODUCTS?.PHOTO_URL ? (
                           <img 
-                            src={item.PRODUCTS.PHOTO_URL} 
+                            src={getImageUrl(item.PRODUCTS.PHOTO_URL)} 
                             alt={item.PRODUCTS.PRODUCT_NAME}
                             className="w-12 h-12 rounded-lg object-cover"
                             onError={(e) => {
-                              e.currentTarget.src = '/placeholder.jpg'
+                              e.currentTarget.src = '/stationaryhub/placeholder.jpg'
                             }}
                           />
                         ) : (

@@ -11,9 +11,9 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext } from "react"
+import { createContext, useContext, useEffect } from "react"
 import { useSession, signIn, signOut } from "next-auth/react"
-// import type { Session } from "next-auth" // ไม่จำเป็นต้องใช้
+import { useRouter } from "next/navigation"
 
 interface AuthContextType {
   user: {
@@ -28,7 +28,7 @@ interface AuthContextType {
     EmpCode?: string | null;
     [key: string]: unknown;
   } | null;
-  login: (username: string, password: string) => Promise<boolean>
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   isAuthenticated: boolean
   isAuthLoading: boolean
@@ -37,28 +37,61 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // ...existing code...
   const { data: session, status } = useSession()
+  const router = useRouter()
   const user = session?.user ?? null
+  
   console.log("AuthProvider session:", user)
+  console.log("AuthProvider status:", status)
+  
   const isAuthenticated = status === "authenticated"
   const isAuthLoading = status === "loading"
 
-  const login = async (username: string, password: string): Promise<boolean> => {
-    const res = await signIn("credentials", {
-      redirect: false,
-      username,
-      password,
-    })
-    return !!(res && res.ok && !res.error)
+  const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await signIn("credentials", {
+        redirect: false,
+        username,
+        password,
+      })
+      
+      if (res?.ok && !res.error) {
+        return { success: true }
+      } else {
+        return { 
+          success: false, 
+          error: res?.error || "การเข้าสู่ระบบล้มเหลว" 
+        }
+      }
+    } catch (error) {
+      console.error("Login error:", error)
+      return { 
+        success: false, 
+        error: "เกิดข้อผิดพลาดในการเข้าสู่ระบบ" 
+      }
+    }
   }
 
   const logout = () => {
-    signOut({ callbackUrl: "/login" })
+    signOut({ 
+      callbackUrl: "/login",
+      redirect: true
+    })
   }
 
+  // Redirect to login if not authenticated and not loading
+  useEffect(() => {
+    if (!isAuthLoading && !isAuthenticated) {
+      const currentPath = window.location.pathname
+      if (currentPath !== "/login" && !currentPath.includes("/api/")) {
+        console.log("Redirecting to login - user not authenticated")
+        router.push("/login")
+      }
+    }
+  }, [isAuthenticated, isAuthLoading, router])
+
   return (
-    <AuthContext.Provider value={{ user , login, logout, isAuthenticated, isAuthLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated, isAuthLoading }}>
       {children}
     </AuthContext.Provider>
   )

@@ -4,6 +4,7 @@ import CssBaseline from "@mui/material/CssBaseline"
 import { Inter } from "next/font/google"
 import { ReactNode } from "react"
 import { SessionProvider } from "next-auth/react"
+import { BASE_PATH } from "@/lib/base-path"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -42,7 +43,11 @@ const theme = createTheme({
 
 export default function ThemeProviderClient({ children }: { children: ReactNode }) {
   return (
-    <SessionProvider>
+    <SessionProvider 
+      basePath={`${BASE_PATH}/api/auth`}
+      refetchInterval={5 * 60} // Refetch session every 5 minutes
+      refetchOnWindowFocus={true}
+    >
       <ThemeProvider theme={theme}>
         <CssBaseline />
         {children}

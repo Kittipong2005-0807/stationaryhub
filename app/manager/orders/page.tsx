@@ -90,7 +90,7 @@ export default function ManagerOrdersPage() {
     try {
       setLoading(true)
       // ดึง order ของตัว Manager เองเท่านั้น
-      const response = await fetch("/api/requisitions?mine=1")
+      const response = await fetch("/stationaryhub/api/requisitions?mine=1")
       const data = await response.json()
       
       if (response.ok) {
@@ -182,6 +182,23 @@ export default function ManagerOrdersPage() {
       style: "currency",
       currency: "THB",
     }).format(amount)
+  }
+
+  // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
+  const getImageUrl = (photoUrl: string | null | undefined) => {
+    if (!photoUrl) return '/stationaryhub/placeholder.jpg'
+    
+    // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+      return photoUrl
+    }
+    
+    // ถ้าเป็น filename ธรรมดา ให้เพิ่ม base path
+    if (photoUrl.startsWith('/')) {
+      return `/stationaryhub${photoUrl}`
+    }
+    
+    return `/stationaryhub/${photoUrl}`
   }
 
   if (loading) {
@@ -435,7 +452,7 @@ export default function ManagerOrdersPage() {
                             <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
                               {item.PHOTO_URL ? (
                                 <img 
-                                  src={item.PHOTO_URL} 
+                                  src={getImageUrl(item.PHOTO_URL)} 
                                   alt={item.PRODUCT_NAME}
                                   className="w-full h-full object-cover rounded-lg"
                                 />

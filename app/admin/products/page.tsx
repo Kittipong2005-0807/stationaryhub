@@ -94,10 +94,19 @@ export default function ProductManagementPage() {
         const response = await fetch('/api/categories');
         if (response.ok) {
           const data = await response.json();
-          setCategories(data);
+          // ตรวจสอบว่า response มี data field หรือไม่
+          if (data && data.success && Array.isArray(data.data)) {
+            setCategories(data.data);
+          } else if (Array.isArray(data)) {
+            setCategories(data);
+          } else {
+            console.error('Invalid categories data format:', data);
+            setCategories([]);
+          }
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
+        setCategories([]);
       }
     };
 
@@ -123,7 +132,15 @@ export default function ProductManagementPage() {
       const categoriesResponse = await fetch("/api/categories")
       if (categoriesResponse.ok) {
         const categoriesData = await categoriesResponse.json()
-        setCategories(categoriesData)
+        // ตรวจสอบว่า response มี data field หรือไม่
+        if (categoriesData && categoriesData.success && Array.isArray(categoriesData.data)) {
+          setCategories(categoriesData.data)
+        } else if (Array.isArray(categoriesData)) {
+          setCategories(categoriesData)
+        } else {
+          console.error('Invalid categories data format:', categoriesData)
+          setCategories([])
+        }
       }
     } catch (error) {
       console.error("Error fetching data:", error)
@@ -274,6 +291,23 @@ export default function ProductManagementPage() {
       console.error("Error deleting product:", error)
       alert("Error deleting product")
     }
+  }
+
+  // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
+  const getImageUrl = (photoUrl: string | null | undefined) => {
+    if (!photoUrl) return '/stationaryhub/placeholder.jpg'
+    
+    // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+      return photoUrl
+    }
+    
+    // ถ้าเป็น filename ธรรมดา ให้เพิ่ม base path
+    if (photoUrl.startsWith('/')) {
+      return `/stationaryhub${photoUrl}`
+    }
+    
+    return `/stationaryhub/${photoUrl}`
   }
 
   const getCategoryName = (categoryId: number) => {
@@ -434,7 +468,7 @@ export default function ProductManagementPage() {
                         <TableCell className="py-3">
                           {product.PHOTO_URL ? (
                             <Image
-                              src={product.PHOTO_URL}
+                              src={getImageUrl(product.PHOTO_URL)}
                               alt={product.PRODUCT_NAME}
                               width={45}
                               height={45}
@@ -633,7 +667,7 @@ export default function ProductManagementPage() {
                      {formData.PHOTO_URL && (
                        <Box className="relative">
                          <Image
-                           src={formData.PHOTO_URL}
+                           src={getImageUrl(formData.PHOTO_URL)}
                            alt="Product preview"
                            width={120}
                            height={120}

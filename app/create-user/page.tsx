@@ -29,7 +29,7 @@ export default function CreateUserPage() {
     setSuccess(false)
 
     try {
-      const response = await fetch("/api/create-user", {
+      const response = await fetch("/stationaryhub/api/create-user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -17,6 +17,7 @@ import { type Product } from "@/lib/database"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
+import { apiGet } from "@/lib/api-utils"
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -30,7 +31,7 @@ export default function HomePage() {
   const router = useRouter()
   
   // Create categories array from products
-  const categories: (string | undefined)[] = Array.from(new Set((products ?? []).map((p: Product) => p.CATEGORY_NAME)));
+  const categories: (string | undefined)[] = Array.from(new Set((products || []).map((p: Product) => p.CATEGORY_NAME).filter(Boolean)));
   
   console.log("Test User : ", user)
 
@@ -54,16 +55,7 @@ export default function HomePage() {
     // Only fetch products if authenticated and USER role
     if (user?.ROLE === "USER") {
       setLoading(true);
-      fetch("/api/products", {
-        // Add cache headers
-        headers: {
-          'Cache-Control': 'max-age=300' // cache 5 minutes
-        }
-      })
-        .then((res) => {
-          console.log("API /api/products status:", res.status);
-          return res.json();
-        })
+      apiGet("/api/products")
         .then((data) => {
           console.log("API /api/products data:", data);
           setProducts(data);

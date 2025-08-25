@@ -29,6 +29,23 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
   // Check if user can use cart (USER or MANAGER)
   const canUseCartForUser = canUseCart(user?.ROLE || undefined)
 
+  // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
+  const getImageUrl = (photoUrl: string | null | undefined) => {
+    if (!photoUrl) return '/stationaryhub/placeholder.svg'
+    
+    // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+      return photoUrl
+    }
+    
+    // ถ้าเป็น filename ธรรมดา ให้เพิ่ม base path
+    if (photoUrl.startsWith('/')) {
+      return `/stationaryhub${photoUrl}`
+    }
+    
+    return `/stationaryhub/${photoUrl}`
+  }
+
   const handleAddToCart = async () => {
     if (quantity > product.STOCK_QUANTITY) {
       showError("Insufficient Stock", `Only ${product.STOCK_QUANTITY} items available`)
@@ -90,7 +107,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
           {/* Image */}
           <Box style={{ width: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, flexShrink: 0 }}>
             <Image
-              src={product.PHOTO_URL || "/placeholder.svg"}
+              src={getImageUrl(product.PHOTO_URL)}
               alt={product.PRODUCT_NAME}
               width={160}
               height={160}
@@ -219,7 +236,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             </div>
           )}
           <Image
-            src={product.PHOTO_URL || "/placeholder.svg"}
+            src={getImageUrl(product.PHOTO_URL)}
             alt={product.PRODUCT_NAME}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

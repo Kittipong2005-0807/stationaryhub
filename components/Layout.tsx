@@ -41,6 +41,7 @@ import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
+import { apiGet, apiPut } from "@/lib/api-utils"
 
 interface LayoutProps {
   children: React.ReactNode
@@ -92,12 +93,11 @@ export default function Layout({ children }: LayoutProps) {
       setLoadingNotifications(true)
       console.log('🔔 Fetching notifications for user:', user.AdLoginName)
       
-      const response = await fetch(`/api/notifications?userId=${user.AdLoginName}`)
-      const data = await response.json()
+      const data = await apiGet(`/api/notifications?userId=${user.AdLoginName}`)
 
       console.log('🔔 API response:', data)
 
-      if (response.ok && data.success) {
+      if (data.success) {
         // แปลงข้อมูลจาก API ให้ตรงกับ interface
         const formattedNotifications = (data.data.notifications || []).map((notification: any) => ({
           id: notification.id || notification.EMAIL_ID,
@@ -162,9 +162,7 @@ export default function Layout({ children }: LayoutProps) {
   const handleNotificationAction = async (notification: Notification) => {
     try {
       // Mark as read
-      await fetch(`/api/notifications/${notification.id}/read`, {
-        method: 'PUT'
-      })
+      await apiPut(`/api/notifications/${notification.id}/read`, {})
 
       // Update local state
       setNotifications(prev => 

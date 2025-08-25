@@ -33,7 +33,7 @@ export default function SiteIdStatusPage() {
       setError("")
 
       // ดึงข้อมูลสถิติ SITE_ID
-      const response = await fetch("/api/orgcode3?action=getStats")
+      const response = await fetch("/stationaryhub/api/orgcode3?action=getStats")
       const data = await response.json()
       
       if (response.ok) {

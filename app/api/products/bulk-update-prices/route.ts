@@ -46,34 +46,36 @@ export async function POST(request: NextRequest) {
 
         const oldPrice = existingProduct.UNIT_COST ? parseFloat(existingProduct.UNIT_COST.toString()) : 0;
 
-        // อัปเดตราคาใน PRODUCTS
+        // 1. บันทึกราคาเก่าลง PRICE_HISTORY ก่อน
+        await prisma.$executeRaw`
+          INSERT INTO PRICE_HISTORY (
+            PRODUCT_ID, 
+            OLD_PRICE,
+            NEW_PRICE, 
+            PRICE_CHANGE,
+            PERCENTAGE_CHANGE,
+            YEAR, 
+            RECORDED_DATE, 
+            NOTES, 
+            CREATED_BY
+          ) VALUES (
+            ${parseInt(productId)}, 
+            ${oldPrice},           -- ราคาเก่า
+            ${parseFloat(newPrice)}, -- ราคาใหม่
+            ${parseFloat(newPrice) - oldPrice}, -- การเปลี่ยนแปลงราคา
+            ${oldPrice > 0 ? ((parseFloat(newPrice) - oldPrice) / oldPrice) * 100 : 0}, -- เปอร์เซ็นต์
+            ${parseInt(year)}, 
+            GETDATE(), 
+            ${notes || 'Bulk price update'}, 
+            ${'ADMIN'}
+          )
+        `;
+
+        // 2. อัปเดตราคาใหม่ในตาราง PRODUCTS
         await prisma.pRODUCTS.update({
           where: { PRODUCT_ID: parseInt(productId) },
           data: { UNIT_COST: parseFloat(newPrice) }
         });
-
-        // บันทึกประวัติราคา
-        await prisma.$executeRaw`
-          INSERT INTO PRICE_HISTORY (
-            PRODUCT_ID, 
-            YEAR, 
-            PRICE, 
-            RECORDED_DATE, 
-            NOTES, 
-            CREATED_BY,
-            PRICE_CHANGE,
-            PERCENTAGE_CHANGE
-          ) VALUES (
-            ${parseInt(productId)}, 
-            ${parseInt(year)}, 
-            ${parseFloat(newPrice)}, 
-            GETDATE(), 
-            ${notes || 'Bulk price update'}, 
-            ${'ADMIN'},
-            ${parseFloat(newPrice) - oldPrice},
-            ${oldPrice > 0 ? ((parseFloat(newPrice) - oldPrice) / oldPrice) * 100 : 0}
-          )
-        `;
 
         results.push({
           productId: parseInt(productId),
