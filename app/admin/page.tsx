@@ -142,7 +142,7 @@ export default function AdminDashboard() {
 
   const fetchCategories = async () => {
     try {
-      const response = await apiGet('/api/categories')
+      const response = await apiGet('/stationaryhub/api/categories')
       if (response.success && Array.isArray(response.data)) {
         setCategories(response.data)
         console.log('✅ Categories loaded:', response.data.length, 'items')
@@ -158,7 +158,7 @@ export default function AdminDashboard() {
 
   const fetchRealPriceHistory = async () => {
     try {
-      const response = await apiGet('/api/products/real-price-history');
+      const response = await apiGet('/stationaryhub/api/products/real-price-history');
       if (response.success && Array.isArray(response.data)) {
         setRealPriceHistory(response.data)
         console.log('✅ Real price history loaded:', response.data.length, 'items')

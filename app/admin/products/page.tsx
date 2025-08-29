@@ -78,7 +78,7 @@ export default function ProductManagementPage() {
     // Fetch products
     const fetchProducts = async () => {
       try {
-        const response = await fetch('/api/products');
+        const response = await fetch('/stationaryhub/api/products');
         if (response.ok) {
           const data = await response.json();
           setProducts(data);
@@ -91,7 +91,7 @@ export default function ProductManagementPage() {
     // Fetch categories
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/api/categories');
+        const response = await fetch('/stationaryhub/api/categories');
         if (response.ok) {
           const data = await response.json();
           // ตรวจสอบว่า response มี data field หรือไม่
@@ -122,14 +122,14 @@ export default function ProductManagementPage() {
       setRefreshing(true);
       
       // Fetch products
-      const productsResponse = await fetch("/api/products")
+      const productsResponse = await fetch("/stationaryhub/api/products")
       if (productsResponse.ok) {
         const productsData = await productsResponse.json()
         setProducts(productsData)
       }
 
       // Fetch categories
-      const categoriesResponse = await fetch("/api/categories")
+      const categoriesResponse = await fetch("/stationaryhub/api/categories")
       if (categoriesResponse.ok) {
         const categoriesData = await categoriesResponse.json()
         // ตรวจสอบว่า response มี data field หรือไม่

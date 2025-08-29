@@ -55,9 +55,9 @@ export default function HomePage() {
     // Only fetch products if authenticated and USER role
     if (user?.ROLE === "USER") {
       setLoading(true);
-      apiGet("/api/products")
+      apiGet("/stationaryhub/api/products")
         .then((data) => {
-          console.log("API /api/products data:", data);
+          console.log("API /stationaryhub/api/products data:", data);
           setProducts(data);
           setFilteredProducts(data);
           setLoading(false);
