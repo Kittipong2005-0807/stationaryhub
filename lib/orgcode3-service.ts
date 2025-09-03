@@ -108,16 +108,54 @@ export class OrgCode3Service {
   }
 
   /**
-   * สร้าง Requisition พร้อม SITE_ID
+   * สร้าง Requisition พร้อม SITE_ID และ Items
    */
   static async createRequisitionWithSiteId(
     userId: string,
     totalAmount: number,
     issueNote?: string,
-    siteId?: string
+    siteId?: string,
+    items?: Array<{
+      PRODUCT_ID: number
+      QUANTITY: number
+      UNIT_PRICE: number
+      TOTAL_PRICE: number
+    }>
   ): Promise<number | null> {
     try {
-      console.log("Creating requisition with params:", { userId, totalAmount, issueNote, siteId })
+      console.log("=== CREATE REQUISITION START ===")
+      console.log("Creating requisition with params:", { userId, totalAmount, issueNote, siteId, itemsCount: items?.length })
+      
+      // ตรวจสอบ database connection
+      try {
+        await prisma.$queryRaw`SELECT 1`
+        console.log("✅ Database connection OK")
+      } catch (dbError) {
+        console.error("❌ Database connection error:", dbError)
+        throw new Error("Database connection failed")
+      }
+      
+      // ตรวจสอบ schema ของตาราง REQUISITIONS
+      try {
+        const tableInfo = await prisma.$queryRaw`
+          SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_NAME = 'REQUISITIONS'
+          ORDER BY ORDINAL_POSITION
+        `
+        console.log("✅ REQUISITIONS table schema:", tableInfo)
+        
+        // ตรวจสอบว่าตารางมีข้อมูลหรือไม่
+        const tableExists = await prisma.$queryRaw`
+          SELECT COUNT(*) as count
+          FROM INFORMATION_SCHEMA.TABLES
+          WHERE TABLE_NAME = 'REQUISITIONS'
+        `
+        console.log("✅ REQUISITIONS table exists:", tableExists)
+      } catch (schemaError) {
+        console.error("❌ Schema check error:", schemaError)
+        throw new Error("Database schema check failed")
+      }
       
       // ดึง SITE_ID ของ user
       const userSiteId = await this.getUserSiteId(userId)
@@ -137,7 +175,24 @@ export class OrgCode3Service {
           select: { USER_ID: true, USERNAME: true }
         })
         console.log("All users:", allUsers)
-        return null
+        
+        // สร้าง user ใหม่ถ้าไม่มี
+        console.log("Creating new user in USERS table:", userId)
+        try {
+          await prisma.uSERS.create({
+            data: {
+              USER_ID: userId,
+              USERNAME: userId, // ใช้ userId เป็น username ชั่วคราว
+              EMAIL: `${userId}@company.com`, // email ชั่วคราว
+              ROLE: 'USER',
+              SITE_ID: userSiteId || siteId || 'HQ'
+            }
+          })
+          console.log("✅ Created new user:", userId)
+        } catch (createError) {
+          console.error("❌ Error creating user:", createError)
+          throw new Error(`Failed to create user: ${createError instanceof Error ? createError.message : 'Unknown error'}`)
+        }
       }
       
       // สร้าง requisition
@@ -149,45 +204,89 @@ export class OrgCode3Service {
         SITE_ID: userSiteId || siteId || 'HQ'
       })
       
-      const result = await prisma.$executeRaw`
-        INSERT INTO REQUISITIONS (USER_ID, STATUS, TOTAL_AMOUNT, ISSUE_NOTE, SITE_ID)
-        VALUES (${userId}, 'PENDING', ${totalAmount}, ${issueNote || ''}, ${userSiteId || siteId || 'HQ'})
-      `
-      
-      console.log("INSERT result:", result)
+      try {
+        const result = await prisma.$executeRaw`
+          INSERT INTO REQUISITIONS (USER_ID, STATUS, TOTAL_AMOUNT, ISSUE_NOTE, SITE_ID)
+          VALUES (${userId}, 'PENDING', ${totalAmount}, ${issueNote || ''}, ${userSiteId || siteId || 'HQ'})
+        `
+        console.log("✅ INSERT result:", result)
+      } catch (insertError) {
+        console.error("❌ INSERT error:", insertError)
+        throw insertError
+      }
       
       // ดึง ID ของ requisition ที่เพิ่งสร้าง
-      const requisitionId = await prisma.$queryRaw<{ REQUISITION_ID: number }[]>`
-        SELECT TOP 1 REQUISITION_ID 
-        FROM REQUISITIONS 
-        WHERE USER_ID = ${userId} 
-        ORDER BY SUBMITTED_AT DESC
-      `
-      
-      console.log("Retrieved requisition ID:", requisitionId)
+      let requisitionId: { REQUISITION_ID: number }[] = []
+      try {
+        requisitionId = await prisma.$queryRaw<{ REQUISITION_ID: number }[]>`
+          SELECT TOP 1 REQUISITION_ID 
+          FROM REQUISITIONS 
+          WHERE USER_ID = ${userId} 
+          ORDER BY SUBMITTED_AT DESC
+        `
+        console.log("✅ Retrieved requisition ID:", requisitionId)
+      } catch (selectError) {
+        console.error("❌ SELECT error:", selectError)
+        throw selectError
+      }
       
       const finalRequisitionId = requisitionId && requisitionId.length > 0 ? requisitionId[0].REQUISITION_ID : null
       
-      // สร้างการแจ้งเตือนเมื่อสร้าง requisition สำเร็จ
-      if (finalRequisitionId) {
+      if (!finalRequisitionId) {
+        console.error("❌ Failed to retrieve requisition ID after creation")
+        throw new Error("Failed to retrieve requisition ID after creation")
+      }
+      
+      console.log("✅ Final requisition ID:", finalRequisitionId)
+      
+      // สร้าง requisition items ถ้ามี
+      if (items && items.length > 0) {
+        console.log(`Creating ${items.length} requisition items for requisition ${finalRequisitionId}`)
+        
         try {
-          await NotificationService.notifyRequisitionCreated(finalRequisitionId, userId)
-          console.log(`✅ Notification created for requisition ${finalRequisitionId}`)
-        } catch (notificationError) {
-          console.error(`❌ Error creating notification for requisition ${finalRequisitionId}:`, notificationError)
+          for (const item of items) {
+            console.log("Creating item:", item)
+            await prisma.rEQUISITION_ITEMS.create({
+              data: {
+                REQUISITION_ID: finalRequisitionId,
+                PRODUCT_ID: item.PRODUCT_ID,
+                QUANTITY: item.QUANTITY,
+                UNIT_PRICE: item.UNIT_PRICE,
+                // TOTAL_PRICE เป็น computed column ไม่ต้องใส่ค่า
+              }
+            })
+          }
+          
+          console.log(`✅ Created ${items.length} requisition items`)
+        } catch (itemsError) {
+          console.error("❌ Error creating requisition items:", itemsError)
+          throw itemsError
         }
       }
       
+      // สร้างการแจ้งเตือนเมื่อสร้าง requisition สำเร็จ
+      try {
+        await NotificationService.notifyRequisitionCreated(finalRequisitionId, userId)
+        console.log(`✅ Notification created for requisition ${finalRequisitionId}`)
+      } catch (notificationError) {
+        console.error(`❌ Error creating notification for requisition ${finalRequisitionId}:`, notificationError)
+        // ไม่ throw error เพราะ notification ไม่ใช่ส่วนสำคัญ
+      }
+      
+      console.log("=== CREATE REQUISITION SUCCESS ===")
+      console.log("Final requisition ID:", finalRequisitionId)
       return finalRequisitionId
     } catch (error: unknown) {
+      console.error("=== CREATE REQUISITION ERROR ===")
       console.error('Error creating requisition with SITE_ID:', error)
       if (error instanceof Error) {
         console.error('Error details:', {
           message: error.message,
           stack: error.stack
         })
+        throw error // Re-throw the error so API route can catch it
       }
-      return null
+      throw new Error('Unknown error occurred while creating requisition')
     }
   }
 

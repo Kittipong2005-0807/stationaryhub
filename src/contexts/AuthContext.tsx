@@ -14,6 +14,7 @@ import type React from "react"
 import { createContext, useContext, useEffect } from "react"
 import { useSession, signIn, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { getBasePathUrl } from "@/lib/base-path"
 
 interface AuthContextType {
   user: {
@@ -74,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     signOut({ 
-      callbackUrl: "/login",
+      callbackUrl: getBasePathUrl("/login"),
       redirect: true
     })
   }
@@ -83,9 +84,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
       const currentPath = window.location.pathname
-      if (currentPath !== "/login" && !currentPath.includes("/api/")) {
+      if (currentPath !== getBasePathUrl("/login") && !currentPath.includes("/api/")) {
         console.log("Redirecting to login - user not authenticated")
-        router.push("/login")
+        router.push(getBasePathUrl("/login"))
       }
     }
   }, [isAuthenticated, isAuthLoading, router])

@@ -2,9 +2,13 @@
 const nextConfig = {
   // Base path configuration - ใช้ในทุก mode
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub',
-  
-  // Asset prefix สำหรับ static files - ใช้ในทุก mode
   assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub',
+  
+  // Fix for static files in development
+  ...(process.env.NODE_ENV === 'development' && {
+    // Disable asset prefix in development to fix static files
+    assetPrefix: '',
+  }),
   
   // Development server configuration
   devIndicators: {
@@ -16,6 +20,12 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   
+  // Experimental features
+  experimental: {
+    // Fix CSS preload warning
+    optimizePackageImports: ['@/components'],
+  },
+  
   // Output configuration for Docker
   output: 'standalone',
   
@@ -26,6 +36,8 @@ const nextConfig = {
     // เพิ่ม unoptimized สำหรับ development
     unoptimized: process.env.NODE_ENV === 'development',
   },
+
+
   
   // Webpack optimizations
   webpack: (config, { isServer, _dev }) => {
@@ -67,7 +79,7 @@ const nextConfig = {
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'your-secret-key-here',
     // เพิ่ม environment variables สำหรับ NextAuth.js
     NEXTAUTH_URL_DEV: 'http://localhost:3000/stationaryhub',
-    NEXTAUTH_URL_PROD: process.env.NEXTAUTH_URL || 'http://localhost:3001/stationaryhub',
+    NEXTAUTH_URL_PROD: process.env.NEXTAUTH_URL || 'http://localhost:3000/stationaryhub',
   },
   
   // Headers configuration
@@ -79,6 +91,13 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
+        ],
+      },
+      {
+        source: '/_next/static/css/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
         ],
       },
     ]

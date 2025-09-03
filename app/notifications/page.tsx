@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Info
 } from "lucide-react"
+import ThaiDateUtils from '@/lib/date-utils'
 
 interface Notification {
   EMAIL_ID: number
@@ -128,14 +129,7 @@ export default function NotificationsPage() {
   }
 
   const formatDate = (dateString: string | Date) => {
-    const date = new Date(dateString)
-    return date.toLocaleString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    return ThaiDateUtils.formatMediumThaiDate(dateString)
   }
 
   const unreadCount = notifications.filter(n => n.STATUS === 'SENT').length

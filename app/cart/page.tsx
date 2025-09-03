@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import Image from "next/image"
+import { getBasePathUrl } from "@/lib/base-path"
 
 export default function CartPage() {
   console.log('🛒 CartPage component rendering...')
@@ -58,7 +59,7 @@ export default function CartPage() {
 
   React.useEffect(() => {
     if (!isAuthenticated || user?.ROLE !== "USER") {
-      router.push("/login")
+      router.push(getBasePathUrl("/login"))
     }
   }, [isAuthenticated, user, router])
 
@@ -167,25 +168,11 @@ export default function CartPage() {
       const result = await res.json()
       console.log("Requisition created with ID:", result.requisitionId)
       
-      // สร้าง requisition items
-      if (result.requisitionId && requisitionData.REQUISITION_ITEMS.length > 0) {
-        const itemsRes = await fetch("/stationaryhub/api/requisitions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...requisitionData,
-            requisitionId: result.requisitionId
-          }),
-        })
-        
-        if (!itemsRes.ok) {
-          console.warn("Failed to create requisition items")
-        }
-      }
+      // ไม่ต้องเรียก API /api/requisitions อีกครั้ง เพราะ OrgCode3Service สร้าง requisition items ให้แล้ว
       
       alert("Requisition submitted successfully!")
       clearCart()
-      router.push("/orders")
+      router.push(getBasePathUrl("/orders"))
     } catch (err) {
       console.error("Error submitting requisition:", err)
       alert("เกิดข้อผิดพลาดในการส่งใบเบิก กรุณาลองใหม่")

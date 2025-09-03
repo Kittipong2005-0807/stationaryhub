@@ -99,21 +99,46 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Invalid action" }, { status: 400 })
     }
   } catch (error: any) {
+    console.error("=== API ORGCODE3 ERROR ===")
     console.error("Error in orgcode3 API:", error)
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
+    console.error("Error type:", typeof error)
+    console.error("Error message:", error.message)
+    console.error("Error stack:", error.stack)
+    
+    return NextResponse.json({ 
+      error: error.message || "Internal server error",
+      type: typeof error,
+      details: "Check server logs for more information"
+    }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("=== API ORGCODE3 POST START ===")
+    
     const session = await getServerSession(authOptions)
+    console.log("Session:", session)
+    
     if (!session?.user) {
+      console.error("❌ No session user found")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+    
+    console.log("✅ Session user found:", session.user)
 
     const { action, userId, siteId, totalAmount, issueNote, REQUISITION_ITEMS } = await request.json()
     
-    console.log("API orgcode3 POST request:", { action, userId, siteId, totalAmount, issueNote })
+    console.log("=== API ORGCODE3 POST REQUEST ===")
+    console.log("Request data:", { 
+      action, 
+      userId, 
+      siteId, 
+      totalAmount, 
+      issueNote, 
+      itemsCount: REQUISITION_ITEMS?.length,
+      items: REQUISITION_ITEMS 
+    })
 
     switch (action) {
       case "updateUserSiteId":
@@ -128,27 +153,48 @@ export async function POST(request: NextRequest) {
           console.error("Missing required fields:", { userId, totalAmount })
           return NextResponse.json({ error: "User ID and total amount are required" }, { status: 400 })
         }
+        
+        // ตรวจสอบข้อมูลเพิ่มเติม
+        if (totalAmount <= 0) {
+          console.error("Invalid total amount:", totalAmount)
+          return NextResponse.json({ error: "Total amount must be greater than 0" }, { status: 400 })
+        }
+        
+        if (!REQUISITION_ITEMS || !Array.isArray(REQUISITION_ITEMS) || REQUISITION_ITEMS.length === 0) {
+          console.error("Invalid or empty REQUISITION_ITEMS:", REQUISITION_ITEMS)
+          return NextResponse.json({ error: "Requisition items are required" }, { status: 400 })
+        }
+        
         console.log("Creating requisition for user:", userId)
-        console.log("Request data:", { userId, totalAmount, issueNote, siteId })
+        console.log("Request data:", { userId, totalAmount, issueNote, siteId, itemsCount: REQUISITION_ITEMS.length })
         
         try {
+          console.log("=== CALLING ORGCODE3SERVICE ===")
           const requisitionId = await OrgCode3Service.createRequisitionWithSiteId(
             userId,
             totalAmount,
             issueNote,
-            siteId
+            siteId,
+            REQUISITION_ITEMS
           )
+          console.log("=== ORGCODE3SERVICE RESULT ===")
           console.log("Requisition created with ID:", requisitionId)
           
           if (!requisitionId) {
             console.error("Failed to create requisition - no ID returned")
-            return NextResponse.json({ error: "Failed to create requisition" }, { status: 500 })
+            return NextResponse.json({ 
+              error: "Failed to create requisition - user may not exist or database error occurred" 
+            }, { status: 500 })
           }
           
           return NextResponse.json({ requisitionId })
         } catch (error) {
           console.error("Error in createRequisition:", error)
-          return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+          const errorMessage = error instanceof Error ? error.message : "Internal server error"
+          return NextResponse.json({ 
+            error: errorMessage,
+            details: "Please check if user exists and database connection is working"
+          }, { status: 500 })
         }
 
       case "checkUserManagerRelationship":

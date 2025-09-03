@@ -36,6 +36,7 @@ import {
 } from "@mui/icons-material"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
+import { getBasePathUrl } from "@/lib/base-path"
 import { motion } from "framer-motion"
 
 interface Stats {
@@ -69,7 +70,7 @@ export default function ManagerDashboard() {
     if (isAuthLoading) return
     
     if (!isAuthenticated || user?.ROLE !== "MANAGER") {
-      router.replace("/login")
+      router.replace(getBasePathUrl("/login"))
       return
     }
 
@@ -199,16 +200,16 @@ export default function ManagerDashboard() {
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'products':
-        router.push('/manager/products')
+        router.push(getBasePathUrl('/manager/products'))
         break
       case 'approvals':
-        router.push('/approvals')
+        router.push(getBasePathUrl('/approvals'))
         break
       case 'cart':
-        router.push('/manager/cart')
+        router.push(getBasePathUrl('/manager/cart'))
         break
       case 'orders':
-        router.push('/manager/orders')
+        router.push(getBasePathUrl('/manager/orders'))
         break
       default:
         break

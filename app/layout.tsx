@@ -1,11 +1,13 @@
 import type React from "react"
 import type { Metadata } from "next"
-import "./globals.css"
 import { AuthProvider } from "@/src/contexts/AuthContext"
 import { CartProvider } from "@/src/contexts/CartContext"
 import dynamic from "next/dynamic"
 import Layout from "@/components/Layout"
 import ThemeProviderClient from "@/components/ThemeProviderClient"
+
+// Import CSS
+import "./globals.css"
 
 export const metadata: Metadata = {
   title: "StationeryHub - Modern Requisition System",

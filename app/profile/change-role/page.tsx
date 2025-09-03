@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Shield, UserCheck, Settings, Users, AlertTriangle, CheckCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
+import { getBasePathUrl } from "@/lib/base-path"
 
 interface UserPermissions {
   userRole: string
@@ -42,7 +43,7 @@ export default function ChangeRolePage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push("/login")
+      router.push(getBasePathUrl("/login"))
       return
     }
 

@@ -5,6 +5,8 @@ import { Box, Typography, Button, Card, CardContent, Chip, Dialog, DialogTitle, 
 import { Refresh as RefreshIcon, Visibility as VisibilityIcon } from "@mui/icons-material"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { motion } from "framer-motion"
+import { getBasePathUrl } from "@/lib/base-path"
+import ThaiDateUtils from '@/lib/date-utils'
 
 interface RequisitionItem {
   ITEM_ID: number
@@ -206,7 +208,7 @@ export default function OrdersPage() {
           </Typography>
           <Button 
             variant="outlined" 
-            onClick={() => window.location.href = "/"}
+            onClick={() => window.location.href = getBasePathUrl("/")}
           >
             Go to Products
           </Button>
@@ -222,14 +224,7 @@ export default function OrdersPage() {
                       Order #{order.REQUISITION_ID}
                     </Typography>
                     <Typography variant="body2" className="text-gray-500">
-                      {new Date(order.SUBMITTED_AT).toLocaleDateString('th-TH', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                      })}
+                      {ThaiDateUtils.formatMediumThaiDate(order.SUBMITTED_AT)}
                     </Typography>
                   </Box>
                   <Chip 

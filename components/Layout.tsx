@@ -40,8 +40,10 @@ import {
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
+import { getBasePathUrl } from "@/lib/base-path"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
 import { apiGet, apiPut } from "@/lib/api-utils"
+import ThaiDateUtils from '@/lib/date-utils'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -137,7 +139,7 @@ export default function Layout({ children }: LayoutProps) {
   const handleLogout = () => {
     setIsNavigating(true)
     logout()
-    router.push("/login")
+    router.push(getBasePathUrl("/login"))
     handleClose()
   }
 
@@ -177,7 +179,7 @@ export default function Layout({ children }: LayoutProps) {
 
       // Navigate based on notification type
       if (notification.subject.includes('requisition') || notification.subject.includes('เบิก')) {
-        router.push("/orders")
+        router.push(getBasePathUrl("/orders"))
       }
     } catch (error) {
       console.error('Error handling notification:', error)
@@ -253,14 +255,7 @@ export default function Layout({ children }: LayoutProps) {
   }
 
   const formatDate = (dateString: string | Date) => {
-    const date = new Date(dateString)
-    return date.toLocaleString('th-TH', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    return ThaiDateUtils.formatMediumThaiDate(dateString)
   }
 
   const getNavigationItems = () => {

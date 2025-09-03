@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { signIn } from "next-auth/react"
 import { useSearchParams } from 'next/navigation'
 import Link from "next/link"
+import { getBasePathUrl } from "@/lib/base-path"
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
@@ -37,7 +38,7 @@ export default function LoginPage() {
       })
       if (res?.ok && !res?.error) {
         console.log("T : ",res)
-        router.push("/")
+        router.push(getBasePathUrl("/"))
       } else {
         setError("Invalid username or password")
       }

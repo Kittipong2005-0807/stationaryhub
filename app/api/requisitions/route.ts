@@ -185,9 +185,9 @@ export async function POST(request: NextRequest) {
     const data = await request.json()
     console.log("Received data:", data)
     
-    // ถ้ามี requisitionId แสดงว่าเป็นการสร้าง requisition items
+    // ถ้ามี requisitionId แสดงว่าเป็นการสร้าง requisition items เท่านั้น
     if (data.requisitionId) {
-      console.log("Creating requisition items for ID:", data.requisitionId)
+      console.log("Creating requisition items for existing ID:", data.requisitionId)
       
       if (data.REQUISITION_ITEMS && Array.isArray(data.REQUISITION_ITEMS)) {
         for (const item of data.REQUISITION_ITEMS) {
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      // return NextResponse.json({ success: true }, { status: 201 })
+      return NextResponse.json({ success: true }, { status: 201 })
     }
     
     // กรณีสร้าง requisition ใหม่ (จะใช้ OrgCode3Service แทน)

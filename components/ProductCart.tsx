@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import StatusBadge from "./ui/StatusBadge"
 import { useToast } from "./ui/ToastContainer"
+import ThaiDateUtils from '@/lib/date-utils'
 
 
 interface ProductCardProps {
@@ -266,11 +267,11 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
                 />
               </Box>
               <Typography variant="body2" className="text-gray-500 mb-1">
-                Unit Price: <span className="font-semibold text-blue-700">฿{Number(product.UNIT_COST || 0).toFixed(2)}</span>
-              </Typography>
-              <Typography variant="caption" className="text-gray-400">
-                Added: {new Date(product.CREATED_AT).toLocaleDateString('th-TH')} {new Date(product.CREATED_AT).toLocaleTimeString('th-TH', { hour12: false })}
-              </Typography>
+                                  Unit Price: <span className="font-semibold text-blue-700">฿{Number(product.UNIT_COST || 0).toFixed(2)}</span>
+                </Typography>
+                <Typography variant="caption" className="text-gray-400">
+                  Added: {ThaiDateUtils.formatShortThaiDate(product.CREATED_AT)}
+                </Typography>
             </motion.div>
             {/* Quantity Selector */}
             {canUseCartForUser && !isOutOfStock && (

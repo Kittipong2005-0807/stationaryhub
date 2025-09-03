@@ -7,6 +7,7 @@ import ProductCart from "@/components/ProductCart"
 import { type Product } from "@/lib/database"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
+import { getBasePathUrl } from "@/lib/base-path"
 import { motion, AnimatePresence } from "framer-motion"
 
 export default function ManagerProductsPage() {
@@ -32,12 +33,12 @@ export default function ManagerProductsPage() {
     
     // Redirect if not authenticated or not MANAGER role
     if (!isAuthenticated) {
-      router.replace("/login");
+      router.replace(getBasePathUrl("/login"));
       return;
     }
     
     if (user?.ROLE !== "MANAGER") {
-      router.replace("/login");
+      router.replace(getBasePathUrl("/login"));
       return;
     }
     

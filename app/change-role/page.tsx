@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Shield, UserCheck, Settings, Users, AlertTriangle, CheckCircle, Code } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
+import { getBasePathUrl } from "@/lib/base-path"
 
 export default function SimpleChangeRolePage() {
   const [loading, setLoading] = useState(true)
@@ -28,7 +29,7 @@ export default function SimpleChangeRolePage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push("/login")
+      router.push(getBasePathUrl("/login"))
       return
     }
 

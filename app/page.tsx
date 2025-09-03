@@ -18,6 +18,7 @@ import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { apiGet } from "@/lib/api-utils"
+import { getBasePathUrl } from "@/lib/base-path"
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -41,15 +42,15 @@ export default function HomePage() {
     if (isAuthLoading) return;
     // Redirect if not authenticated or not USER role
     if (!isAuthenticated) {
-      router.replace("/login");
+      router.replace(getBasePathUrl("/login"));
       return;
     }
     if (user?.ROLE === "MANAGER") {
-      router.replace("/manager");
+      router.replace(getBasePathUrl("/manager"));
       return;
     }
     if (user?.ROLE === "ADMIN") {
-      router.replace("/admin");
+      router.replace(getBasePathUrl("/admin"));
       return;
     }
     // Only fetch products if authenticated and USER role

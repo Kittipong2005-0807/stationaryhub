@@ -15,8 +15,10 @@ import { ShoppingCart, Person, CalendarToday, Note, Inventory, Category } from "
 import { Typography } from "@mui/material"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import { getBasePathUrl } from "@/lib/base-path"
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import ThaiDateUtils from '@/lib/date-utils'
 
 interface RequisitionItem {
   ITEM_ID: number
@@ -77,7 +79,7 @@ export default function ApprovalsPage() {
 
   useEffect(() => {
     if (!isAuthenticated || (user?.ROLE !== "MANAGER" && user?.ROLE !== "ADMIN")) {
-      router.push("/login")
+      router.push(getBasePathUrl("/login"))
       return
     }
 
@@ -630,14 +632,7 @@ export default function ApprovalsPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("th-TH", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false
-    });
+    return ThaiDateUtils.formatShortThaiDate(dateString)
   }
 
   // ฟังก์ชันสำหรับฟิลเตอร์ข้อมูล

@@ -36,6 +36,8 @@ import {
 import { motion } from "framer-motion"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
+import { getBasePathUrl } from "@/lib/base-path"
+import ThaiDateUtils from '@/lib/date-utils'
 
 interface RequisitionItem {
   ITEM_ID: number
@@ -72,7 +74,7 @@ export default function ManagerOrdersPage() {
 
   useEffect(() => {
     if (!isAuthenticated || user?.ROLE !== "MANAGER") {
-      router.push("/login")
+      router.push(getBasePathUrl("/login"))
       return
     }
 
@@ -161,13 +163,7 @@ export default function ManagerOrdersPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("th-TH", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
+    return ThaiDateUtils.formatMediumThaiDate(dateString)
   }
 
   const formatCurrency = (amount: number) => {

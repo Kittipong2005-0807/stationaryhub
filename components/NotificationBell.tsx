@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import ThaiDateUtils from '@/lib/date-utils'
 
 export const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false)
@@ -59,17 +60,7 @@ export const NotificationBell = () => {
   }
 
   const formatDate = (dateString: string | Date) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
-    
-    if (diffInHours < 1) {
-      return 'ไม่กี่นาทีที่แล้ว'
-    } else if (diffInHours < 24) {
-      return `${diffInHours} ชั่วโมงที่แล้ว`
-    } else {
-      return date.toLocaleDateString('th-TH')
-    }
+    return ThaiDateUtils.formatThaiNotificationDate(dateString)
   }
 
   return (

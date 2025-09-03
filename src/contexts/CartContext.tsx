@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, useCallback } from "react"
 import type { Product } from "@/lib/database"
 import { useSession } from "next-auth/react"
 
@@ -30,20 +30,40 @@ const getCartStorageKey = (userId: string | null) => {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [items, setItems] = useState<CartItem[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
-  // โหลดข้อมูลตะกร้าจาก localStorage เมื่อ component โหลด
-  useEffect(() => {
-    loadCartFromStorage()
-  }, [])
+  // ตรวจสอบว่า session กำลังโหลดหรือไม่
+  const isSessionLoading = status === "loading"
+
+  const clearCartFromStorage = useCallback(() => {
+    try {
+      const userId = currentUserId || session?.user?.name || null
+      localStorage.removeItem(getCartStorageKey(userId))
+      setItems([])
+      console.log('🗑️ Cleared cart from localStorage for user:', userId)
+    } catch (error) {
+      console.error('❌ Error clearing cart from localStorage:', error)
+    }
+  }, [currentUserId, session?.user?.name])
+
+  const clearCart = useCallback(() => {
+    setItems([])
+    clearCartFromStorage()
+    // console.log('🗑️ Cart cleared')
+  }, [clearCartFromStorage])
 
   // ตรวจสอบ user session และล้างข้อมูลตะกร้าเมื่อ user เปลี่ยน
   useEffect(() => {
+    // รอให้ session โหลดเสร็จก่อน
+    if (isSessionLoading) {
+      return
+    }
+    
     const userId = session?.user?.name || null
     
     // ถ้า user เปลี่ยน ให้ล้างข้อมูลตะกร้า
@@ -77,14 +97,38 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       setCurrentUserId(userId)
     }
-  }, [session?.user?.name, currentUserId])
+  }, [session?.user?.name, currentUserId, session, isSessionLoading, clearCart])
+
+  // โหลดข้อมูลตะกร้าจาก localStorage เมื่อ currentUserId เปลี่ยนหรือเมื่อ component โหลดครั้งแรก
+  useEffect(() => {
+    if (isInitialized && !isSessionLoading) {
+      loadCartFromStorage()
+    }
+  }, [currentUserId, isInitialized, isSessionLoading])
+
+  // โหลดข้อมูลตะกร้าจาก localStorage เมื่อ component โหลดครั้งแรกและ session โหลดเสร็จแล้ว
+  useEffect(() => {
+    if (!isSessionLoading) {
+      loadCartFromStorage()
+    }
+  }, [isSessionLoading])
 
   const loadCartFromStorage = () => {
     try {
       setIsLoading(true)
       setError(null)
       
-      const savedCart = localStorage.getItem(getCartStorageKey(currentUserId))
+      // ใช้ currentUserId หรือ session?.user?.name ถ้า currentUserId ยังเป็น null
+      const userId = currentUserId || session?.user?.name || null
+      
+      // ถ้า session ยังโหลดไม่เสร็จ ให้รอ
+      if (isSessionLoading) {
+        console.log('⏳ Session still loading, waiting...')
+        return
+      }
+      
+      const savedCart = localStorage.getItem(getCartStorageKey(userId))
+      
       if (savedCart) {
         const parsedCart = JSON.parse(savedCart)
         
@@ -100,7 +144,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           
           if (validItems.length > 0) {
             setItems(validItems)
-            console.log('🛒 Loaded cart from localStorage:', validItems.length, 'items')
+            console.log('🛒 Loaded cart from localStorage:', validItems.length, 'items for user:', userId)
           } else {
             console.log('⚠️ No valid items found in localStorage, clearing cart')
             clearCartFromStorage()
@@ -110,7 +154,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           setItems([])
         }
       } else {
-        console.log('📭 No cart data in localStorage')
+        console.log('📭 No cart data in localStorage for user:', userId)
         setItems([])
       }
     } catch (error) {
@@ -124,28 +168,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const clearCartFromStorage = () => {
-    try {
-      localStorage.removeItem(getCartStorageKey(currentUserId))
-      setItems([])
-      console.log('🗑️ Cleared cart from localStorage')
-    } catch (error) {
-      console.error('❌ Error clearing cart from localStorage:', error)
-    }
-  }
+
 
   // บันทึกข้อมูลตะกร้าลง localStorage ทุกครั้งที่มีการเปลี่ยนแปลง
   useEffect(() => {
-    if (isInitialized && !isLoading) {
+    if (isInitialized && !isLoading && !isSessionLoading) {
       try {
-        localStorage.setItem(getCartStorageKey(currentUserId), JSON.stringify(items))
-        // console.log('💾 Saved cart to localStorage:', items.length, 'items')
+        const userId = currentUserId || session?.user?.name || null
+        localStorage.setItem(getCartStorageKey(userId), JSON.stringify(items))
+        console.log('💾 Saved cart to localStorage:', items.length, 'items for user:', userId)
       } catch (error) {
         console.error('❌ Error saving cart to localStorage:', error)
         setError('เกิดข้อผิดพลาดในการบันทึกข้อมูลตะกร้า')
       }
     }
-  }, [items, isInitialized, isLoading])
+  }, [items, isInitialized, isLoading, currentUserId, session?.user?.name, isSessionLoading])
 
   const addToCart = (product: Product, quantity: number) => {
     if (!product.PRODUCT_ID || quantity <= 0) {
@@ -196,11 +233,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
-  const clearCart = () => {
-    setItems([])
-    clearCartFromStorage()
-    // console.log('🗑️ Cart cleared')
-  }
+
 
   const refreshCart = () => {
     loadCartFromStorage()
@@ -224,7 +257,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         clearCart,
         getTotalAmount,
         getTotalItems,
-        isLoading,
+        isLoading: isLoading || isSessionLoading,
         error,
         refreshCart,
       }}

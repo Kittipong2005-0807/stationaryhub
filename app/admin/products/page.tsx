@@ -29,6 +29,7 @@ import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import Image from "next/image"
+import ThaiDateUtils from '@/lib/date-utils'
 
 // Interface สำหรับ Product ตามฐานข้อมูลจริง
 interface Product {
@@ -500,16 +501,10 @@ export default function ProductManagementPage() {
                         <TableCell className="text-gray-600 py-3">
                           {product.ORDER_UNIT || "-"}
                         </TableCell>
+
                         <TableCell className="text-gray-600 py-3">
                           {product.CREATED_AT 
-                            ? new Date(product.CREATED_AT).toLocaleDateString('th-TH', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: false
-                              })
+                            ? ThaiDateUtils.formatShortThaiDate(product.CREATED_AT)
                             : "-"
                           }
                         </TableCell>
