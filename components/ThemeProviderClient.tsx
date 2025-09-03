@@ -1,12 +1,9 @@
 "use client"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
-import { Inter } from "next/font/google"
 import { ReactNode } from "react"
 import { SessionProvider } from "next-auth/react"
 import { BASE_PATH } from "@/lib/base-path"
-
-const inter = Inter({ subsets: ["latin"] })
 
 const theme = createTheme({
   palette: {
@@ -18,7 +15,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: inter.style.fontFamily,
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
   },
   components: {
     MuiButton: {

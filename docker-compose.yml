@@ -1,20 +1,4 @@
-version: '3.8'
-
 services:
-  # SQL Server Database
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
-      - MSSQL_PID=Express
-    ports:
-      - "1433:1433"
-    volumes:
-      - sqlserver_data:/var/opt/mssql
-    networks:
-      - stationaryhub_network
-
   # StationaryHub Application
   stationaryhub:
     build:
@@ -22,42 +6,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=sqlserver://sqlserver:1433;database=StationaryNew;user=sa;password=YourStrong@Passw0rd;trustServerCertificate=true
-      - NEXTAUTH_URL=http://localhost:3000/stationaryhub
-      - NEXTAUTH_SECRET=your-secret-key-here
-      - NEXT_PUBLIC_BASE_PATH=/stationaryhub
-      - LDAP_URL=ldap://your-ldap-server:389
-      - LDAP_BIND_DN=cn=admin,dc=example,dc=com
-      - LDAP_BIND_PASSWORD=password
-      - SMTP_HOST=smtp.gmail.com
-      - SMTP_PORT=587
-      - SMTP_USER=your-email@gmail.com
-      - SMTP_PASS=your-app-password
-    depends_on:
-      - sqlserver
+    env_file:
+      - .env.local
     networks:
       - stationaryhub_network
     restart: unless-stopped
-
-  # Nginx Reverse Proxy (Optional)
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - stationaryhub
-    networks:
-      - stationaryhub_network
-    restart: unless-stopped
-
-volumes:
-  sqlserver_data:
 
 networks:
   stationaryhub_network:

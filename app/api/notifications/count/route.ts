@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/authOptions'
 import { NotificationService } from '@/lib/notification-service'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // ตรวจสอบ session
     const session = await getServerSession(authOptions)

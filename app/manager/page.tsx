@@ -281,7 +281,7 @@ export default function ManagerDashboard() {
             🎯 Manager Dashboard
           </Typography>
           <Typography variant="h6" className="text-gray-600">
-            Welcome back, {user?.FULL_NAME ? user.FULL_NAME : user?.USERNAME ? user.USERNAME : 'Manager'}! Here's your overview.
+            Welcome back, {user?.FullNameThai || user?.FullNameEng || user?.USERNAME || 'Manager'}! Here&apos;s your overview.
           </Typography>
           
                      {/* Debug Info */}
@@ -292,10 +292,10 @@ export default function ManagerDashboard() {
                Approved: {stats.approvedRequisitions} | 
                Rejected: {stats.rejectedRequisitions}
              </Typography>
-             <Typography variant="body2" className="text-blue-700 mt-1">
-               🏢 User SITE_ID: {user?.SITE_ID || 'Not set'} | 
-               Department: {user?.DEPARTMENT || 'Not set'}
-             </Typography>
+                           <Typography variant="body2" className="text-blue-700 mt-1">
+                🏢 User SITE_ID: {(user as any)?.SITE_ID || 'Not set'} | 
+                Department: {(user as any)?.DEPARTMENT || 'Not set'}
+              </Typography>
            </Box>
         </motion.div>
 

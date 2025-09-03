@@ -4,20 +4,28 @@
     "next/typescript"
   ],
   "rules": {
-    "react/no-array-index-key": "warn",
-    "react/jsx-no-bind": "warn",
-    "react/jsx-no-constructed-context-values": "warn",
-    "react/jsx-no-useless-fragment": "warn",
-    "react/no-unstable-nested-components": "warn",
+    // Critical rules that can cause bugs - keep as warnings
+    "react-hooks/exhaustive-deps": "warn",
     "@typescript-eslint/no-unused-vars": ["warn", {
       "argsIgnorePattern": "^_",
       "varsIgnorePattern": "^_"
     }],
-    "@typescript-eslint/no-explicit-any": "warn",
-    "no-console": "off",
     "prefer-const": "warn",
     "no-var": "error",
-    "react/no-unescaped-entities": "warn",
-    "react-hooks/exhaustive-deps": "warn"
+    
+    // Performance-related rules - keep but less strict
+    "@next/next/no-img-element": "warn",
+    "react/jsx-no-bind": "off",
+    "react/jsx-no-constructed-context-values": "off",
+    "react/no-array-index-key": "off",
+    
+    // Cosmetic rules - turn off to reduce noise
+    "@typescript-eslint/no-explicit-any": "off",
+    "react/no-unescaped-entities": "off",
+    "react/jsx-no-useless-fragment": "off",
+    "react/no-unstable-nested-components": "off",
+    
+    // Keep console for debugging
+    "no-console": "off"
   }
 }

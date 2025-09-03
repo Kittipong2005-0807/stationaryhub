@@ -1,14 +1,11 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/src/contexts/AuthContext"
 import { CartProvider } from "@/src/contexts/CartContext"
 import dynamic from "next/dynamic"
 import Layout from "@/components/Layout"
 import ThemeProviderClient from "@/components/ThemeProviderClient"
-
-const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "StationeryHub - Modern Requisition System",
@@ -24,7 +21,7 @@ export default function RootLayout({
   const ToastProvider = dynamic(() => import("@/components/ui/ToastContainer").then(mod => mod.ToastProvider), { ssr: false })
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className="font-sans">
         <ThemeProviderClient>
           <AuthProvider>
             <CartProvider>

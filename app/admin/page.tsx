@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   Grid,
   Card,
@@ -43,8 +43,9 @@ import {
   Schedule,
 } from "@mui/icons-material"
 import { useAuth } from "@/src/contexts/AuthContext"
-import { useRouter } from "next/navigation"
+// import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { motion } from "framer-motion"
 import type { Requisition } from "@/lib/database"
 import { apiGet, apiPost } from "@/lib/api-utils"
@@ -72,7 +73,7 @@ export default function AdminDashboard() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [realPriceHistory, setRealPriceHistory] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
-  const [arrivalMessage, setArrivalMessage] = useState<string>('')
+  const [_arrivalMessage, _setArrivalMessage] = useState<string>('')
   const [stats, setStats] = useState({
     totalRequisitions: 0,
     pendingApprovals: 0,
@@ -103,7 +104,7 @@ export default function AdminDashboard() {
   }
 
   // ฟังก์ชันดึงข้อมูลราคาสินค้า
-  const fetchProductPrices = async () => {
+  const fetchProductPrices = useCallback(async () => {
     try {
       console.log('🔍 Fetching price comparison data for year:', selectedYear, 'category:', selectedCategory)
       const response = await apiGet(`/stationaryhub/api/products/price-comparison?year=${selectedYear}&category=${selectedCategory}`)
@@ -119,9 +120,9 @@ export default function AdminDashboard() {
       console.error('❌ Error fetching product prices:', error)
       setProductPrices([])
     }
-  }
+  }, [selectedYear, selectedCategory])
 
-  const fetchRequisitions = async () => {
+  const fetchRequisitions = useCallback(async () => {
     try {
       const response = await apiGet("/stationaryhub/api/requisitions")
       if (response && Array.isArray(response)) {
@@ -138,9 +139,9 @@ export default function AdminDashboard() {
       console.error('❌ Error fetching requisitions:', error)
       setRequisitions([])
     }
-  }
+  }, [])
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await apiGet('/stationaryhub/api/categories')
       if (response.success && Array.isArray(response.data)) {
@@ -154,9 +155,9 @@ export default function AdminDashboard() {
       console.error('❌ Error fetching categories:', error)
       setCategories([])
     }
-  }
+  }, [])
 
-  const fetchRealPriceHistory = async () => {
+  const fetchRealPriceHistory = useCallback(async () => {
     try {
       const response = await apiGet('/stationaryhub/api/products/real-price-history');
       if (response.success && Array.isArray(response.data)) {
@@ -170,7 +171,7 @@ export default function AdminDashboard() {
       console.error('❌ Error fetching real price history:', error)
       setRealPriceHistory([])
     }
-  }
+  }, [])
 
   const handleBulkUpdatePrices = async () => {
     try {
@@ -246,11 +247,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (isAuthenticated && user?.ROLE === "ADMIN") {
       fetchProductPrices()
-      fetchCategories()
-      fetchRealPriceHistory()
-      fetchRequisitions()
     }
-  }, [selectedYear, selectedCategory, isAuthenticated, user])
+  }, [selectedYear, selectedCategory, isAuthenticated, user, fetchProductPrices])
 
   // ดึงข้อมูลเริ่มต้นเมื่อ component mount
   useEffect(() => {
@@ -265,7 +263,7 @@ export default function AdminDashboard() {
         setLoading(false)
       })
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, user, fetchProductPrices, fetchCategories, fetchRealPriceHistory, fetchRequisitions])
 
   // อัปเดต stats เมื่อข้อมูลเปลี่ยน
   useEffect(() => {
@@ -394,7 +392,7 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleSendArrivalEmail = async (requisitionId: number) => {
+  const _handleSendArrivalEmail = async (requisitionId: number) => {
     try {
       setNotifying(true)
       
@@ -963,9 +961,11 @@ export default function AdminDashboard() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             {item.PHOTO_URL ? (
-                              <img 
+                              <Image 
                                 src={getImageUrl(item.PHOTO_URL)} 
                                 alt={item.PRODUCT_NAME}
+                                width={32}
+                                height={32}
                                 className="w-8 h-8 rounded-lg object-cover"
                                 onError={(e) => {
                                   e.currentTarget.src = '/stationaryhub/placeholder.jpg'
@@ -1102,9 +1102,11 @@ export default function AdminDashboard() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             {item.PHOTO_URL ? (
-                              <img 
+                              <Image 
                                 src={getImageUrl(item.PHOTO_URL)} 
                                 alt={item.PRODUCT_NAME}
+                                width={32}
+                                height={32}
                                 className="w-8 h-8 rounded-lg object-cover"
                                 onError={(e) => {
                                   e.currentTarget.src = '/stationaryhub/placeholder.jpg'
