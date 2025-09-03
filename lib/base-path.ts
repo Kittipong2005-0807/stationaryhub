@@ -11,6 +11,14 @@ export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
  */
 export function getBasePathUrl(path: string = ''): string {
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  
+  if (typeof window !== 'undefined') {
+    // For client-side, Next.js จะจัดการ basePath ให้อัตโนมัติ
+    // ดังนั้นเราใช้ path โดยตรง (ไม่ต้องเพิ่ม /)
+    return path.startsWith('/') ? path : `/${path}`;
+  }
+  
+  // For server-side, use BASE_PATH
   return `${BASE_PATH}/${cleanPath}`.replace(/\/+/g, '/');
 }
 

@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
+import { useApprovedCount } from "@/src/hooks/use-approved-count"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -16,6 +17,7 @@ import { Typography } from "@mui/material"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { getBasePathUrl } from "@/lib/base-path"
+import { getApiUrl } from "@/lib/api-utils"
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import ThaiDateUtils from '@/lib/date-utils'
@@ -76,6 +78,7 @@ export default function ApprovalsPage() {
   const { data: session } = useSession()
   const user = session?.user as unknown as { EmpCode?: string; USER_ID?: string; AdLoginName?: string; ROLE?: string }
   const isAuthenticated = !!session
+  const { markAsViewed } = useApprovedCount()
 
   useEffect(() => {
     if (!isAuthenticated || (user?.ROLE !== "MANAGER" && user?.ROLE !== "ADMIN")) {
@@ -95,7 +98,7 @@ export default function ApprovalsPage() {
         ROLE: user?.ROLE
       })
       
-      fetch(`/stationaryhub/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
+      fetch(getApiUrl(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`))
         .then((res) => {
           console.log("Admin API response status:", res.status)
           if (!res.ok) {
@@ -103,17 +106,22 @@ export default function ApprovalsPage() {
           }
           return res.json()
         })
-        .then((data) => {
+        .then(async (data) => {
           console.log("Fetched approved requisitions for admin:", data)
           if (data.requisitions && Array.isArray(data.requisitions)) {
-            setRequisitions(data.requisitions)
-          } else if (Array.isArray(data)) {
-            setRequisitions(data)
-          } else {
-            console.warn("Unexpected data format:", data)
-            setRequisitions([])
-          }
-          setLoading(false)
+                      setRequisitions(data.requisitions)
+        } else if (Array.isArray(data)) {
+          setRequisitions(data)
+        } else {
+          console.warn("Unexpected data format:", data)
+          setRequisitions([])
+        }
+        setLoading(false)
+        
+        // สำหรับ Admin ให้ mark requisitions เป็น viewed
+        if (user?.ROLE === "ADMIN") {
+          await markAsViewed()
+        }
         })
         .catch((error) => {
           console.error("Error fetching approved requisitions:", error)
@@ -131,7 +139,7 @@ export default function ApprovalsPage() {
         managerUserId 
       })
       
-      fetch(`/stationaryhub/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
+      fetch(getApiUrl(`/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`))
         .then((res) => res.json())
         .then((data) => {
           console.log("Fetched requisitions for manager:", data)
@@ -158,7 +166,7 @@ export default function ApprovalsPage() {
     setSubmitting(true)
 // console.log("selectedRequisition", selectedRequisition);
     try {
-      const response = await fetch(`/api/requisitions/${selectedRequisition.REQUISITION_ID}/approve`, {
+      const response = await fetch(getApiUrl(`/api/requisitions/${selectedRequisition.REQUISITION_ID}/approve`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -173,7 +181,7 @@ export default function ApprovalsPage() {
         // อัปเดตสถานะใน UI โดยดึงข้อมูลใหม่จาก API orgcode3
         if (user?.ROLE === "ADMIN") {
           // Admin refresh ข้อมูล
-          const refreshResponse = await fetch(`/stationaryhub/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
+          const refreshResponse = await fetch(getApiUrl(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`))
           if (refreshResponse.ok) {
             const data = await refreshResponse.json()
             if (data.requisitions && Array.isArray(data.requisitions)) {
@@ -185,7 +193,7 @@ export default function ApprovalsPage() {
         } else {
           // Manager refresh ข้อมูล
           const managerUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName
-          const refreshResponse = await fetch(`/stationaryhub/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
+          const refreshResponse = await fetch(getApiUrl(`/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`))
           if (refreshResponse.ok) {
             const data = await refreshResponse.json()
             setRequisitions(data.requisitions || [])
@@ -211,7 +219,7 @@ export default function ApprovalsPage() {
     
     try {
       if (user?.ROLE === "ADMIN") {
-        const response = await fetch(`/stationaryhub/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
+        const response = await fetch(getApiUrl(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`))
         if (response.ok) {
           const data = await response.json()
           if (data.requisitions && Array.isArray(data.requisitions)) {
@@ -222,7 +230,7 @@ export default function ApprovalsPage() {
         }
       } else {
         const managerUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName
-        const response = await fetch(`/stationaryhub/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`)
+        const response = await fetch(getApiUrl(`/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`))
         if (response.ok) {
           const data = await response.json()
           setRequisitions(data.requisitions || [])
@@ -588,7 +596,7 @@ export default function ApprovalsPage() {
     
     try {
       // ดึงข้อมูล requisition ใหม่พร้อม items
-      const response = await fetch(`/api/requisitions/${requisition.REQUISITION_ID}`)
+              const response = await fetch(getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}`))
       if (response.ok) {
         const detailedRequisition = await response.json()
         console.log("Detailed requisition:", detailedRequisition)

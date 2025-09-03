@@ -8,6 +8,7 @@ import { type Product } from "@/lib/database"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { getBasePathUrl } from "@/lib/base-path"
+import { getApiUrl } from "@/lib/api-utils"
 import { motion, AnimatePresence } from "framer-motion"
 
 export default function ManagerProductsPage() {
@@ -45,7 +46,7 @@ export default function ManagerProductsPage() {
     // Fetch products for MANAGER
     if (user?.ROLE === "MANAGER") {
       setLoading(true);
-      fetch("/api/products", {
+      fetch(getApiUrl("/api/products"), {
         headers: {
           'Cache-Control': 'max-age=300' // cache 5 minutes
         }

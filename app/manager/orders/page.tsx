@@ -37,6 +37,7 @@ import { motion } from "framer-motion"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { getBasePathUrl } from "@/lib/base-path"
+import { getApiUrl } from "@/lib/api-utils"
 import ThaiDateUtils from '@/lib/date-utils'
 
 interface RequisitionItem {
@@ -85,7 +86,7 @@ export default function ManagerOrdersPage() {
     try {
       setLoading(true)
       // ดึง order ของตัว Manager เองเท่านั้น
-      const response = await fetch("/stationaryhub/api/requisitions?mine=1")
+      const response = await fetch(getApiUrl("/api/requisitions?mine=1"))
       const data = await response.json()
       
       if (response.ok) {
@@ -103,7 +104,7 @@ export default function ManagerOrdersPage() {
   const fetchRequisitionDetails = async (requisitionId: number) => {
     try {
       setDetailLoading(true)
-      const response = await fetch(`/api/requisitions/${requisitionId}`)
+      const response = await fetch(getApiUrl(`/api/requisitions/${requisitionId}`))
       const data = await response.json()
       
       if (response.ok) {

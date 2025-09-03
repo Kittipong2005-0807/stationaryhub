@@ -22,6 +22,7 @@ import { useCart } from "@/src/contexts/CartContext"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { getBasePathUrl } from "@/lib/base-path"
+import { getApiUrl } from "@/lib/api-utils"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -30,6 +31,15 @@ export default function ManagerCartPage() {
   const { items, removeFromCart, updateQuantity, getTotalAmount, clearCart } = useCart()
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
+
+  // Debug logs
+  console.log("🔍 Manager Cart Debug:")
+  console.log("- User:", user)
+  console.log("- Is Authenticated:", isAuthenticated)
+  console.log("- User Role:", user?.ROLE)
+  console.log("- Cart Items:", items)
+  console.log("- Cart Items Length:", items.length)
+  console.log("- Total Amount:", getTotalAmount())
 
   React.useEffect(() => {
     if (!isAuthenticated || user?.ROLE !== "MANAGER") {
@@ -95,7 +105,7 @@ export default function ManagerCartPage() {
 
     try {
       // ใช้ API orgcode3 เพื่อสร้าง requisition พร้อม orgcode3
-      const res = await fetch("/stationaryhub/api/orgcode3", {
+      const res = await fetch(getApiUrl("/api/orgcode3"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requisitionData),
@@ -140,6 +150,8 @@ export default function ManagerCartPage() {
   }
 
   const handleQuantityChange = (itemId: number, newQuantity: number) => {
+    updateQuantity(itemId, newQuantity)
+  }
 
   if (!isAuthenticated || user?.ROLE !== "MANAGER") {
     return null
@@ -306,5 +318,4 @@ export default function ManagerCartPage() {
       </Card>
     </motion.div>
   )
-}
 }

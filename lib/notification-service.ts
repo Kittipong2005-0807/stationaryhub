@@ -79,6 +79,7 @@ export class NotificationService {
         try {
           console.log(`📧 Attempting to send email to ${userId} at ${userEmail}`)
           // await this.sendEmail(
+          
           //   userEmail,
           //   'ยืนยันการส่งคำขอเบิก',
           //   this.createEmailTemplate('requisition_created', {
@@ -138,6 +139,7 @@ export class NotificationService {
 
       // ส่งอีเมลแจ้งเตือน
       if (userEmail) {
+        console.log(`📧 Attempting to send approval email to user ${requisition.USER_ID} at ${userEmail}`)
         // await this.sendEmail(
         //   userEmail,
         //   'คำขอเบิกได้รับการอนุมัติ',
@@ -446,6 +448,7 @@ export class NotificationService {
             }
 
             // ส่งอีเมลแจ้งเตือน
+            console.log(`📧 Attempting to send admin notification email to ${admin.EMAIL}`)
             // await this.sendEmail(
             //   admin.EMAIL,
             //   'มีการอนุมัติคำขอเบิกใหม่',
@@ -1010,6 +1013,7 @@ export class NotificationService {
       `
 
       // await this.sendEmail(toEmail, subject, htmlContent)
+      console.log(`📧 Attempting to send test email to ${toEmail}`)
       console.log(`✅ Test email sent to ${toEmail}`)
     } catch (error) {
       console.error('❌ Error sending test email:', error)

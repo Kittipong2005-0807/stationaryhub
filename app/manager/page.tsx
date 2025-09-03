@@ -37,6 +37,7 @@ import {
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { getBasePathUrl } from "@/lib/base-path"
+import { getApiUrl } from "@/lib/api-utils"
 import { motion } from "framer-motion"
 
 interface Stats {
@@ -93,7 +94,7 @@ export default function ManagerDashboard() {
       }
       
       // Fetch requisitions data for current manager's department
-      const requisitionsRes = await fetch(`/api/orgcode3?action=getRequisitionsForManager&userId=${currentUserId}`)
+      const requisitionsRes = await fetch(getApiUrl(`/api/orgcode3?action=getRequisitionsForManager&userId=${currentUserId}`))
       console.log("📊 Requisitions response status:", requisitionsRes.status)
       
       if (!requisitionsRes.ok) {
@@ -108,7 +109,7 @@ export default function ManagerDashboard() {
       console.log("📋 Extracted requisitions:", requisitions)
       
              // Also fetch all requisitions from the same department/site
-       const allRequisitionsRes = await fetch(`/api/orgcode3?action=getAllRequisitionsForDepartment&userId=${currentUserId}`)
+       const allRequisitionsRes = await fetch(getApiUrl(`/api/orgcode3?action=getAllRequisitionsForDepartment&userId=${currentUserId}`))
        console.log("🏢 All department requisitions response status:", allRequisitionsRes.status)
        
        let allDepartmentRequisitions = []
@@ -129,7 +130,7 @@ export default function ManagerDashboard() {
             const userSiteId = user?.SITE_ID || '1700' // Use actual SITE_ID from user
             console.log("🔄 Using user's SITE_ID for fallback:", userSiteId)
             
-            const fallbackRes = await fetch(`/api/orgcode3?action=getRequisitionsBySiteId&siteId=${userSiteId}`)
+            const fallbackRes = await fetch(getApiUrl(`/api/orgcode3?action=getRequisitionsBySiteId&siteId=${userSiteId}`))
             if (fallbackRes.ok) {
               const fallbackData = await fallbackRes.json()
               allDepartmentRequisitions = fallbackData.requisitions || []

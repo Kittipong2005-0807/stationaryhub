@@ -4,6 +4,7 @@ import React from "react"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useCart } from "@/src/contexts/CartContext"
 import { Bell } from "lucide-react"
+import { useApprovedCount } from "@/src/hooks/use-approved-count"
 import {
   AppBar,
   Toolbar,
@@ -67,6 +68,7 @@ interface Notification {
 export default function Layout({ children }: LayoutProps) {
   const { user, logout, isAuthenticated } = useAuth()
   const { getTotalItems } = useCart()
+  const { approvedCount } = useApprovedCount()
   const router = useRouter()
   const pathname = usePathname()
   const theme = useTheme()
@@ -283,7 +285,7 @@ export default function Layout({ children }: LayoutProps) {
       items.push(
         { label: "Dashboard", path: "/admin", icon: Dashboard },
         { label: "Products", path: "/admin/products", icon: Inventory },
-        { label: "Approvals", path: "/approvals", icon: Assignment },
+        { label: "Approvals", path: "/approvals", icon: Assignment, badge: approvedCount },
       )
     }
 
@@ -300,29 +302,72 @@ export default function Layout({ children }: LayoutProps) {
           component={Link}
           href={item.path}
           className={`rounded-lg mx-2 my-1 ${pathname === item.path ? "bg-blue-50" : ""}`}
+          style={{ position: 'relative' }}
         >
           <ListItemIcon>
-            <Badge badgeContent={item.badge} color="error">
-              <item.icon className={pathname === item.path ? "text-blue-600" : "text-gray-600"} />
-            </Badge>
+            <item.icon className={pathname === item.path ? "text-blue-600" : "text-gray-600"} />
           </ListItemIcon>
           <ListItemText
             primary={item.label}
             className={pathname === item.path ? "text-blue-600 font-semibold" : "text-gray-700"}
           />
+          {item.badge && (
+            <Badge 
+              badgeContent={item.badge} 
+              color="error"
+              sx={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                '& .MuiBadge-badge': {
+                  fontSize: '0.75rem',
+                  minWidth: '20px',
+                  height: '20px',
+                }
+              }}
+            >
+              <div style={{ width: 0, height: 0 }} />
+            </Badge>
+          )}
         </ListItem>
       ) : (
         <Link href={item.path} style={{ textDecoration: 'none' }}>
           <Button
             variant={pathname === item.path ? "contained" : "text"}
-            startIcon={
-              <Badge badgeContent={item.badge} color="error">
-                <item.icon />
-              </Badge>
-            }
+            startIcon={<item.icon />}
             size="small"
+            sx={{ 
+              position: 'relative',
+              ...(item.badge && {
+                '& .MuiButton-root': {
+                  position: 'relative'
+                }
+              })
+            }}
           >
             {item.label}
+            {item.badge && (
+              <Badge 
+                badgeContent={item.badge} 
+                color="error"
+                sx={{
+                  position: 'absolute',
+                  top: '0px',
+                  right: '0px',
+                  '& .MuiBadge-badge': {
+                    fontSize: '0.75rem',
+                    minWidth: '20px',
+                    height: '20px',
+                    backgroundColor: pathname === item.path ? '#1976d2' : '#d32f2f',
+                    color: 'white',
+                    border: '2px solid white',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  }
+                }}
+              >
+                <div style={{ width: 0, height: 0 }} />
+              </Badge>
+            )}
           </Button>
         </Link>
       )}
