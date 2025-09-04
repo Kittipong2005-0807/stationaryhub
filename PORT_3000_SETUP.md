@@ -150,3 +150,4 @@ taskkill /PID <PID> /F
 - [ ] Navigation ทำงานได้
 - [ ] API calls ทำงานได้
 
+

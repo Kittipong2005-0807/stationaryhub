@@ -1,18 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import { apiFetch } from '@/lib/api-utils'
 
 export interface Notification {
   id: number
   userId: string
   subject: string
-  message: string
-  sentAt: Date
+  body: string
+  status: string
   isRead: boolean
-  type: string
+  sentAt: Date
+  type?: string
   requisitionId?: number
   actorId?: string
-  priority: 'low' | 'medium' | 'high'
-  timestamp?: string
+  priority?: 'low' | 'medium' | 'high'
+  timestamp?: Date
 }
 
 export interface NotificationResponse {
@@ -20,9 +22,9 @@ export interface NotificationResponse {
   data: {
     notifications: Notification[]
     pagination: {
+      total: number
       page: number
       limit: number
-      total: number
       hasMore: boolean
     }
   }
@@ -43,8 +45,7 @@ export const useNotifications = () => {
     setError(null)
 
     try {
-      const response = await fetch(`/api/notifications?limit=${limit}`)
-      const data: NotificationResponse = await response.json()
+      const data: NotificationResponse = await apiFetch(`/api/notifications?limit=${limit}`)
 
       if (data.success) {
         setNotifications(data.data.notifications)
@@ -64,8 +65,7 @@ export const useNotifications = () => {
     if (!session?.user?.name) return
 
     try {
-      const response = await fetch('/api/notifications/count')
-      const data = await response.json()
+      const data = await apiFetch('/api/notifications/count')
 
       if (data.success) {
         setUnreadCount(data.data.unreadCount)
@@ -78,10 +78,9 @@ export const useNotifications = () => {
   // อัปเดตสถานะการอ่าน
   const markAsRead = useCallback(async (notificationId: number) => {
     try {
-      const response = await fetch(`/api/notifications/${notificationId}/read`, {
-        method: 'PUT'
+      const data = await apiFetch(`/api/notifications/${notificationId}/read`, {
+        method: 'PUT',
       })
-      const data = await response.json()
 
       if (data.success) {
         // อัปเดตสถานะใน local state

@@ -185,3 +185,4 @@ npm run dev
 - Error handling ที่ดีจะป้องกันการ crash
 - การตรวจสอบ database connection จะช่วยหาปัญหาได้เร็วขึ้น
 
+

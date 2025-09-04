@@ -97,12 +97,8 @@ export async function POST(
     const result = await ApprovalService.createApproval(approvalData)
     console.log("🔍 Approval result:", result)
 
-    // ส่งการแจ้งเตือนตามผลการอนุมัติ
-    if (action === "approve") {
-      await NotificationService.notifyRequisitionApproved(requisitionId, userId)
-    } else if (action === "reject") {
-      await NotificationService.notifyRequisitionRejected(requisitionId, userId, note)
-    }
+    // การแจ้งเตือนจะถูกส่งโดย ApprovalService.createApproval แล้ว
+    // ไม่ต้องส่งซ้ำที่นี่
 
     console.log("✅ Approval successful")
     return NextResponse.json({ 

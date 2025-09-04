@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
-import { useApprovedCount } from "@/src/hooks/use-approved-count"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -78,7 +78,7 @@ export default function ApprovalsPage() {
   const { data: session } = useSession()
   const user = session?.user as unknown as { EmpCode?: string; USER_ID?: string; AdLoginName?: string; ROLE?: string }
   const isAuthenticated = !!session
-  const { markAsViewed } = useApprovedCount()
+
 
   useEffect(() => {
     if (!isAuthenticated || (user?.ROLE !== "MANAGER" && user?.ROLE !== "ADMIN")) {
@@ -118,10 +118,7 @@ export default function ApprovalsPage() {
         }
         setLoading(false)
         
-        // สำหรับ Admin ให้ mark requisitions เป็น viewed
-        if (user?.ROLE === "ADMIN") {
-          await markAsViewed()
-        }
+
         })
         .catch((error) => {
           console.error("Error fetching approved requisitions:", error)
@@ -1297,7 +1294,7 @@ export default function ApprovalsPage() {
              <DialogTitle className="flex items-center gap-3 border-b border-gray-200 pb-4">
                <ShoppingCart className="text-blue-600" />
                <div>
-                 <Typography variant="h5" className="font-bold">
+                 <Typography variant="h6" component="div" className="font-bold">
                    Requisition Details #{selectedRequisition?.REQUISITION_ID}
                  </Typography>
                  <Typography variant="body2" className="text-gray-600">

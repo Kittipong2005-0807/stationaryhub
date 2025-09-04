@@ -42,6 +42,20 @@ model EXPORT_LOGS {
   REQUISITIONS   REQUISITIONS @relation(fields: [REQUISITION_ID], references: [REQUISITION_ID], onUpdate: NoAction, map: "FK__EXPORT_LO__REQUI__571DF1D5")
 }
 
+model PRICE_HISTORY {
+  HISTORY_ID        Int      @id @default(autoincrement())
+  PRODUCT_ID        Int
+  OLD_PRICE         Decimal? @db.Decimal(18, 2)
+  NEW_PRICE         Decimal? @db.Decimal(18, 2)
+  PRICE_CHANGE      Decimal? @db.Decimal(18, 2)
+  PERCENTAGE_CHANGE Decimal? @db.Decimal(5, 2)
+  YEAR              Int
+  RECORDED_DATE     DateTime @default(now())
+  NOTES             String?  @db.VarChar(1000)
+  CREATED_BY        String?  @db.VarChar(50)
+  PRODUCTS          PRODUCTS @relation(fields: [PRODUCT_ID], references: [PRODUCT_ID], onUpdate: NoAction)
+}
+
 model PRODUCT_CATEGORIES {
   CATEGORY_ID   Int        @id(map: "PK__PRODUCT___E7DA297C64E80E18") @default(autoincrement())
   CATEGORY_NAME String     @db.VarChar(255)
@@ -57,23 +71,9 @@ model PRODUCTS {
   ORDER_UNIT         String?             @db.VarChar(50)
   PHOTO_URL          String?             @db.VarChar(500)
   CREATED_AT         DateTime?           @default(now(), map: "DF__PRODUCTS__CREATE__4316F928") @db.DateTime
+  PRICE_HISTORY      PRICE_HISTORY[]
   PRODUCT_CATEGORIES PRODUCT_CATEGORIES  @relation(fields: [CATEGORY_ID], references: [CATEGORY_ID], onUpdate: NoAction, map: "FK__PRODUCTS__CATEGO__440B1D61")
   REQUISITION_ITEMS  REQUISITION_ITEMS[]
-  PRICE_HISTORY      PRICE_HISTORY[]
-}
-
-model PRICE_HISTORY {
-  HISTORY_ID        Int      @id @default(autoincrement())
-  PRODUCT_ID        Int
-  OLD_PRICE         Decimal? @db.Decimal(18, 2)
-  NEW_PRICE         Decimal  @db.Decimal(18, 2)
-  PRICE_CHANGE      Decimal? @db.Decimal(18, 2)
-  PERCENTAGE_CHANGE Decimal? @db.Decimal(5, 2)
-  YEAR              Int
-  RECORDED_DATE     DateTime @default(now())
-  NOTES             String?  @db.VarChar(1000)
-  CREATED_BY        String   @db.VarChar(50)
-  PRODUCTS          PRODUCTS @relation(fields: [PRODUCT_ID], references: [PRODUCT_ID], onUpdate: NoAction)
 }
 
 model REQUISITION_ITEMS {
@@ -95,7 +95,7 @@ model REQUISITIONS {
   TOTAL_AMOUNT      Decimal?            @db.Decimal(18, 2)
   SITE_ID           String?             @db.VarChar(50)
   ISSUE_NOTE        String?             @db.VarChar(1000)
-  ADMIN_VIEWED_AT   DateTime?            @db.DateTime
+  ADMIN_VIEWED_AT   DateTime?           @db.DateTime
   APPROVALS         APPROVALS[]
   EXPORT_LOGS       EXPORT_LOGS[]
   REQUISITION_ITEMS REQUISITION_ITEMS[]
@@ -115,22 +115,21 @@ model STATUS_HISTORY {
 }
 
 model USERS {
-  USER_ID                                     String           @id(map: "PK__USERS__F3BEEBFF17F9F5BC") @db.VarChar(50)
-  USERNAME                                    String           @db.VarChar(100)
-  PASSWORD                                    String           @db.VarChar(255)
-  EMAIL                                       String           @db.VarChar(255)
-  ROLE                                        String?          @db.VarChar(50)
-  DEPARTMENT                                  String?          @db.VarChar(100)
-  SITE_ID                                     String?          @db.VarChar(50)
-  CREATED_AT                                  DateTime?        @default(now(), map: "DF__USERS__CREATED_A__3F466844") @db.DateTime
-  APPROVALS                                   APPROVALS[]
-  EMAIL_LOGS                                  EMAIL_LOGS[]
-  EXPORT_LOGS                                 EXPORT_LOGS[]
-  REQUISITIONS                                REQUISITIONS[]
-  STATUS_HISTORY                              STATUS_HISTORY[]
+  USER_ID        String           @id(map: "PK__USERS__F3BEEBFF17F9F5BC") @db.VarChar(50)
+  USERNAME       String           @db.VarChar(100)
+  PASSWORD       String           @db.VarChar(255)
+  EMAIL          String           @db.VarChar(255)
+  ROLE           String?          @db.VarChar(50)
+  DEPARTMENT     String?          @db.VarChar(100)
+  SITE_ID        String?          @db.VarChar(50)
+  CREATED_AT     DateTime?        @default(now(), map: "DF__USERS__CREATED_A__3F466844") @db.DateTime
+  APPROVALS      APPROVALS[]
+  EMAIL_LOGS     EMAIL_LOGS[]
+  EXPORT_LOGS    EXPORT_LOGS[]
+  REQUISITIONS   REQUISITIONS[]
+  STATUS_HISTORY STATUS_HISTORY[]
 }
 
-/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 view UserWithRoles {
   AdLoginName   String? @db.VarChar(50)
   EmpCode       String? @db.VarChar(50)
@@ -139,7 +138,6 @@ view UserWithRoles {
   FullNameThai  String? @db.VarChar(100)
   PostNameEng   String? @db.VarChar(100)
   CostCenterEng String? @db.VarChar(100)
-  OrgCode3      String? @db.NVarChar(Max)
-
-  @@ignore
+  OrgTDesc3     String? @db.VarChar(100)
+  OrgCode3      String? @db.VarChar(100)
 }

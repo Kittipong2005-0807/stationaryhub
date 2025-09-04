@@ -151,3 +151,4 @@ export async function middleware(request: NextRequest) {
 - [ ] Navigation ทำงานได้
 - [ ] API calls ทำงานได้
 
+

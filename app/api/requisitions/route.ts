@@ -249,12 +249,8 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // ส่ง notification
-    try {
-      await NotificationService.notifyRequisitionCreated(requisition.REQUISITION_ID, empCode)
-    } catch (notificationError) {
-      console.error("Notification error:", notificationError)
-    }
+    // การแจ้งเตือนจะถูกส่งโดย OrgCode3Service.createRequisitionWithSiteId แล้ว
+    // ไม่ต้องส่งซ้ำที่นี่
     
     return NextResponse.json({ 
       success: true, 

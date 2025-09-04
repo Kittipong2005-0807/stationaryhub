@@ -166,3 +166,4 @@ taskkill /F /IM node.exe
 - [ ] Production build สำเร็จ
 - [ ] ไม่มี console warnings
 
+

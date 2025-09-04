@@ -1,0 +1,13 @@
+# Ignore uploaded product images but keep other files
+product_*.png
+product_*.jpg
+product_*.jpeg
+product_*.webp
+
+# Keep placeholder and other important files
+!placeholder.jpg
+!placeholder.png
+!placeholder.svg
+!placeholder-logo.png
+!placeholder-logo.svg
+!placeholder-user.jpg

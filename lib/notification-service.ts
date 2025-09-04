@@ -463,7 +463,7 @@ export class NotificationService {
 
             // บันทึกการแจ้งเตือนลงฐานข้อมูล
             await this.logNotification({
-              type: 'requisition_pending',
+              type: 'requisition_approved',
               userId: admin.USER_ID,
               requisitionId,
               message: `มีการอนุมัติคำขอเบิกใหม่ (เลขที่ ${requisitionId}) จาก ${(requisition.USERS as any)?.FullNameThai || (requisition.USERS as any)?.FullNameEng || requisition.USER_ID} โดย ${approvedBy} จำนวนเงิน: ฿${requisition.TOTAL_AMOUNT?.toFixed(2)}`,

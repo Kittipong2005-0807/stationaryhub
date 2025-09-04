@@ -12,7 +12,11 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "StationeryHub - Modern Requisition System",
   description: "Advanced stationery requisition and approval system with modern UI/UX",
-    generator: 'v0.dev'
+  generator: 'v0.dev',
+  // เพิ่มการตั้งค่าเพื่อลด CSS preload warning
+  other: {
+    'X-Content-Type-Options': 'nosniff',
+  },
 }
 
 export default function RootLayout({
@@ -20,7 +24,12 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const ToastProvider = dynamic(() => import("@/components/ui/ToastContainer").then(mod => mod.ToastProvider), { ssr: false })
+  const ToastProvider = dynamic(() => import("@/components/ui/ToastContainer").then(mod => mod.ToastProvider), { 
+    ssr: false,
+    // เพิ่มการตั้งค่าเพื่อลด preload warning
+    loading: () => null,
+  })
+  
   return (
     <html lang="en">
       <body className="font-sans">

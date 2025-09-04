@@ -24,6 +24,8 @@ const nextConfig = {
   experimental: {
     // Fix CSS preload warning
     optimizePackageImports: ['@/components'],
+    // เพิ่มการตั้งค่าเพื่อลด CSS preload warning
+    optimizeCss: true,
   },
   
   // Output configuration for Docker
@@ -37,7 +39,8 @@ const nextConfig = {
     unoptimized: process.env.NODE_ENV === 'development',
   },
 
-
+  // เพิ่มการตั้งค่าเพื่อแก้ไข CSS preload warning
+  poweredByHeader: false,
   
   // Webpack optimizations
   webpack: (config, { isServer, _dev }) => {
@@ -60,6 +63,25 @@ const nextConfig = {
       }
     }
     
+    // เพิ่มการตั้งค่าเพื่อลด CSS preload warning
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          ...config.optimization.splitChunks,
+          cacheGroups: {
+            ...config.optimization.splitChunks.cacheGroups,
+            styles: {
+              name: 'styles',
+              test: /\.(css|scss)$/,
+              chunks: 'all',
+              enforce: true,
+            },
+          },
+        },
+      }
+    }
+    
     return config;
   },
   
@@ -75,11 +97,11 @@ const nextConfig = {
   
   // Environment variables
   env: {
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000/stationaryhub',
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3001/stationaryhub',
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'your-secret-key-here',
     // เพิ่ม environment variables สำหรับ NextAuth.js
-    NEXTAUTH_URL_DEV: 'http://localhost:3000/stationaryhub',
-    NEXTAUTH_URL_PROD: process.env.NEXTAUTH_URL || 'http://localhost:3000/stationaryhub',
+    NEXTAUTH_URL_DEV: 'http://localhost:3001/stationaryhub',
+    NEXTAUTH_URL_PROD: process.env.NEXTAUTH_URL || 'http://localhost:3001/stationaryhub',
   },
   
   // Headers configuration
@@ -95,6 +117,24 @@ const nextConfig = {
       },
       {
         source: '/_next/static/css/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Content-Type', value: 'text/css' },
+        ],
+      },
+      // เพิ่ม header สำหรับ CSS preload
+      {
+        source: '/_next/static/css/app/layout.css',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Content-Type', value: 'text/css' },
+        ],
+      },
+      // เพิ่ม header สำหรับ static files ทั้งหมด
+      {
+        source: '/_next/static/:path*',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },

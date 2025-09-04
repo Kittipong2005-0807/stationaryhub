@@ -4,7 +4,7 @@ import React from "react"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useCart } from "@/src/contexts/CartContext"
 import { Bell } from "lucide-react"
-import { useApprovedCount } from "@/src/hooks/use-approved-count"
+
 import {
   AppBar,
   Toolbar,
@@ -43,7 +43,7 @@ import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { getBasePathUrl } from "@/lib/base-path"
 import LoadingSpinner from "@/components/ui/LoadingSpinner"
-import { apiGet, apiPut } from "@/lib/api-utils"
+import { apiGet, apiPut, apiFetch } from "@/lib/api-utils"
 import ThaiDateUtils from '@/lib/date-utils'
 
 interface LayoutProps {
@@ -68,7 +68,6 @@ interface Notification {
 export default function Layout({ children }: LayoutProps) {
   const { user, logout, isAuthenticated } = useAuth()
   const { getTotalItems } = useCart()
-  const { approvedCount } = useApprovedCount()
   const router = useRouter()
   const pathname = usePathname()
   const theme = useTheme()
@@ -141,7 +140,6 @@ export default function Layout({ children }: LayoutProps) {
   const handleLogout = () => {
     setIsNavigating(true)
     logout()
-    router.push(getBasePathUrl("/login"))
     handleClose()
   }
 
@@ -190,7 +188,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const handleDeleteNotification = async (notificationId: number) => {
     try {
-      await fetch(`/api/notifications/${notificationId}`, {
+      await apiFetch(`/api/notifications/${notificationId}`, {
         method: 'DELETE'
       })
 
@@ -262,12 +260,13 @@ export default function Layout({ children }: LayoutProps) {
 
   const getNavigationItems = () => {
     const items = []
+    const cartItemCount = getTotalItems()
 
     if (user?.ROLE === "USER") {
       items.push(
         { label: "Products", path: "/", icon: Dashboard },
         { label: "Orders", path: "/orders", icon: Assignment },
-        { label: "Cart", path: "/cart", icon: ShoppingCart, badge: getTotalItems() },
+        { label: "Cart", path: "/cart", icon: ShoppingCart, badge: cartItemCount > 0 ? cartItemCount : undefined },
       )
     }
 
@@ -276,7 +275,7 @@ export default function Layout({ children }: LayoutProps) {
         { label: "Dashboard", path: "/manager", icon: Dashboard },
         { label: "Approvals", path: "/approvals", icon: Assignment },
         { label: "Products", path: "/manager/products", icon: Inventory },
-        { label: "Cart", path: "/manager/cart", icon: ShoppingCart, badge: getTotalItems() },
+        { label: "Cart", path: "/manager/cart", icon: ShoppingCart, badge: cartItemCount > 0 ? cartItemCount : undefined },
         { label: "Orders", path: "/manager/orders", icon: Assignment },
       )
     }
@@ -285,7 +284,7 @@ export default function Layout({ children }: LayoutProps) {
       items.push(
         { label: "Dashboard", path: "/admin", icon: Dashboard },
         { label: "Products", path: "/admin/products", icon: Inventory },
-        { label: "Approvals", path: "/approvals", icon: Assignment, badge: approvedCount },
+        { label: "Approvals", path: "/approvals", icon: Assignment },
       )
     }
 

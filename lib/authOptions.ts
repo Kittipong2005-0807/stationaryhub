@@ -22,8 +22,8 @@ interface ExtendedUser {
 export const authOptions: AuthOptions = {
   // NextAuth configuration
   pages: {
-    signIn: '/login',
-    error: '/login',
+    signIn: '/stationaryhub/login',
+    error: '/stationaryhub/login',
   },
   
   // Session configuration

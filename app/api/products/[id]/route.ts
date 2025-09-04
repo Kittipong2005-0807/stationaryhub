@@ -31,13 +31,31 @@ export async function PUT(
     const productId = parseInt(params.id)
     const updateData = await request.json()
 
+    // Get current product data to compare prices
+    const currentProduct = await prisma.pRODUCTS.findUnique({
+      where: { PRODUCT_ID: productId },
+      include: {
+        PRODUCT_CATEGORIES: true,
+      },
+    })
+
+    if (!currentProduct) {
+      return NextResponse.json(
+        { error: "Product not found" },
+        { status: 404 }
+      )
+    }
+
+    const oldPrice = currentProduct.UNIT_COST ? parseFloat(currentProduct.UNIT_COST.toString()) : 0
+    const newPrice = updateData.UNIT_COST !== undefined && updateData.UNIT_COST !== null && updateData.UNIT_COST !== '' ? parseFloat(updateData.UNIT_COST) : 0
+
     // Update product
     const updatedProduct = await prisma.pRODUCTS.update({
       where: { PRODUCT_ID: productId },
       data: {
         PRODUCT_NAME: updateData.PRODUCT_NAME,
         CATEGORY_ID: updateData.CATEGORY_ID,
-        UNIT_COST: updateData.UNIT_COST ? parseFloat(updateData.UNIT_COST) : null,
+        UNIT_COST: newPrice,
         ORDER_UNIT: updateData.ORDER_UNIT,
         PHOTO_URL: updateData.PHOTO_URL,
       },
@@ -45,6 +63,34 @@ export async function PUT(
         PRODUCT_CATEGORIES: true,
       },
     })
+
+    // Record price history if price has changed
+    if (oldPrice !== newPrice) {
+      try {
+        const currentYear = new Date().getFullYear()
+        const priceChange = newPrice - oldPrice
+        const percentageChange = oldPrice > 0 ? (priceChange / oldPrice) * 100 : 0
+
+        await prisma.pRICE_HISTORY.create({
+          data: {
+            PRODUCT_ID: productId,
+            OLD_PRICE: oldPrice,
+            NEW_PRICE: newPrice,
+            PRICE_CHANGE: priceChange,
+            PERCENTAGE_CHANGE: percentageChange,
+            YEAR: currentYear,
+            RECORDED_DATE: new Date(),
+            NOTES: `Price updated by admin from ฿${oldPrice} to ฿${newPrice}`,
+            CREATED_BY: user?.USERNAME || 'ADMIN',
+          },
+        })
+
+        console.log(`✅ Price history recorded: ${oldPrice} → ${newPrice} (${percentageChange >= 0 ? '+' : ''}${percentageChange.toFixed(1)}%)`)
+      } catch (historyError) {
+        console.error('❌ Error recording price history:', historyError)
+        // Continue with the update even if history recording fails
+      }
+    }
 
     return NextResponse.json(updatedProduct)
   } catch (error) {

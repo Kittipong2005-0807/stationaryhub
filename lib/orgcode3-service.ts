@@ -184,6 +184,7 @@ export class OrgCode3Service {
               USER_ID: userId,
               USERNAME: userId, // ใช้ userId เป็น username ชั่วคราว
               EMAIL: `${userId}@company.com`, // email ชั่วคราว
+              PASSWORD: 'temp_password_123', // รหัสผ่านชั่วคราว
               ROLE: 'USER',
               SITE_ID: userSiteId || siteId || 'HQ'
             }

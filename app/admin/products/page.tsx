@@ -24,7 +24,7 @@ import FormControl from "@mui/material/FormControl"
 import InputLabel from "@mui/material/InputLabel"
 import Select from "@mui/material/Select"
 import MenuItem from "@mui/material/MenuItem"
-import { Add, Edit, Delete, Inventory, Image as ImageIcon, Refresh, Search, FilterList } from "@mui/icons-material"
+import { Add, Edit, Delete, Inventory, Image as ImageIcon, Refresh, Search, FilterList, TrendingUp } from "@mui/icons-material"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
@@ -205,7 +205,7 @@ export default function ProductManagementPage() {
       const formData = new FormData()
       formData.append("file", file)
 
-      const response = await fetch("/api/upload-product-image", {
+      const response = await fetch("/stationaryhub/api/upload-product-image", {
         method: "POST",
         body: formData,
       })
@@ -241,8 +241,8 @@ export default function ProductManagementPage() {
 
     try {
       const url = editingProduct 
-        ? `/api/products/${editingProduct.PRODUCT_ID}` 
-        : "/api/products"
+        ? `/stationaryhub/api/products/${editingProduct.PRODUCT_ID}` 
+        : "/stationaryhub/api/products"
       
       const method = editingProduct ? "PUT" : "POST"
       
@@ -277,7 +277,7 @@ export default function ProductManagementPage() {
     }
 
     try {
-      const response = await fetch(`/api/products/${productId}`, {
+      const response = await fetch(`/stationaryhub/api/products/${productId}`, {
         method: "DELETE",
       })
 
@@ -303,9 +303,14 @@ export default function ProductManagementPage() {
       return photoUrl
     }
     
-    // ถ้าเป็น filename ธรรมดา ให้เพิ่ม base path
+    // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้เลย
     if (photoUrl.startsWith('/')) {
       return `/stationaryhub${photoUrl}`
+    }
+    
+    // ถ้าเป็น filename ที่ไม่มี path ให้เพิ่ม path
+    if (photoUrl.includes('product_')) {
+      return `/stationaryhub/${photoUrl}`
     }
     
     return `/stationaryhub/${photoUrl}`
@@ -359,30 +364,42 @@ export default function ProductManagementPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Refresh />}
-                    onClick={fetchData}
-                    disabled={refreshing}
-                    className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                    size="medium"
-                  >
-                    {refreshing ? "Loading..." : "Refresh"}
-                  </Button>
-                </motion.div>
+                                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                   <Button
+                     variant="outlined"
+                     startIcon={<Refresh />}
+                     onClick={fetchData}
+                     disabled={refreshing}
+                     className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                     size="medium"
+                   >
+                     {refreshing ? "Loading..." : "Refresh"}
+                   </Button>
+                 </motion.div>
 
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    variant="contained"
-                    startIcon={<Add />}
-                    onClick={() => handleOpenDialog()}
-                    className="bg-white text-blue-600 hover:bg-gray-100 font-bold shadow-lg"
-                    size="medium"
-                  >
-                    Add New Product
-                  </Button>
-                </motion.div>
+                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                   <Button
+                     variant="outlined"
+                     startIcon={<TrendingUp />}
+                     onClick={() => router.push('/stationaryhub/admin/price-history')}
+                     className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                     size="medium"
+                   >
+                     Price History
+                   </Button>
+                 </motion.div>
+
+                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                   <Button
+                     variant="contained"
+                     startIcon={<Add />}
+                     onClick={() => handleOpenDialog()}
+                     className="bg-white text-blue-600 hover:bg-gray-100 font-bold shadow-lg"
+                     size="medium"
+                   >
+                     Add New Product
+                   </Button>
+                 </motion.div>
               </div>
             </div>
           </div>
@@ -495,9 +512,9 @@ export default function ProductManagementPage() {
                             className="bg-gradient-to-r from-blue-500 to-purple-500 text-white"
                           />
                         </TableCell>
-                        <TableCell className="font-semibold text-green-600 py-3">
-                          {product.UNIT_COST ? `$${product.UNIT_COST.toLocaleString()}` : "-"}
-                        </TableCell>
+                                                 <TableCell className="font-semibold text-green-600 py-3">
+                           {product.UNIT_COST ? `฿${product.UNIT_COST.toLocaleString()}` : "-"}
+                         </TableCell>
                         <TableCell className="text-gray-600 py-3">
                           {product.ORDER_UNIT || "-"}
                         </TableCell>
@@ -567,10 +584,10 @@ export default function ProductManagementPage() {
             className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-2xl"
             style={{ padding: '24px 32px' }}
           >
-            <Typography variant="h5" className="font-bold">
+            <Typography variant="h5" component="div" className="font-bold">
               {editingProduct ? "✏️ Edit Product" : "➕ Add New Product"}
             </Typography>
-            <Typography variant="body2" className="text-blue-100 mt-1">
+            <Typography variant="body2" component="div" className="text-blue-100 mt-1">
               {editingProduct ? "Update product information" : "Create a new product in your inventory"}
             </Typography>
           </DialogTitle>
@@ -629,7 +646,7 @@ export default function ProductManagementPage() {
                     label="Unit Price"
                     type="number"
                     value={formData.UNIT_COST}
-                    onChange={(e) => setFormData({ ...formData, UNIT_COST: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => setFormData({ ...formData, UNIT_COST: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
                     placeholder="0.00"
                     variant="outlined"
                     size="medium"

@@ -132,3 +132,4 @@ NEXTAUTH_SECRET=your-secret-key-here
 
 ระบบจะใช้ base path และ asset prefix ตามที่กำหนดไว้
 
+

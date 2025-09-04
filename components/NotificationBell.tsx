@@ -33,7 +33,7 @@ export const NotificationBell = () => {
     await markAllAsRead()
   }
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: string | undefined) => {
     switch (priority) {
       case 'high':
         return 'bg-red-100 text-red-800 border-red-200'
@@ -46,7 +46,7 @@ export const NotificationBell = () => {
     }
   }
 
-  const getPriorityIcon = (priority: string) => {
+  const getPriorityIcon = (priority: string | undefined) => {
     switch (priority) {
       case 'high':
         return '🔴'
@@ -143,12 +143,12 @@ export const NotificationBell = () => {
                             variant="outline"
                             className={`text-xs ${getPriorityColor(notification.priority)}`}
                           >
-                            {notification.priority}
+                            {notification.priority || 'medium'}
                           </Badge>
                         </div>
                         
                         <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                          {notification.message}
+                          {notification.body}
                         </p>
                         
                         <div className="flex items-center justify-between text-xs text-muted-foreground">

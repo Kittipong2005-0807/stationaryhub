@@ -341,7 +341,7 @@ export default function ManagerOrdersPage() {
         <DialogTitle className="flex items-center gap-3 border-b border-gray-200 pb-4">
           <ShoppingCart className="text-blue-600" />
           <div>
-            <Typography variant="h5" className="font-bold">
+            <Typography variant="h6" component="div" className="font-bold">
               Order Details #{selectedRequisition?.REQUISITION_ID}
             </Typography>
             <Typography variant="body2" className="text-gray-600">

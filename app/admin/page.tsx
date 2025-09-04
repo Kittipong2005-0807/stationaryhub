@@ -176,7 +176,7 @@ export default function AdminDashboard() {
   const handleBulkUpdatePrices = async () => {
     try {
       setBulkUpdating(true)
-      const response = await apiPost('/api/products/bulk-update-prices', {
+      const response = await apiPost('/stationaryhub/api/products/bulk-update-prices', {
         updateValue: 0,
         year: selectedYear,
         category: selectedCategory
@@ -202,7 +202,7 @@ export default function AdminDashboard() {
       const formData = new FormData()
       formData.append('file', file)
       
-      const response = await apiPost('/api/products/import-prices', formData)
+      const response = await apiPost('/stationaryhub/api/products/import-prices', formData)
       
       if (response.success) {
         alert('Price import completed successfully!')
@@ -241,6 +241,28 @@ export default function AdminDashboard() {
     
     return `/stationaryhub/${photoUrl}`
   }
+
+  const handlePriceChange = async (productId: number, newPrice: number) => {
+    try {
+      const response = await apiPost('/stationaryhub/api/products/update-price', {
+        productId,
+        newPrice,
+        year: selectedYear,
+        notes: `Price updated via admin panel`
+      });
+
+      if (response.success) {
+        alert(`Price updated successfully for Product ID ${productId} to ฿${newPrice.toFixed(2)}`);
+        fetchProductPrices(); // Refresh prices after update
+        fetchRealPriceHistory(); // Refresh history
+      } else {
+        alert(`Failed to update price for Product ID ${productId}: ${response.error}`);
+      }
+    } catch (error) {
+      console.error(`Error updating price for Product ID ${productId}:`, error);
+      alert(`Error updating price for Product ID ${productId}`);
+    }
+  };
 
 
   // ดึงข้อมูลราคาสินค้าเมื่อปีหรือหมวดหมู่เปลี่ยน
@@ -1357,7 +1379,7 @@ export default function AdminDashboard() {
               <span className="text-white text-2xl">📦</span>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">สินค้ามาแล้ว!</h2>
+          <div className="text-2xl font-bold text-gray-900">สินค้ามาแล้ว!</div>
         </DialogTitle>
         
         <DialogContent className="text-center text-gray-600 mb-4">

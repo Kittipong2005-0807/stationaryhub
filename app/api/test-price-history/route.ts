@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { productId, newPrice, year, notes } = body;
 
-    console.log(`🔍 Updating product price:`, { productId, newPrice, year, notes });
+    console.log(`🔍 Testing price history update:`, { productId, newPrice, year, notes });
 
     if (!productId || !newPrice) {
       return NextResponse.json(
@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
     const oldPrice = existingProduct.UNIT_COST ? parseFloat(existingProduct.UNIT_COST.toString()) : 0;
     const currentYear = year || new Date().getFullYear();
 
+    console.log(`📊 Product found: ${existingProduct.PRODUCT_NAME}, Old price: ${oldPrice}`);
+
     // 1. อัปเดตราคาปัจจุบันในตาราง PRODUCTS
     const updatedProduct = await prisma.pRODUCTS.update({
       where: {
@@ -51,22 +53,24 @@ export async function POST(request: NextRequest) {
       const insertResult = await prisma.$executeRaw`
         INSERT INTO PRICE_HISTORY (
           PRODUCT_ID, 
+          OLD_PRICE,
+          NEW_PRICE, 
+          PRICE_CHANGE,
+          PERCENTAGE_CHANGE,
           YEAR, 
-          PRICE, 
           RECORDED_DATE, 
           NOTES, 
-          CREATED_BY,
-          PRICE_CHANGE,
-          PERCENTAGE_CHANGE
+          CREATED_BY
         ) VALUES (
           ${parseInt(productId)}, 
+          ${oldPrice},           -- ราคาเก่า
+          ${parseFloat(newPrice)}, -- ราคาใหม่
+          ${parseFloat(newPrice) - oldPrice}, -- การเปลี่ยนแปลงราคา
+          ${oldPrice > 0 ? ((parseFloat(newPrice) - oldPrice) / oldPrice) * 100 : 0}, -- เปอร์เซ็นต์
           ${parseInt(currentYear)}, 
-          ${parseFloat(newPrice)}, 
           GETDATE(), 
-          ${notes || 'Price updated via API'}, 
-          ${'ADMIN'},
-                      ${parseFloat(newPrice) - oldPrice},
-            ${oldPrice > 0 ? ((parseFloat(newPrice) - oldPrice) / oldPrice) * 100 : 0}
+          ${notes || 'Test price update'}, 
+          ${'TEST_USER'}
         )
       `;
 
@@ -102,7 +106,7 @@ export async function POST(request: NextRequest) {
       priceChange: parseFloat(newPrice) - (oldPrice || 0),
       percentageChange: oldPrice ? ((parseFloat(newPrice) - oldPrice) / oldPrice) * 100 : 0,
       updatedAt: new Date().toISOString(),
-      notes: notes || 'Price updated via API'
+      notes: notes || 'Test price update'
     };
 
     return NextResponse.json({ 
@@ -113,11 +117,65 @@ export async function POST(request: NextRequest) {
       message: `Price updated for "${updatedProduct.PRODUCT_NAME}" from ฿${oldPrice || 0} to ฿${newPrice} (${historyLog.percentageChange >= 0 ? '+' : ''}${historyLog.percentageChange.toFixed(1)}%)`
     });
   } catch (error) {
-    console.error('❌ Error updating product price:', error);
+    console.error('❌ Error in test price history:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to update product price',
+        error: 'Failed to test price history',
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const productId = searchParams.get('productId');
+
+    console.log(`🔍 Testing price history retrieval for productId: ${productId}`);
+
+    let query = `
+      SELECT TOP 10
+        ph.HISTORY_ID,
+        ph.PRODUCT_ID,
+        p.PRODUCT_NAME,
+        ph.OLD_PRICE,
+        ph.NEW_PRICE,
+        ph.PRICE_CHANGE,
+        ph.PERCENTAGE_CHANGE,
+        ph.YEAR,
+        ph.RECORDED_DATE,
+        ph.NOTES,
+        ph.CREATED_BY
+      FROM PRICE_HISTORY ph
+      INNER JOIN PRODUCTS p ON ph.PRODUCT_ID = p.PRODUCT_ID
+    `;
+
+    if (productId) {
+      query += ` WHERE ph.PRODUCT_ID = ${parseInt(productId)}`;
+    }
+
+    query += ` ORDER BY ph.RECORDED_DATE DESC`;
+
+    console.log(`📊 Executing query:`, query);
+    const result = await prisma.$queryRawUnsafe(query);
+
+    console.log(`✅ Test price history fetched successfully:`, result);
+
+    return NextResponse.json({ 
+      success: true, 
+      data: result,
+      count: Array.isArray(result) ? result.length : 0,
+      message: 'Test price history retrieved successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error fetching test price history:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to fetch test price history',
         details: error instanceof Error ? error.message : String(error)
       },
       { status: 500 }

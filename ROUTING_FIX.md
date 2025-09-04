@@ -148,3 +148,4 @@ if (token && isProtectedPath) {
 - [ ] Production mode ใช้ base path
 - [ ] Environment variables ถูกต้อง
 
+

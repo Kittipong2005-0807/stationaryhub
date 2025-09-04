@@ -34,20 +34,15 @@ export async function POST(request: NextRequest) {
     const fileExtension = file.name.split('.').pop()
     const fileName = `product_${timestamp}_${randomString}.${fileExtension}`
 
-    // สร้างโฟลเดอร์ uploads/products ถ้ายังไม่มี
-    const uploadDir = join(process.cwd(), "public", "uploads", "products")
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true })
-    }
-
-    // บันทึกไฟล์
+    // บันทึกไฟล์ลงโฟลเดอร์ public โดยตรง
+    const uploadDir = join(process.cwd(), "public")
     const filePath = join(uploadDir, fileName)
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
     // ส่ง URL กลับไป
-    const imageUrl = `/uploads/products/${fileName}`
+    const imageUrl = `/${fileName}`
 
     return NextResponse.json({ 
       success: true, 

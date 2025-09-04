@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         ITEM_ID: body.ITEM_ID || null,
         PRODUCT_NAME: body.PRODUCT_NAME,
         CATEGORY_ID: parseInt(body.CATEGORY_ID),
-        UNIT_COST: body.UNIT_COST ? parseFloat(body.UNIT_COST) : null,
+        UNIT_COST: body.UNIT_COST !== undefined && body.UNIT_COST !== null && body.UNIT_COST !== '' ? parseFloat(body.UNIT_COST) : 0,
         ORDER_UNIT: body.ORDER_UNIT,
         PHOTO_URL: body.PHOTO_URL || null,
       },

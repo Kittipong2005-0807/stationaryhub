@@ -1,115 +1,131 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/authOptions"
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const productId = searchParams.get('productId');
-    const year = searchParams.get('year');
+    // Check user session
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
-    console.log(`🔍 Fetching price history for productId: ${productId}, year: ${year}`);
+    // Check ADMIN role
+    const user = session.user as any
+    if (user?.ROLE !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Access denied. Admin role required." },
+        { status: 403 }
+      )
+    }
 
-    // ใช้ข้อมูลจริงจากตาราง PRODUCTS และสร้างประวัติราคาจำลอง
-    let query = `
-      SELECT 
-        p.PRODUCT_ID,
-        p.PRODUCT_NAME,
-        p.ITEM_ID,
-        pc.CATEGORY_NAME,
-        p.ORDER_UNIT,
-        p.PHOTO_URL,
-        p.UNIT_COST as CURRENT_PRICE,
-                            -- สร้างประวัติราคาจำลองสำหรับปีที่แตกต่างกัน
-                    2025 as YEAR,
-                    p.UNIT_COST as PRICE,
-                    COALESCE(p.CREATED_AT, GETDATE()) as RECORDED_DATE,
-                    'Current Price' as NOTES
-                  FROM PRODUCTS p
-                  LEFT JOIN PRODUCT_CATEGORIES pc ON p.CATEGORY_ID = pc.CATEGORY_ID
-                  WHERE p.UNIT_COST IS NOT NULL
-                `;
+    // Get query parameters
+    const { searchParams } = new URL(request.url)
+    const productId = searchParams.get('productId')
+    const year = searchParams.get('year')
+    const limit = searchParams.get('limit') || '100'
 
-                if (productId) {
-                  query += ` AND p.PRODUCT_ID = ${parseInt(productId)}`;
-                }
-
-                query += `
-                  UNION ALL
-                  SELECT 
-                    p.PRODUCT_ID,
-                    p.PRODUCT_NAME,
-                    p.ITEM_ID,
-                    pc.CATEGORY_NAME,
-                    p.ORDER_UNIT,
-                    p.PHOTO_URL,
-                    p.UNIT_COST as CURRENT_PRICE,
-                    2024 as YEAR,
-                    CAST(p.UNIT_COST * 0.95 AS DECIMAL(10,2)) as PRICE,
-                    DATEADD(year, -1, COALESCE(p.CREATED_AT, GETDATE())) as RECORDED_DATE,
-                    'Previous Year Price' as NOTES
-                  FROM PRODUCTS p
-                  LEFT JOIN PRODUCT_CATEGORIES pc ON p.CATEGORY_ID = pc.CATEGORY_ID
-                  WHERE p.UNIT_COST IS NOT NULL
-                `;
-
-                if (productId) {
-                  query += ` AND p.PRODUCT_ID = ${parseInt(productId)}`;
-                }
-
-                query += `
-                  UNION ALL
-                  SELECT 
-                    p.PRODUCT_ID,
-                    p.PRODUCT_NAME,
-                    p.ITEM_ID,
-                    pc.CATEGORY_NAME,
-                    p.ORDER_UNIT,
-                    p.PHOTO_URL,
-                    p.UNIT_COST as CURRENT_PRICE,
-                    2023 as YEAR,
-                    CAST(p.UNIT_COST * 0.90 AS DECIMAL(10,2)) as PRICE,
-                    DATEADD(year, -2, COALESCE(p.CREATED_AT, GETDATE())) as RECORDED_DATE,
-                    '2023 Price' as NOTES
-                  FROM PRODUCTS p
-                  LEFT JOIN PRODUCT_CATEGORIES pc ON p.CATEGORY_ID = pc.CATEGORY_ID
-                  WHERE p.UNIT_COST IS NOT NULL
-                `;
-
+    // Build query conditions
+    let whereConditions: any = {}
+    
     if (productId) {
-      query += ` AND p.PRODUCT_ID = ${parseInt(productId)}`;
+      whereConditions.PRODUCT_ID = parseInt(productId)
     }
-
-    // เพิ่มเงื่อนไขปีถ้ามี
+    
     if (year) {
-      query = `
-        SELECT * FROM (${query}) as combined_data
-        WHERE YEAR = ${parseInt(year)}
-      `;
+      whereConditions.YEAR = parseInt(year)
     }
 
-    query += ` ORDER BY PRODUCT_NAME, YEAR DESC`;
-
-    console.log(`📊 Executing query:`, query);
-
-    const result = await prisma.$queryRawUnsafe(query);
-
-    console.log(`✅ Price history data fetched successfully:`, result);
-
-    return NextResponse.json({ 
-      success: true, 
-      data: result,
-      params: { productId, year },
-      message: 'Using real product data with simulated price history'
-    });
-  } catch (error) {
-    console.error('❌ Error fetching price history:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch price history',
-        details: error instanceof Error ? error.message : String(error)
+    // Fetch price history with product information
+    const priceHistory = await prisma.pRICE_HISTORY.findMany({
+      where: whereConditions,
+      include: {
+        PRODUCTS: {
+          include: {
+            PRODUCT_CATEGORIES: true
+          }
+        }
       },
+      orderBy: {
+        RECORDED_DATE: 'desc'
+      },
+      take: parseInt(limit)
+    })
+
+    return NextResponse.json(priceHistory)
+  } catch (error) {
+    console.error('Error fetching price history:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch price history' },
       { status: 500 }
-    );
+    )
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Check user session
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Check ADMIN role
+    const user = session.user as any
+    if (user?.ROLE !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Access denied. Admin role required." },
+        { status: 403 }
+      )
+    }
+
+    const body = await request.json()
+    const { productId, oldPrice, newPrice, notes } = body
+
+    if (!productId || newPrice === undefined) {
+      return NextResponse.json(
+        { error: 'Missing required fields: productId, newPrice' },
+        { status: 400 }
+      )
+    }
+
+    const currentYear = new Date().getFullYear()
+    const priceChange = newPrice - (oldPrice || 0)
+    const percentageChange = oldPrice && oldPrice > 0 ? (priceChange / oldPrice) * 100 : 0
+
+    // Create price history record
+    const priceHistory = await prisma.pRICE_HISTORY.create({
+      data: {
+        PRODUCT_ID: parseInt(productId),
+        OLD_PRICE: oldPrice || 0,
+        NEW_PRICE: parseFloat(newPrice),
+        PRICE_CHANGE: priceChange,
+        PERCENTAGE_CHANGE: percentageChange,
+        YEAR: currentYear,
+        RECORDED_DATE: new Date(),
+        NOTES: notes || `Price updated by admin from ฿${oldPrice || 0} to ฿${newPrice}`,
+        CREATED_BY: user?.USERNAME || 'ADMIN',
+      },
+      include: {
+        PRODUCTS: {
+          include: {
+            PRODUCT_CATEGORIES: true
+          }
+        }
+      }
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: priceHistory,
+      message: `Price history recorded: ฿${oldPrice || 0} → ฿${newPrice}`
+    })
+  } catch (error) {
+    console.error('Error creating price history:', error)
+    return NextResponse.json(
+      { error: 'Failed to create price history' },
+      { status: 500 }
+    )
   }
 }
