@@ -97,11 +97,11 @@ const nextConfig = {
   
   // Environment variables
   env: {
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3001/stationaryhub',
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000/stationaryhub',
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'your-secret-key-here',
     // เพิ่ม environment variables สำหรับ NextAuth.js
-    NEXTAUTH_URL_DEV: 'http://localhost:3001/stationaryhub',
-    NEXTAUTH_URL_PROD: process.env.NEXTAUTH_URL || 'http://localhost:3001/stationaryhub',
+    NEXTAUTH_URL_DEV: 'http://localhost:3000/stationaryhub',
+    NEXTAUTH_URL_PROD: process.env.NEXTAUTH_URL || 'http://localhost:3000/stationaryhub',
   },
   
   // Headers configuration

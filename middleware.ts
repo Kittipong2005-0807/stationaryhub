@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
 
     // ถ้าเป็น protected path แต่ไม่มี token ให้ redirect ไป login
     if (isProtectedPath && !token) {
-      const loginUrl = new URL(`${basePath}/login`, request.url);
+      const loginUrl = new URL('/stationaryhub/login', request.url);
       return NextResponse.redirect(loginUrl);
     }
 
@@ -65,7 +65,7 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     console.error('Middleware error:', error)
     // ถ้าเกิด error ให้ redirect ไป login
-    const loginUrl = new URL(`${basePath}/login`, request.url);
+    const loginUrl = new URL('/stationaryhub/login', request.url);
     return NextResponse.redirect(loginUrl);
   }
 }

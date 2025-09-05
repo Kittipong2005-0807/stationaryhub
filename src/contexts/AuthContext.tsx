@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     signOut({ 
-      callbackUrl: getBasePathUrl("/login"),
+      callbackUrl: "/stationaryhub/login",
       redirect: true
     })
   }

@@ -23,7 +23,7 @@ export function getApiUrl(endpoint: string): string {
   }
 
   // For server-side, use NEXTAUTH_URL with BASE_PATH
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3001'
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
   return `${baseUrl}${BASE_PATH}/${cleanEndpoint}`.replace(/\/+/g, '/') // Ensure single slashes
 }
 
@@ -122,5 +122,5 @@ export function getBaseUrl(): string {
   }
   
   // Server environment
-  return process.env.NEXTAUTH_URL || 'http://localhost:3001'
+  return process.env.NEXTAUTH_URL || 'http://localhost:3000'
 }

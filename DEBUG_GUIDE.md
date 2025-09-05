@@ -186,3 +186,4 @@ npm run dev
 - การตรวจสอบ database connection จะช่วยหาปัญหาได้เร็วขึ้น
 
 
+
