@@ -18,13 +18,13 @@ export function getApiUrl(endpoint: string): string {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
 
   if (typeof window !== 'undefined') {
-    // For client-side, ใช้ BASE_PATH เพื่อให้ API calls ทำงานถูกต้อง
+    // Client-side: ใช้ BASE_PATH เพื่อให้ API calls ทำงานถูกต้อง
     return `${BASE_PATH}/${cleanEndpoint}`.replace(/\/+/g, '/')
   }
 
-  // For server-side, use NEXTAUTH_URL with BASE_PATH
+  // Server-side: use NEXTAUTH_URL with BASE_PATH
   const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-  return `${baseUrl}${BASE_PATH}/${cleanEndpoint}`.replace(/\/+/g, '/') // Ensure single slashes
+  return `${baseUrl}${BASE_PATH}/${cleanEndpoint}`.replace(/\/+/g, '/')
 }
 
 /**

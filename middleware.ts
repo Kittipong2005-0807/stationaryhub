@@ -26,6 +26,11 @@ export async function middleware(request: NextRequest) {
     // ตรวจสอบ path ที่ไม่ต้องการ authentication
     const publicPaths = ['/login', '/api/auth', '/', '/api'];
     const isPublicPath = publicPaths.some(path => pathWithoutBase.startsWith(path));
+    
+    // ถ้าเป็นหน้า login ให้ผ่านไปได้เสมอ (ไม่ต้องตรวจสอบ token)
+    if (pathWithoutBase === '/login') {
+      return NextResponse.next();
+    }
 
     // ถ้าเป็น public path ให้ผ่านไปได้
     if (isPublicPath) {
@@ -34,7 +39,7 @@ export async function middleware(request: NextRequest) {
 
     // ถ้าเป็น protected path แต่ไม่มี token ให้ redirect ไป login
     if (isProtectedPath && !token) {
-      const loginUrl = new URL('/stationaryhub/login', request.url);
+      const loginUrl = new URL(`${basePath}/login`, request.url);
       return NextResponse.redirect(loginUrl);
     }
 
@@ -65,7 +70,7 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     console.error('Middleware error:', error)
     // ถ้าเกิด error ให้ redirect ไป login
-    const loginUrl = new URL('/stationaryhub/login', request.url);
+    const loginUrl = new URL(`${basePath}/login`, request.url);
     return NextResponse.redirect(loginUrl);
   }
 }

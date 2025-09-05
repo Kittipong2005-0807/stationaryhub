@@ -1291,17 +1291,17 @@ export default function ApprovalsPage() {
         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-white">
            <DialogHeader className="pb-4">
-             <DialogTitle className="flex items-center gap-3 border-b border-gray-200 pb-4">
+             <div className="flex items-center gap-3 border-b border-gray-200 pb-4">
                <ShoppingCart className="text-blue-600" />
                <div>
-                 <Typography variant="h6" component="div" className="font-bold">
+                 <div className="font-bold text-lg">
                    Requisition Details #{selectedRequisition?.REQUISITION_ID}
-                 </Typography>
-                 <Typography variant="body2" className="text-gray-600">
+                 </div>
+                 <div className="text-gray-600 text-sm">
                    รายละเอียดคำขอเบิก
-                 </Typography>
+                 </div>
                </div>
-             </DialogTitle>
+             </div>
            </DialogHeader>
                        <div className="space-y-6 pt-6">
              {/* Order Information */}
@@ -1571,15 +1571,15 @@ export default function ApprovalsPage() {
            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
             <DialogContent className="max-w-2xl max-h-[90vh] bg-white overflow-y-auto">
              <DialogHeader>
-               <DialogTitle className="flex items-center gap-3">
+               <div className="flex items-center gap-3">
                  <div className="w-10 h-10 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
                    <FileText className="h-5 w-5 text-white" />
                  </div>
                  <div>
-                   <h2 className="text-xl font-bold text-gray-900">แก้ไขข้อมูล SUPPLY REQUEST ORDER</h2>
-                   <p className="text-sm text-gray-500 mt-1">ปรับแต่งข้อมูลก่อนสร้าง PDF</p>
+                   <div className="text-xl font-bold text-gray-900">แก้ไขข้อมูล SUPPLY REQUEST ORDER</div>
+                   <div className="text-sm text-gray-500 mt-1">ปรับแต่งข้อมูลก่อนสร้าง PDF</div>
                  </div>
-               </DialogTitle>
+               </div>
              </DialogHeader>
              
              <div className="space-y-6 py-4">

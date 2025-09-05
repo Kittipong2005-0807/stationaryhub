@@ -271,7 +271,7 @@ export default function OrdersPage() {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
+        <DialogTitle component="div">
           Order Details #{selectedOrder?.REQUISITION_ID}
         </DialogTitle>
         <DialogContent>

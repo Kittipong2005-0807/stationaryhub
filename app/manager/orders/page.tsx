@@ -338,15 +338,15 @@ export default function ManagerOrdersPage() {
           className: "glass-card"
         }}
       >
-        <DialogTitle className="flex items-center gap-3 border-b border-gray-200 pb-4">
+        <DialogTitle className="flex items-center gap-3 border-b border-gray-200 pb-4" component="div">
           <ShoppingCart className="text-blue-600" />
           <div>
-            <Typography variant="h6" component="div" className="font-bold">
+            <div className="font-bold text-lg">
               Order Details #{selectedRequisition?.REQUISITION_ID}
-            </Typography>
-            <Typography variant="body2" className="text-gray-600">
+            </div>
+            <div className="text-gray-600 text-sm">
               รายละเอียดคำขอเบิก
-            </Typography>
+            </div>
           </div>
         </DialogTitle>
 

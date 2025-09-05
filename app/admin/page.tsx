@@ -1335,7 +1335,7 @@ export default function AdminDashboard() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle className="text-center">
+        <DialogTitle className="text-center" component="div">
           <div className="flex items-center justify-center gap-3 mb-3">
             <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
               <span className="text-white text-2xl">📦</span>

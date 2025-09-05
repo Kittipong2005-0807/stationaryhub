@@ -583,13 +583,14 @@ export default function ProductManagementPage() {
           <DialogTitle 
             className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-2xl"
             style={{ padding: '24px 32px' }}
+            component="div"
           >
-            <Typography variant="h5" component="div" className="font-bold">
+            <div className="font-bold text-xl">
               {editingProduct ? "✏️ Edit Product" : "➕ Add New Product"}
-            </Typography>
-            <Typography variant="body2" component="div" className="text-blue-100 mt-1">
+            </div>
+            <div className="text-blue-100 mt-1 text-sm">
               {editingProduct ? "Update product information" : "Create a new product in your inventory"}
-            </Typography>
+            </div>
           </DialogTitle>
           <DialogContent 
             className="pt-8 pb-6"

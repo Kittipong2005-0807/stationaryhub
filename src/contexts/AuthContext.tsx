@@ -75,7 +75,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     signOut({ 
-      callbackUrl: "/stationaryhub/login",
       redirect: true
     })
   }
@@ -84,9 +83,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
       const currentPath = window.location.pathname
-      if (currentPath !== getBasePathUrl("/login") && !currentPath.includes("/api/")) {
+      const loginPath = getBasePathUrl("/login")
+      
+      // ตรวจสอบว่าไม่ใช่หน้า login และไม่ใช่ API route
+      if (currentPath !== loginPath && !currentPath.includes("/api/")) {
         console.log("Redirecting to login - user not authenticated")
-        router.push(getBasePathUrl("/login"))
+        router.push(loginPath)
       }
     }
   }, [isAuthenticated, isAuthLoading, router])

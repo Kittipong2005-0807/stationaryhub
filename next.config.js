@@ -4,12 +4,6 @@ const nextConfig = {
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub',
   assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub',
   
-  // Fix for static files in development
-  ...(process.env.NODE_ENV === 'development' && {
-    // Disable asset prefix in development to fix static files
-    assetPrefix: '',
-  }),
-  
   // Development server configuration
   devIndicators: {
     buildActivity: true,
@@ -102,6 +96,7 @@ const nextConfig = {
     // เพิ่ม environment variables สำหรับ NextAuth.js
     NEXTAUTH_URL_DEV: 'http://localhost:3000/stationaryhub',
     NEXTAUTH_URL_PROD: process.env.NEXTAUTH_URL || 'http://localhost:3000/stationaryhub',
+    NEXT_PUBLIC_BASE_PATH: process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub',
   },
   
   // Headers configuration

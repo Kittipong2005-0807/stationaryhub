@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { AuthOptions } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import ldap from 'ldapjs';
+import { getBasePathUrl } from '@/lib/base-path';
 
 interface LdapEntry {
   object: {
@@ -22,8 +23,8 @@ interface ExtendedUser {
 export const authOptions: AuthOptions = {
   // NextAuth configuration
   pages: {
-    signIn: '/stationaryhub/login',
-    error: '/stationaryhub/login',
+    signIn: getBasePathUrl('/login'),
+    error: getBasePathUrl('/login'),
   },
   
   // Session configuration
@@ -262,6 +263,20 @@ export const authOptions: AuthOptions = {
   ],
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      console.log('🔄 Redirect callback - url:', url, 'baseUrl:', baseUrl);
+      
+      // ถ้า url เป็น relative path ให้เพิ่ม basePath
+      if (url.startsWith('/')) {
+        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
+        const redirectUrl = `${baseUrl}${basePath}${url}`;
+        console.log('🔄 Redirect to:', redirectUrl);
+        return redirectUrl;
+      }
+      // ถ้า url เป็น absolute path ให้ใช้ตามเดิม
+      console.log('🔄 Redirect to absolute URL:', url);
+      return url;
+    },
     async jwt({ token, user }) {
       console.log('🧠 JWT Callback - user:', user);
       console.log('🧠 JWT Callback - token:', token);
@@ -332,6 +347,20 @@ export const authOptions: AuthOptions = {
                 if (userData.orgcode3) {
                   token.SITE_ID = userData.orgcode3.toString();
                   console.log('✅ Updated SITE_ID from orgcode3:', token.SITE_ID);
+                }
+                
+                // Update DEPARTMENT in USERS table from CostCenterEng
+                if (userData.CostCenterEng) {
+                  try {
+                    await prisma.$executeRaw`
+                      UPDATE USERS 
+                      SET DEPARTMENT = ${userData.CostCenterEng.toString()}
+                      WHERE USER_ID = ${user.name ?? ''}
+                    `;
+                    console.log('✅ Updated DEPARTMENT in USERS table from CostCenterEng:', userData.CostCenterEng);
+                  } catch (updateError) {
+                    console.error('❌ Failed to update DEPARTMENT in USERS table:', updateError);
+                  }
                 }
                 
                 // Update ROLE from PostNameEng - temporarily disabled
