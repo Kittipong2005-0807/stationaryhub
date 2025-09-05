@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log(`🔍 Testing products data...`);
+    console.log(`🔍 Debugging products data...`);
 
     // ดึงข้อมูลสินค้าทั้งหมด
     const allProducts = await prisma.pRODUCTS.findMany({
@@ -58,11 +58,11 @@ export async function GET(request: NextRequest) {
       message: 'Products data analysis completed'
     });
   } catch (error) {
-    console.error('❌ Error testing products:', error);
+    console.error('❌ Error debugging products:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to test products',
+        error: 'Failed to debug products',
         details: error instanceof Error ? error.message : String(error)
       },
       { status: 500 }

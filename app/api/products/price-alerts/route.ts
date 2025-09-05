@@ -5,40 +5,62 @@ export async function GET(_request: NextRequest) {
   try {
     console.log(`🔍 Fetching price alerts...`);
 
-    // ใช้ข้อมูลจริงจากตาราง PRODUCTS และสร้างการแจ้งเตือนจำลอง
-    const result = await prisma.$queryRawUnsafe(`
-      SELECT 
-        p.PRODUCT_ID,
-        p.PRODUCT_NAME,
-        p.ITEM_ID,
-        pc.CATEGORY_NAME,
-        p.UNIT_COST as CURRENT_PRICE,
-        CAST(p.UNIT_COST * 0.95 AS DECIMAL(10,2)) as PREVIOUS_PRICE,
-        CAST(p.UNIT_COST - (p.UNIT_COST * 0.95) AS DECIMAL(10,2)) as PRICE_CHANGE,
-        CAST(((p.UNIT_COST - (p.UNIT_COST * 0.95)) / (p.UNIT_COST * 0.95)) * 100 AS DECIMAL(5,2)) as PERCENTAGE_CHANGE,
-        CASE 
-          WHEN ((p.UNIT_COST - (p.UNIT_COST * 0.95)) / (p.UNIT_COST * 0.95)) * 100 > 10 THEN 'HIGH'
-          WHEN ((p.UNIT_COST - (p.UNIT_COST * 0.95)) / (p.UNIT_COST * 0.95)) * 100 > 5 THEN 'MEDIUM'
-          ELSE 'LOW'
-        END as ALERT_LEVEL,
-        CASE 
-          WHEN ((p.UNIT_COST - (p.UNIT_COST * 0.95)) / (p.UNIT_COST * 0.95)) * 100 > 10 THEN 'ราคาเพิ่มขึ้นมากกว่า 10%'
-          WHEN ((p.UNIT_COST - (p.UNIT_COST * 0.95)) / (p.UNIT_COST * 0.95)) * 100 > 5 THEN 'ราคาเพิ่มขึ้นมากกว่า 5%'
-          ELSE 'ราคาเพิ่มขึ้นเล็กน้อย'
-        END as ALERT_MESSAGE,
-        GETDATE() as ALERT_DATE
-      FROM PRODUCTS p
-      LEFT JOIN PRODUCT_CATEGORIES pc ON p.CATEGORY_ID = pc.CATEGORY_ID
-      WHERE p.UNIT_COST IS NOT NULL
-        AND ((p.UNIT_COST - (p.UNIT_COST * 0.95)) / (p.UNIT_COST * 0.95)) * 100 > 5
-      ORDER BY PERCENTAGE_CHANGE DESC
-    `);
+    // ใช้ Prisma ORM แทน raw SQL
+    const products = await prisma.pRODUCTS.findMany({
+      where: {
+        UNIT_COST: {
+          not: null
+        }
+      },
+      include: {
+        PRODUCT_CATEGORIES: true
+      },
+      orderBy: {
+        PRODUCT_NAME: 'asc'
+      }
+    });
 
-    console.log(`✅ Price alerts data fetched successfully:`, result);
+    // สร้างข้อมูลการแจ้งเตือนราคา
+    const priceAlerts = products.map(product => {
+      const currentPrice = product.UNIT_COST ? parseFloat(product.UNIT_COST.toString()) : 0;
+      const previousPrice = currentPrice * 0.95; // ลดราคา 5%
+      const priceChange = currentPrice - previousPrice;
+      const percentageChange = previousPrice > 0 ? (priceChange / previousPrice) * 100 : 0;
+
+      let alertLevel = 'LOW';
+      let alertMessage = 'ราคาเพิ่มขึ้นเล็กน้อย';
+
+      if (percentageChange > 10) {
+        alertLevel = 'HIGH';
+        alertMessage = 'ราคาเพิ่มขึ้นมากกว่า 10%';
+      } else if (percentageChange > 5) {
+        alertLevel = 'MEDIUM';
+        alertMessage = 'ราคาเพิ่มขึ้นมากกว่า 5%';
+      }
+
+      return {
+        PRODUCT_ID: product.PRODUCT_ID,
+        PRODUCT_NAME: product.PRODUCT_NAME,
+        ITEM_ID: product.ITEM_ID,
+        CATEGORY_NAME: product.PRODUCT_CATEGORIES?.CATEGORY_NAME || 'Unknown',
+        CURRENT_PRICE: currentPrice,
+        PREVIOUS_PRICE: Math.round(previousPrice * 100) / 100,
+        PRICE_CHANGE: Math.round(priceChange * 100) / 100,
+        PERCENTAGE_CHANGE: Math.round(percentageChange * 100) / 100,
+        ALERT_LEVEL: alertLevel,
+        ALERT_MESSAGE: alertMessage,
+        ALERT_DATE: new Date().toISOString()
+      };
+    }).filter(alert => alert.PERCENTAGE_CHANGE > 5); // กรองเฉพาะที่เพิ่มขึ้นมากกว่า 5%
+
+    // เรียงลำดับตาม PERCENTAGE_CHANGE จากมากไปน้อย
+    priceAlerts.sort((a, b) => b.PERCENTAGE_CHANGE - a.PERCENTAGE_CHANGE);
+
+    console.log(`✅ Price alerts data fetched successfully: ${priceAlerts.length} alerts`);
 
     return NextResponse.json({ 
       success: true, 
-      data: result,
+      data: priceAlerts,
       timestamp: new Date().toISOString(),
       message: 'Using real product data with simulated price alerts'
     });

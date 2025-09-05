@@ -133,7 +133,8 @@ export const isFocusable = (element: HTMLElement): boolean => {
   
   if (naturallyFocusable.includes(tagName)) {
     // Check if element is disabled or hidden
-    if (element.disabled || element.hidden) return false
+    if ((element as HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).disabled || 
+        element.hasAttribute('hidden')) return false
     
     // Check input type
     if (tagName === 'input' && type === 'hidden') return false
@@ -167,5 +168,7 @@ export const getFocusableElements = (container: HTMLElement): HTMLElement[] => {
   ]
   
   const elements = container.querySelectorAll(focusableSelectors.join(', '))
-  return Array.from(elements).filter(isFocusable) as HTMLElement[]
+  return Array.from(elements).filter((element): element is HTMLElement => {
+    return element instanceof HTMLElement && isFocusable(element)
+  })
 }

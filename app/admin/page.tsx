@@ -27,6 +27,7 @@ import {
   FormControl,
   InputLabel,
   Select,
+  TextField,
 } from "@mui/material"
 import {
   Dashboard,
@@ -93,7 +94,6 @@ export default function AdminDashboard() {
   const [notifyMessage, setNotifyMessage] = useState("")
   const [notifying, setNotifying] = useState(false)
   const [sendEmail, setSendEmail] = useState(true) // เพิ่มตัวเลือกส่งอีเมล
-  const [bulkUpdating, setBulkUpdating] = useState(false)
   const [importing, setImporting] = useState(false)
   const { user, isAuthenticated } = useAuth()
   
@@ -173,28 +173,7 @@ export default function AdminDashboard() {
     }
   }, [])
 
-  const handleBulkUpdatePrices = async () => {
-    try {
-      setBulkUpdating(true)
-      const response = await apiPost('/stationaryhub/api/products/bulk-update-prices', {
-        updateValue: 0,
-        year: selectedYear,
-        category: selectedCategory
-      })
-      
-      if (response.success) {
-        alert('Bulk price update completed successfully!')
-        fetchProductPrices()
-      } else {
-        alert('Bulk price update failed: ' + response.error)
-      }
-    } catch (error) {
-      console.error('Error updating prices:', error)
-      alert('Error updating prices')
-    } finally {
-      setBulkUpdating(false)
-    }
-  }
+
 
   const handleImportPrices = async (file: File) => {
     try {
@@ -914,23 +893,6 @@ export default function AdminDashboard() {
                   className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                 >
                   Refresh
-                </Button>
-
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={handleBulkUpdatePrices}
-                  className="border-gray-300 hover:border-gray-400"
-                  disabled={bulkUpdating}
-                >
-                  {bulkUpdating ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      กำลังอัปเดต...
-                    </div>
-                  ) : (
-                    "Bulk Update"
-                  )}
                 </Button>
 
                 <input
