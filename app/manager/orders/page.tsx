@@ -183,12 +183,18 @@ export default function ManagerOrdersPage() {
       return photoUrl
     }
     
-    // ถ้าเป็น filename ธรรมดา ให้เพิ่ม base path
-    if (photoUrl.startsWith('/')) {
-      return `/stationaryhub${photoUrl}`
+    // ถ้าเป็น path ที่มี basepath แล้ว ให้ใช้เลย
+    if (photoUrl.startsWith('/stationaryhub/')) {
+      return photoUrl
     }
     
-    return `/stationaryhub/${photoUrl}`
+    // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ API route
+    if (photoUrl.startsWith('/')) {
+      const filename = photoUrl.substring(1) // ลบ / ออก
+      return `/stationaryhub/api/image/${filename}`
+    }
+    
+    return `/stationaryhub/api/image/${photoUrl}`
   }
 
   if (loading) {

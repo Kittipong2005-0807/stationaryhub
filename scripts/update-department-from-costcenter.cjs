@@ -107,3 +107,4 @@ async function updateDepartmentFromCostCenter() {
 
 // รันฟังก์ชัน
 updateDepartmentFromCostCenter();
+

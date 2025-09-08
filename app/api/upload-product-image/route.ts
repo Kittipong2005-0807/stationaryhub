@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { writeFile, mkdir } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
+import { getBasePathUrl } from "@/lib/base-path"
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,8 +42,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
-    // ส่ง URL กลับไป
-    const imageUrl = `/${fileName}`
+    // ส่ง URL กลับไป (ส่งแค่ filename)
+    const imageUrl = fileName
 
     return NextResponse.json({ 
       success: true, 

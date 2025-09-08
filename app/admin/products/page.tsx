@@ -74,6 +74,13 @@ export default function ProductManagementPage() {
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
 
+  // หน่วยที่มีอยู่ในระบบ
+  const commonUnits = [
+    "EA", "Piece", "Box", "Pack", "Set", "Dozen", "Gross", "Bundle", 
+    "Roll", "Sheet", "Pad", "Ream", "Carton", "Case", "Pallet", "Kg", 
+    "Gram", "Liter", "Meter", "Yard", "Foot", "Inch", "Cm", "Mm"
+  ]
+
   // Fetch products and categories
   useEffect(() => {
     // Fetch products
@@ -255,7 +262,7 @@ export default function ProductManagementPage() {
       })
 
       if (response.ok) {
-        const result = await response.json()
+        const _result = await response.json()
         alert(`Product ${editingProduct ? "updated" : "created"} successfully!`)
         handleCloseDialog()
         fetchData() // รีเฟรชข้อมูล
@@ -303,16 +310,18 @@ export default function ProductManagementPage() {
       return photoUrl
     }
     
-    // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้เลย
+    // ถ้าเป็น path ที่มี basepath แล้ว ให้ใช้เลย
+    if (photoUrl.startsWith('/stationaryhub/')) {
+      return photoUrl
+    }
+    
+    // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ static path
     if (photoUrl.startsWith('/')) {
-      return `/stationaryhub${photoUrl}`
+      const filename = photoUrl.substring(1) // ลบ / ออก
+      return `/stationaryhub/${filename}`
     }
     
-    // ถ้าเป็น filename ที่ไม่มี path ให้เพิ่ม path
-    if (photoUrl.includes('product_')) {
-      return `/stationaryhub/${photoUrl}`
-    }
-    
+    // ถ้าเป็น filename ที่ไม่มี path ให้ใช้ static path
     return `/stationaryhub/${photoUrl}`
   }
 
@@ -491,6 +500,7 @@ export default function ProductManagementPage() {
                               width={45}
                               height={45}
                               className="rounded-lg object-cover shadow-md"
+                              unoptimized
                             />
                           ) : (
                             <Box className="w-11 h-11 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center shadow-md">
@@ -660,16 +670,38 @@ export default function ProductManagementPage() {
 
                 {/* Unit */}
                 <Grid item xs={12} md={6}>
+                  <FormControl fullWidth size="medium">
+                    <InputLabel>Unit *</InputLabel>
+                    <Select
+                      value={formData.ORDER_UNIT}
+                      onChange={(e) => setFormData({ ...formData, ORDER_UNIT: e.target.value })}
+                      label="Unit *"
+                    >
+                      {commonUnits.map((unit) => (
+                        <MenuItem key={unit} value={unit}>
+                          {unit}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                
+                {/* Custom Unit Input */}
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    label="Unit *"
+                    label="Custom Unit (if not in list above)"
                     value={formData.ORDER_UNIT}
-                    onChange={(e) => setFormData({ ...formData, ORDER_UNIT: e.target.value })}
-                    placeholder="Piece, Box, Pack, etc."
-                    required
+                    onChange={(e) => {
+                      // ตรวจสอบว่าค่าใหม่ไม่ใช่ใน commonUnits
+                      if (!commonUnits.includes(e.target.value)) {
+                        setFormData({ ...formData, ORDER_UNIT: e.target.value })
+                      }
+                    }}
+                    placeholder="Enter custom unit..."
                     variant="outlined"
                     size="medium"
-                    helperText="Required: Enter the unit of measurement"
+                    helperText="Type here if the unit you need is not in the dropdown above"
                   />
                 </Grid>
 
@@ -685,6 +717,7 @@ export default function ProductManagementPage() {
                            width={120}
                            height={120}
                            className="rounded-lg object-cover border border-gray-200"
+                           unoptimized
                          />
                          <IconButton
                            size="small"
