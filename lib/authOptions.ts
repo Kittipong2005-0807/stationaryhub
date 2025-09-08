@@ -269,9 +269,18 @@ export const authOptions: AuthOptions = {
       // ถ้า url เป็น relative path ให้เพิ่ม basePath
       if (url.startsWith('/')) {
         const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
-        const redirectUrl = `${baseUrl}${basePath}${url}`;
-        console.log('🔄 Redirect to:', redirectUrl);
-        return redirectUrl;
+        // ตรวจสอบว่า url มี basePath อยู่แล้วหรือไม่
+        if (url.startsWith(basePath)) {
+          // ถ้ามี basePath อยู่แล้ว ให้ใช้ตามเดิม
+          const redirectUrl = `${baseUrl}${url}`;
+          console.log('🔄 Redirect to (already has basePath):', redirectUrl);
+          return redirectUrl;
+        } else {
+          // ถ้าไม่มี basePath ให้เพิ่มเข้าไป
+          const redirectUrl = `${baseUrl}${basePath}${url}`;
+          console.log('🔄 Redirect to (added basePath):', redirectUrl);
+          return redirectUrl;
+        }
       }
       // ถ้า url เป็น absolute path ให้ใช้ตามเดิม
       console.log('🔄 Redirect to absolute URL:', url);

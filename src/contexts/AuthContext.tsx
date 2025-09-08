@@ -75,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     signOut({ 
+      callbackUrl: getBasePathUrl("/login"),
       redirect: true
     })
   }

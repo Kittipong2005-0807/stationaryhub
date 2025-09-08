@@ -24,7 +24,7 @@ import FormControl from "@mui/material/FormControl"
 import InputLabel from "@mui/material/InputLabel"
 import Select from "@mui/material/Select"
 import MenuItem from "@mui/material/MenuItem"
-import { Add, Edit, Delete, Inventory, Image as ImageIcon, Refresh, Search, FilterList, TrendingUp } from "@mui/icons-material"
+import { Edit, Delete, Inventory, Image as ImageIcon, Search, FilterList } from "@mui/icons-material"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
@@ -56,6 +56,7 @@ interface Category {
 export default function ProductManagementPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [existingUnits, setExistingUnits] = useState<string[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [formData, setFormData] = useState({
@@ -66,20 +67,47 @@ export default function ProductManagementPage() {
     ORDER_UNIT: "",
     PHOTO_URL: "",
   })
+  const [recentUnits, setRecentUnits] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<number | "all">("all")
   const [imageUploading, setImageUploading] = useState(false)
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
 
-  // หน่วยที่มีอยู่ในระบบ
+  // ประเภทหน่วยสินค้าที่ใช้ในระบบ
   const commonUnits = [
     "EA", "Piece", "Box", "Pack", "Set", "Dozen", "Gross", "Bundle", 
     "Roll", "Sheet", "Pad", "Ream", "Carton", "Case", "Pallet", "Kg", 
-    "Gram", "Liter", "Meter", "Yard", "Foot", "Inch", "Cm", "Mm"
+    "Gram", "Liter", "Meter", "Yard", "Foot", "Inch", "Cm", "Mm",
+    "Bottle", "Tube", "Pen", "Pencil", "Marker", "Highlighter", "Eraser",
+    "Stapler", "Clip", "Folder", "File", "Notebook", "Book", "Magazine"
   ]
+
+  // ฟังก์ชันจัดการ Recent Units
+  const loadRecentUnits = () => {
+    try {
+      const saved = localStorage.getItem('recentUnits')
+      if (saved) {
+        setRecentUnits(JSON.parse(saved))
+      }
+    } catch (error) {
+      console.error('Error loading recent units:', error)
+    }
+  }
+
+  const saveRecentUnit = (unit: string) => {
+    if (!unit || unit === "custom") return
+    
+    try {
+      const currentRecent = recentUnits.filter(u => u !== unit)
+      const newRecent = [unit, ...currentRecent].slice(0, 10) // เก็บแค่ 10 อันล่าสุด
+      setRecentUnits(newRecent)
+      localStorage.setItem('recentUnits', JSON.stringify(newRecent))
+    } catch (error) {
+      console.error('Error saving recent unit:', error)
+    }
+  }
 
   // Fetch products and categories
   useEffect(() => {
@@ -118,45 +146,30 @@ export default function ProductManagementPage() {
       }
     };
 
+    // Fetch existing units
+    const fetchExistingUnits = async () => {
+      try {
+        const response = await fetch('/stationaryhub/api/products/units');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && Array.isArray(data.data)) {
+            setExistingUnits(data.data);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching existing units:', error);
+        setExistingUnits([]);
+      }
+    };
+
     if (isAuthenticated && user?.ROLE === "ADMIN") {
       fetchProducts();
       fetchCategories();
+      fetchExistingUnits();
+      loadRecentUnits();
     }
   }, [isAuthenticated, user, router]);
 
-  // Function to refresh data
-  const fetchData = async () => {
-    try {
-      setRefreshing(true);
-      
-      // Fetch products
-      const productsResponse = await fetch("/stationaryhub/api/products")
-      if (productsResponse.ok) {
-        const productsData = await productsResponse.json()
-        setProducts(productsData)
-      }
-
-      // Fetch categories
-      const categoriesResponse = await fetch("/stationaryhub/api/categories")
-      if (categoriesResponse.ok) {
-        const categoriesData = await categoriesResponse.json()
-        // ตรวจสอบว่า response มี data field หรือไม่
-        if (categoriesData && categoriesData.success && Array.isArray(categoriesData.data)) {
-          setCategories(categoriesData.data)
-        } else if (Array.isArray(categoriesData)) {
-          setCategories(categoriesData)
-        } else {
-          console.error('Invalid categories data format:', categoriesData)
-          setCategories([])
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error)
-      alert("Failed to load data")
-    } finally {
-      setRefreshing(false)
-    }
-  }
 
   const handleOpenDialog = (product?: Product) => {
     if (product) {
@@ -263,9 +276,12 @@ export default function ProductManagementPage() {
 
       if (response.ok) {
         const _result = await response.json()
+        // บันทึกหน่วยที่เลือกเป็น recent unit
+        saveRecentUnit(formData.ORDER_UNIT)
         alert(`Product ${editingProduct ? "updated" : "created"} successfully!`)
         handleCloseDialog()
-        fetchData() // รีเฟรชข้อมูล
+        // รีเฟรชข้อมูล
+        window.location.reload()
       } else {
         const errorData = await response.json()
         alert(`Error: ${errorData.error || "Failed to save data"}`)
@@ -290,7 +306,8 @@ export default function ProductManagementPage() {
 
       if (response.ok) {
         alert("Product deleted successfully!")
-        fetchData() // รีเฟรชข้อมูล
+        // รีเฟรชข้อมูล
+        window.location.reload()
       } else {
         const errorData = await response.json()
         alert(`Error: ${errorData.error || "Failed to delete product"}`)
@@ -338,6 +355,7 @@ export default function ProductManagementPage() {
     return matchesSearch && matchesCategory
   })
 
+
   if (!isAuthenticated || user?.ROLE !== "ADMIN") {
     return (
       <div className="text-center py-20">
@@ -373,46 +391,51 @@ export default function ProductManagementPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                   <Button
-                     variant="outlined"
-                     startIcon={<Refresh />}
-                     onClick={fetchData}
-                     disabled={refreshing}
-                     className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                     size="medium"
-                   >
-                     {refreshing ? "Loading..." : "Refresh"}
-                   </Button>
-                 </motion.div>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<span>⟳</span>}
+                    onClick={() => window.location.reload()}
+                    className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                    size="medium"
+                    style={{ 
+                      minWidth: '120px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    Refresh
+                  </Button>
+                </motion.div>
 
-                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                   <Button
-                     variant="outlined"
-                     startIcon={<TrendingUp />}
-                     onClick={() => router.push('/stationaryhub/admin/price-history')}
-                     className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                     size="medium"
-                   >
-                     Price History
-                   </Button>
-                 </motion.div>
-
-                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                   <Button
-                     variant="contained"
-                     startIcon={<Add />}
-                     onClick={() => handleOpenDialog()}
-                     className="bg-white text-blue-600 hover:bg-gray-100 font-bold shadow-lg"
-                     size="medium"
-                   >
-                     Add New Product
-                   </Button>
-                 </motion.div>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<span>➕</span>}
+                    onClick={() => handleOpenDialog()}
+                    className="bg-white text-blue-600 hover:bg-gray-100 font-bold shadow-lg"
+                    size="medium"
+                    style={{ 
+                      minWidth: '160px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#ffffff',
+                      color: '#2563eb',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Add New Product
+                  </Button>
+                </motion.div>
               </div>
             </div>
           </div>
         </motion.div>
+
 
         {/* Search and Filter Section */}
         <motion.div
@@ -655,9 +678,12 @@ export default function ProductManagementPage() {
                   <TextField
                     fullWidth
                     label="Unit Price"
-                    type="number"
-                    value={formData.UNIT_COST}
-                    onChange={(e) => setFormData({ ...formData, UNIT_COST: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+                    value={formData.UNIT_COST ? formData.UNIT_COST.toLocaleString() : ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/,/g, '')
+                      const numValue = value === '' ? 0 : parseFloat(value) || 0
+                      setFormData({ ...formData, UNIT_COST: numValue })
+                    }}
                     placeholder="0.00"
                     variant="outlined"
                     size="medium"
@@ -671,13 +697,13 @@ export default function ProductManagementPage() {
                 {/* Unit */}
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth size="medium">
-                    <InputLabel>Unit *</InputLabel>
+                    <InputLabel>Unit Type *</InputLabel>
                     <Select
                       value={formData.ORDER_UNIT}
                       onChange={(e) => setFormData({ ...formData, ORDER_UNIT: e.target.value })}
-                      label="Unit *"
+                      label="Unit Type *"
                     >
-                      {commonUnits.map((unit) => (
+                      {[...recentUnits, ...existingUnits, ...commonUnits].map((unit) => (
                         <MenuItem key={unit} value={unit}>
                           {unit}
                         </MenuItem>
@@ -685,28 +711,9 @@ export default function ProductManagementPage() {
                     </Select>
                   </FormControl>
                 </Grid>
-                
-                {/* Custom Unit Input */}
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Custom Unit (if not in list above)"
-                    value={formData.ORDER_UNIT}
-                    onChange={(e) => {
-                      // ตรวจสอบว่าค่าใหม่ไม่ใช่ใน commonUnits
-                      if (!commonUnits.includes(e.target.value)) {
-                        setFormData({ ...formData, ORDER_UNIT: e.target.value })
-                      }
-                    }}
-                    placeholder="Enter custom unit..."
-                    variant="outlined"
-                    size="medium"
-                    helperText="Type here if the unit you need is not in the dropdown above"
-                  />
-                </Grid>
 
                                  {/* Image Upload */}
-                 <Grid item xs={12} md={6}>
+                 <Grid item xs={12}>
                    <Box className="space-y-3">
                      {/* Image Preview */}
                      {formData.PHOTO_URL && (
@@ -743,7 +750,7 @@ export default function ProductManagementPage() {
                          <Button
                            variant="outlined"
                            component="span"
-                           startIcon={imageUploading ? <Refresh className="animate-spin" /> : <ImageIcon />}
+                           startIcon={imageUploading ? <span className="animate-spin">⟳</span> : <ImageIcon />}
                            className="w-full border border-gray-300 hover:border-gray-400"
                            disabled={imageUploading}
                            size="small"

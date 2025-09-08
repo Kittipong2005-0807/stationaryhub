@@ -38,7 +38,7 @@ export async function GET(request: NextRequest, { params }: { params: { filename
       error: "Image not found",
       filename,
       filePath,
-      details: error.message 
+      details: error instanceof Error ? error.message : String(error)
     }, { status: 404 })
   }
 } 
