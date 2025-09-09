@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
 
     // ถ้าเป็น protected path แต่ไม่มี token ให้ redirect ไป login
     if (isProtectedPath && !token) {
-      const loginUrl = new URL(`${basePath}/login`, request.url);
+      const loginUrl = new URL('/login', request.url);
       return NextResponse.redirect(loginUrl);
     }
 
@@ -49,19 +49,19 @@ export async function middleware(request: NextRequest) {
 
       // ตรวจสอบ admin path
       if (pathWithoutBase.startsWith('/admin') && userRole !== 'ADMIN') {
-        const homeUrl = new URL(basePath, request.url);
+        const homeUrl = new URL('/', request.url);
         return NextResponse.redirect(homeUrl);
       }
 
       // ตรวจสอบ manager path
       if (pathWithoutBase.startsWith('/manager') && userRole !== 'MANAGER') {
-        const homeUrl = new URL(basePath, request.url);
+        const homeUrl = new URL('/', request.url);
         return NextResponse.redirect(homeUrl);
       }
 
       // ตรวจสอบ user path
       if (pathWithoutBase.startsWith('/orders') && userRole !== 'USER') {
-        const homeUrl = new URL(basePath, request.url);
+        const homeUrl = new URL('/', request.url);
         return NextResponse.redirect(homeUrl);
       }
     }
@@ -70,7 +70,7 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     console.error('Middleware error:', error)
     // ถ้าเกิด error ให้ redirect ไป login
-    const loginUrl = new URL(`${basePath}/login`, request.url);
+    const loginUrl = new URL('/login', request.url);
     return NextResponse.redirect(loginUrl);
   }
 }

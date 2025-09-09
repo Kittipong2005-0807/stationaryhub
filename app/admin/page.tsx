@@ -124,7 +124,7 @@ export default function AdminDashboard() {
 
   const fetchRequisitions = useCallback(async () => {
     try {
-      const response = await apiGet("/stationaryhub/api/requisitions")
+      const response = await apiGet("/api/requisitions")
       if (response && Array.isArray(response)) {
         setRequisitions(response)
         console.log('✅ Requisitions loaded:', response.length, 'items')
@@ -159,7 +159,7 @@ export default function AdminDashboard() {
 
   const fetchRealPriceHistory = useCallback(async () => {
     try {
-      const response = await apiGet('/stationaryhub/api/products/real-price-history');
+      const response = await apiGet('/api/products/real-price-history');
       if (response.success && Array.isArray(response.data)) {
         setRealPriceHistory(response.data)
         console.log('✅ Real price history loaded:', response.data.length, 'items')
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
       const formData = new FormData()
       formData.append('file', file)
       
-      const response = await apiPost('/stationaryhub/api/products/import-prices', formData)
+      const response = await apiPost('/api/products/import-prices', formData)
       
       if (response.success) {
         alert('Price import completed successfully!')
@@ -206,30 +206,25 @@ export default function AdminDashboard() {
 
   // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
   const getImageUrl = (photoUrl: string | null | undefined) => {
-    if (!photoUrl) return '/stationaryhub/placeholder.jpg'
+    if (!photoUrl) return '/placeholder.jpg'
     
     // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
     if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
       return photoUrl
     }
     
-    // ถ้าเป็น path ที่มี basepath แล้ว ให้ใช้เลย
-    if (photoUrl.startsWith('/stationaryhub/')) {
-      return photoUrl
-    }
-    
     // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ API route
     if (photoUrl.startsWith('/')) {
       const filename = photoUrl.substring(1) // ลบ / ออก
-      return `/stationaryhub/api/image/${filename}`
+      return `/api/image/${filename}`
     }
     
-    return `/stationaryhub/api/image/${photoUrl}`
+    return `/api/image/${photoUrl}`
   }
 
   const handlePriceChange = async (productId: number, newPrice: number) => {
     try {
-      const response = await apiPost('/stationaryhub/api/products/update-price', {
+      const response = await apiPost('/api/products/update-price', {
         productId,
         newPrice,
         year: selectedYear,
@@ -333,7 +328,7 @@ export default function AdminDashboard() {
     setNotifying(true)
     try {
       // ส่งการแจ้งเตือนในระบบ (In-App Notification)
-      const response = await fetch("/stationaryhub/api/notifications/arrival", {
+      const response = await fetch("/api/notifications/arrival", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -350,7 +345,7 @@ export default function AdminDashboard() {
         // ส่งอีเมลแจ้งเตือนไปยัง user (ถ้าเลือกส่งอีเมล)
         if (sendEmail) {
           try {
-            const emailResponse = await fetch("/stationaryhub/api/send-arrival-email", {
+            const emailResponse = await fetch("/api/send-arrival-email", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",

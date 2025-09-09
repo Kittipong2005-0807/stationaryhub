@@ -32,25 +32,20 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
 
   // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
   const getImageUrl = (photoUrl: string | null | undefined) => {
-    if (!photoUrl) return '/stationaryhub/placeholder.svg'
+    if (!photoUrl) return '/placeholder.svg'
     
     // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
     if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
       return photoUrl
     }
     
-    // ถ้าเป็น path ที่มี basepath แล้ว ให้ใช้เลย
-    if (photoUrl.startsWith('/stationaryhub/')) {
-      return photoUrl
-    }
-    
     // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ API route
     if (photoUrl.startsWith('/')) {
       const filename = photoUrl.substring(1) // ลบ / ออก
-      return `/stationaryhub/api/image/${filename}`
+      return `/api/image/${filename}`
     }
     
-    return `/stationaryhub/api/image/${photoUrl}`
+    return `/api/image/${photoUrl}`
   }
 
   const handleAddToCart = async () => {

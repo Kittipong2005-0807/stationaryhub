@@ -105,7 +105,7 @@ export default function ManagerCartPage() {
 
     try {
       // ใช้ API orgcode3 เพื่อสร้าง requisition พร้อม orgcode3
-      const res = await fetch(getApiUrl("/api/orgcode3"), {
+      const res = await fetch("/api/orgcode3", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requisitionData),
@@ -134,25 +134,20 @@ export default function ManagerCartPage() {
 
   // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
   const getImageUrl = (photoUrl: string | null | undefined) => {
-    if (!photoUrl) return '/stationaryhub/placeholder.svg'
+    if (!photoUrl) return '/placeholder.svg'
     
     // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
     if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
       return photoUrl
     }
     
-    // ถ้าเป็น path ที่มี basepath แล้ว ให้ใช้เลย
-    if (photoUrl.startsWith('/stationaryhub/')) {
-      return photoUrl
-    }
-    
     // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ API route
     if (photoUrl.startsWith('/')) {
       const filename = photoUrl.substring(1) // ลบ / ออก
-      return `/stationaryhub/api/image/${filename}`
+      return `/api/image/${filename}`
     }
     
-    return `/stationaryhub/api/image/${photoUrl}`
+    return `/api/image/${photoUrl}`
   }
 
   const handleQuantityChange = (itemId: number, newQuantity: number) => {

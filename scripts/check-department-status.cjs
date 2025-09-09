@@ -138,3 +138,5 @@ async function checkDepartmentStatus() {
 // รันฟังก์ชัน
 checkDepartmentStatus();
 
+
+

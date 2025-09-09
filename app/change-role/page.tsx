@@ -43,7 +43,7 @@ export default function SimpleChangeRolePage() {
 
     setSubmitting(true)
     try {
-      const response = await fetch("/stationaryhub/api/roles", {
+      const response = await fetch("/api/roles", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

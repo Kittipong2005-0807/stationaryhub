@@ -54,7 +54,7 @@ export default function ChangeRolePage() {
   const loadPermissions = async () => {
     setLoading(true)
     try {
-      const response = await fetch("/stationaryhub/api/permissions/check")
+      const response = await fetch("/api/permissions/check")
       if (response.ok) {
         const permissions = await response.json()
         setUserPermissions(permissions)
@@ -71,7 +71,7 @@ export default function ChangeRolePage() {
 
     setSubmitting(true)
     try {
-      const response = await fetch("/stationaryhub/api/roles", {
+      const response = await fetch("/api/roles", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

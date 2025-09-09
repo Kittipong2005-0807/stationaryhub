@@ -225,7 +225,7 @@ export default function ProductManagementPage() {
       const formData = new FormData()
       formData.append("file", file)
 
-      const response = await fetch("/stationaryhub/api/upload-product-image", {
+      const response = await fetch("/api/upload-product-image", {
         method: "POST",
         body: formData,
       })
@@ -261,8 +261,8 @@ export default function ProductManagementPage() {
 
     try {
       const url = editingProduct 
-        ? `/stationaryhub/api/products/${editingProduct.PRODUCT_ID}` 
-        : "/stationaryhub/api/products"
+        ? `/api/products/${editingProduct.PRODUCT_ID}` 
+        : "/api/products"
       
       const method = editingProduct ? "PUT" : "POST"
       
@@ -300,7 +300,7 @@ export default function ProductManagementPage() {
     }
 
     try {
-      const response = await fetch(`/stationaryhub/api/products/${productId}`, {
+      const response = await fetch(`/api/products/${productId}`, {
         method: "DELETE",
       })
 
@@ -320,26 +320,21 @@ export default function ProductManagementPage() {
 
   // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
   const getImageUrl = (photoUrl: string | null | undefined) => {
-    if (!photoUrl) return '/stationaryhub/placeholder.jpg'
+    if (!photoUrl) return '/placeholder.jpg'
     
     // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
     if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
       return photoUrl
     }
     
-    // ถ้าเป็น path ที่มี basepath แล้ว ให้ใช้เลย
-    if (photoUrl.startsWith('/stationaryhub/')) {
-      return photoUrl
-    }
-    
     // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ static path
     if (photoUrl.startsWith('/')) {
       const filename = photoUrl.substring(1) // ลบ / ออก
-      return `/stationaryhub/${filename}`
+      return `/${filename}`
     }
     
     // ถ้าเป็น filename ที่ไม่มี path ให้ใช้ static path
-    return `/stationaryhub/${photoUrl}`
+    return `/${photoUrl}`
   }
 
   const getCategoryName = (categoryId: number) => {

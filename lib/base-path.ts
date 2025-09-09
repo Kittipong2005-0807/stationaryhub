@@ -12,7 +12,13 @@ export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
 export function getBasePathUrl(path: string = ''): string {
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   
-  // Always use BASE_PATH for consistency
+  if (typeof window !== 'undefined') {
+    // Client-side: Next.js จะจัดการ basePath ให้อัตโนมัติ
+    // ดังนั้นเราใช้ path โดยตรง (ไม่ต้องเพิ่ม basePath)
+    return path.startsWith('/') ? path : `/${path}`;
+  }
+  
+  // Server-side: ใช้ BASE_PATH
   return `${BASE_PATH}/${cleanPath}`.replace(/\/+/g, '/');
 }
 
@@ -21,6 +27,12 @@ export function getBasePathUrl(path: string = ''): string {
  * @returns Base path for API routes
  */
 export function getApiBasePath(): string {
+  if (typeof window !== 'undefined') {
+    // Client-side: Next.js จะจัดการ basePath ให้อัตโนมัติ
+    return '';
+  }
+  
+  // Server-side: ใช้ BASE_PATH
   return BASE_PATH;
 }
 

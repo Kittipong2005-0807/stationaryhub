@@ -23,8 +23,8 @@ interface ExtendedUser {
 export const authOptions: AuthOptions = {
   // NextAuth configuration
   pages: {
-    signIn: getBasePathUrl('/login'),
-    error: getBasePathUrl('/login'),
+    signIn: '/login',
+    error: '/login',
   },
   
   // Session configuration
@@ -266,22 +266,14 @@ export const authOptions: AuthOptions = {
     async redirect({ url, baseUrl }) {
       console.log('🔄 Redirect callback - url:', url, 'baseUrl:', baseUrl);
       
-      // ถ้า url เป็น relative path ให้เพิ่ม basePath
+      // ถ้า url เป็น relative path ให้ใช้ baseUrl ที่มี base path แล้ว
       if (url.startsWith('/')) {
-        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
-        // ตรวจสอบว่า url มี basePath อยู่แล้วหรือไม่
-        if (url.startsWith(basePath)) {
-          // ถ้ามี basePath อยู่แล้ว ให้ใช้ตามเดิม
-          const redirectUrl = `${baseUrl}${url}`;
-          console.log('🔄 Redirect to (already has basePath):', redirectUrl);
-          return redirectUrl;
-        } else {
-          // ถ้าไม่มี basePath ให้เพิ่มเข้าไป
-          const redirectUrl = `${baseUrl}${basePath}${url}`;
-          console.log('🔄 Redirect to (added basePath):', redirectUrl);
-          return redirectUrl;
-        }
+        // Next.js จะจัดการ base path ให้อัตโนมัติ
+        const redirectUrl = `${baseUrl}${url}`;
+        console.log('🔄 Redirect to:', redirectUrl);
+        return redirectUrl;
       }
+      
       // ถ้า url เป็น absolute path ให้ใช้ตามเดิม
       console.log('🔄 Redirect to absolute URL:', url);
       return url;

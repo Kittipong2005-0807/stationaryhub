@@ -41,7 +41,7 @@ const theme = createTheme({
 export default function ThemeProviderClient({ children }: { children: ReactNode }) {
   return (
     <SessionProvider 
-      basePath={`${BASE_PATH}/api/auth`}
+      basePath="/api/auth"
       refetchInterval={5 * 60} // Refetch session every 5 minutes
       refetchOnWindowFocus={true}
     >

@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     signOut({ 
-      callbackUrl: getBasePathUrl("/login"),
+      callbackUrl: "/login",
       redirect: true
     })
   }
@@ -84,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
       const currentPath = window.location.pathname
-      const loginPath = getBasePathUrl("/login")
+      const loginPath = "/login"
       
       // ตรวจสอบว่าไม่ใช่หน้า login และไม่ใช่ API route
       if (currentPath !== loginPath && !currentPath.includes("/api/")) {

@@ -551,7 +551,7 @@ export default function ApprovalsPage() {
     
     setNotifying(true)
     try {
-      const response = await fetch("/stationaryhub/api/notifications/arrival", {
+      const response = await fetch("/api/notifications/arrival", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -680,25 +680,20 @@ export default function ApprovalsPage() {
 
   // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
   const getImageUrl = (photoUrl: string | null | undefined) => {
-    if (!photoUrl) return '/stationaryhub/placeholder.jpg'
+    if (!photoUrl) return '/placeholder.jpg'
     
     // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
     if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
       return photoUrl
     }
     
-    // ถ้าเป็น path ที่มี basepath แล้ว ให้ใช้เลย
-    if (photoUrl.startsWith('/stationaryhub/')) {
-      return photoUrl
-    }
-    
     // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ API route
     if (photoUrl.startsWith('/')) {
       const filename = photoUrl.substring(1) // ลบ / ออก
-      return `/stationaryhub/api/image/${filename}`
+      return `/api/image/${filename}`
     }
     
-    return `/stationaryhub/api/image/${photoUrl}`
+    return `/api/image/${photoUrl}`
   }
 
   return (

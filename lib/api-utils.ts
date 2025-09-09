@@ -18,8 +18,9 @@ export function getApiUrl(endpoint: string): string {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
 
   if (typeof window !== 'undefined') {
-    // Client-side: ใช้ BASE_PATH เพื่อให้ API calls ทำงานถูกต้อง
-    return `${BASE_PATH}/${cleanEndpoint}`.replace(/\/+/g, '/')
+    // Client-side: Next.js จะจัดการ basePath ให้อัตโนมัติ
+    // ดังนั้นเราใช้ endpoint โดยตรง
+    return endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   }
 
   // Server-side: use NEXTAUTH_URL with BASE_PATH

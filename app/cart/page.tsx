@@ -152,7 +152,7 @@ export default function CartPage() {
 
     try {
       // ใช้ API orgcode3 เพื่อสร้าง requisition พร้อม orgcode3
-      const res = await fetch("/stationaryhub/api/orgcode3", {
+      const res = await fetch("/api/orgcode3", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requisitionData),

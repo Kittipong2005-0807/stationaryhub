@@ -6,6 +6,8 @@ COPY next.config.js ./next.config.js
 RUN npm install
 RUN npx prisma generate
 COPY . .
+# Copy environment file if exists
+COPY .env* ./
 RUN npm run build
 
 FROM node:23-alpine AS runner

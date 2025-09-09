@@ -35,7 +35,7 @@ export default function TestNotificationsPage() {
       setError("")
       setResult(null)
 
-      const response = await fetch("/stationaryhub/api/notifications/test", {
+      const response = await fetch("/api/notifications/test", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
