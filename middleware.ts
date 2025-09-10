@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
     // ตรวจสอบ path ที่ไม่ต้องการ authentication
     const publicPaths = ['/login', '/api/auth', '/', '/api'];
     const isPublicPath = publicPaths.some(path => pathWithoutBase.startsWith(path));
-    
+    console.log('xxxxxxxxxxxxxxxxxxxxxxxx', new URL(`${basePath}/login`, request.nextUrl.origin))
     // ถ้าเป็นหน้า login ให้ผ่านไปได้เสมอ (ไม่ต้องตรวจสอบ token)
     if (pathWithoutBase === '/login') {
       return NextResponse.next();
@@ -36,11 +36,13 @@ export async function middleware(request: NextRequest) {
     if (isPublicPath) {
       return NextResponse.next();
     }
-
+    
     // ถ้าเป็น protected path แต่ไม่มี token ให้ redirect ไป login
     if (isProtectedPath && !token) {
-      const loginUrl = new URL('/login', request.url);
-      return NextResponse.redirect(loginUrl);
+      
+      // สร้าง URL ใหม่โดยใช้ origin และ pathname ที่ถูกต้อง
+      const loginUrl = new URL(`${basePath}/login`, request.nextUrl.origin);
+      return NextResponse.redirect('/login');
     }
 
     // ถ้ามี token ให้ตรวจสอบ role
@@ -49,19 +51,19 @@ export async function middleware(request: NextRequest) {
 
       // ตรวจสอบ admin path
       if (pathWithoutBase.startsWith('/admin') && userRole !== 'ADMIN') {
-        const homeUrl = new URL('/', request.url);
+        const homeUrl = new URL(basePath, request.nextUrl.origin);
         return NextResponse.redirect(homeUrl);
       }
 
       // ตรวจสอบ manager path
       if (pathWithoutBase.startsWith('/manager') && userRole !== 'MANAGER') {
-        const homeUrl = new URL('/', request.url);
+        const homeUrl = new URL(basePath, request.nextUrl.origin);
         return NextResponse.redirect(homeUrl);
       }
 
       // ตรวจสอบ user path
       if (pathWithoutBase.startsWith('/orders') && userRole !== 'USER') {
-        const homeUrl = new URL('/', request.url);
+        const homeUrl = new URL(basePath, request.nextUrl.origin);
         return NextResponse.redirect(homeUrl);
       }
     }
@@ -70,7 +72,7 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     console.error('Middleware error:', error)
     // ถ้าเกิด error ให้ redirect ไป login
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL(`${basePath}/login`, request.nextUrl.origin);
     return NextResponse.redirect(loginUrl);
   }
 }

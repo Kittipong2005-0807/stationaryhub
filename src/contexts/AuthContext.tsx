@@ -42,8 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const user = session?.user ?? null
   
-  console.log("AuthProvider session:", user)
-  console.log("AuthProvider status:", status)
   
   const isAuthenticated = status === "authenticated"
   const isAuthLoading = status === "loading"
@@ -75,24 +73,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     signOut({ 
-      callbackUrl: "/login",
+      callbackUrl: getBasePathUrl("/login"),  // ใช้ getBasePathUrl แทน "/login"
       redirect: true
     })
   }
 
   // Redirect to login if not authenticated and not loading
-  useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
-      const currentPath = window.location.pathname
-      const loginPath = "/login"
+  // useEffect(() => {
+  //   if (!isAuthLoading && !isAuthenticated) {
+  //     const currentPath = window.location.pathname
+  //     const loginPath = "/login"
       
-      // ตรวจสอบว่าไม่ใช่หน้า login และไม่ใช่ API route
-      if (currentPath !== loginPath && !currentPath.includes("/api/")) {
-        console.log("Redirecting to login - user not authenticated")
-        router.push(loginPath)
-      }
-    }
-  }, [isAuthenticated, isAuthLoading, router])
+  //     // ตรวจสอบว่าไม่ใช่หน้า login และไม่ใช่ API route
+  //     if (currentPath !== loginPath && !currentPath.includes("/api/")) {
+  //       console.log("Redirecting to login - user not authenticated")
+  //       router.push(loginPath)
+  //     }
+  //   }
+  // }, [isAuthenticated, isAuthLoading, router])
 
   return (
     <AuthContext.Provider value={{ user, login, logout, isAuthenticated, isAuthLoading }}>

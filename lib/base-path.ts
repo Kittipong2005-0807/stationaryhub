@@ -2,7 +2,7 @@
  * Utility functions for handling base path in StationaryHub
  */
 
-export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
+export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || (process.env.NODE_ENV === 'production' ? '/stationaryhub' : '');
 
 /**
  * Get the full URL with base path
@@ -10,16 +10,9 @@ export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
  * @returns Full URL with base path
  */
 export function getBasePathUrl(path: string = ''): string {
-  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-  
-  if (typeof window !== 'undefined') {
-    // Client-side: Next.js จะจัดการ basePath ให้อัตโนมัติ
-    // ดังนั้นเราใช้ path โดยตรง (ไม่ต้องเพิ่ม basePath)
-    return path.startsWith('/') ? path : `/${path}`;
-  }
-  
-  // Server-side: ใช้ BASE_PATH
-  return `${BASE_PATH}/${cleanPath}`.replace(/\/+/g, '/');
+  // ใช้ relative path เสมอ - Next.js จะจัดการ base path ให้อัตโนมัติ
+  console.log('getBasePathUrl', path)
+  return path.startsWith('/') ? path : `/${path}`;
 }
 
 /**
@@ -27,13 +20,8 @@ export function getBasePathUrl(path: string = ''): string {
  * @returns Base path for API routes
  */
 export function getApiBasePath(): string {
-  if (typeof window !== 'undefined') {
-    // Client-side: Next.js จะจัดการ basePath ให้อัตโนมัติ
-    return '';
-  }
-  
-  // Server-side: ใช้ BASE_PATH
-  return BASE_PATH;
+  // ใช้ empty string เสมอ - Next.js จะจัดการ base path ให้อัตโนมัติ
+  return '';
 }
 
 /**
@@ -62,7 +50,8 @@ export function removeBasePath(fullPath: string): string {
  * @returns Base path for static assets
  */
 export function getStaticBasePath(): string {
-  return BASE_PATH;
+  // ใช้ empty string เสมอ - Next.js จะจัดการ base path ให้อัตโนมัติ
+  return '';
 }
 
 /**
@@ -70,5 +59,6 @@ export function getStaticBasePath(): string {
  * @returns Base path for images
  */
 export function getImageBasePath(): string {
-  return BASE_PATH;
+  // ใช้ empty string เสมอ - Next.js จะจัดการ base path ให้อัตโนมัติ
+  return '';
 }
