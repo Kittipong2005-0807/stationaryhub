@@ -1,97 +1,94 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { motion } from "framer-motion"
-import { 
-  Bell, 
-  CheckCircle, 
-  XCircle, 
-  Package, 
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { motion } from 'framer-motion';
+import { apiPost } from '@/lib/api-utils';
+import {
+  Bell,
+  CheckCircle,
+  XCircle,
+  Package,
   Send,
   RefreshCw,
   AlertTriangle,
   Info
-} from "lucide-react"
+} from 'lucide-react';
 
 export default function TestNotificationsPage() {
-  const [notificationType, setNotificationType] = useState("requisition_created")
-  const [userId, setUserId] = useState("testuser")
-  const [requisitionId, setRequisitionId] = useState("1")
-  const [message, setMessage] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<any>(null)
-  const [error, setError] = useState("")
+  const [notificationType, setNotificationType] = useState(
+    'requisition_created'
+  );
+  const [userId, setUserId] = useState('testuser');
+  const [requisitionId, setRequisitionId] = useState('1');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState('');
 
   const handleTestNotification = async () => {
     try {
-      setLoading(true)
-      setError("")
-      setResult(null)
+      setLoading(true);
+      setError('');
+      setResult(null);
 
-      const response = await fetch("/api/notifications/test", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          type: notificationType,
-          userId,
-          requisitionId: parseInt(requisitionId),
-          message
-        }),
-      })
+      const data = await apiPost('/api/notifications/test', {
+        type: notificationType,
+        userId,
+        requisitionId: parseInt(requisitionId),
+        message
+      });
 
-      const data = await response.json()
-
-      if (response.ok) {
-        setResult(data)
-      } else {
-        setError(data.error || "เกิดข้อผิดพลาดในการทดสอบ")
-      }
+      setResult(data);
     } catch (error) {
-      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
-      console.error("Error testing notification:", error)
+      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      console.error('Error testing notification:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'requisition_created':
-        return <Package className="h-5 w-5 text-blue-600" />
+        return <Package className="h-5 w-5 text-blue-600" />;
       case 'requisition_approved':
-        return <CheckCircle className="h-5 w-5 text-green-600" />
+        return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'requisition_rejected':
-        return <XCircle className="h-5 w-5 text-red-600" />
+        return <XCircle className="h-5 w-5 text-red-600" />;
       case 'test_email':
-        return <Send className="h-5 w-5 text-purple-600" />
+        return <Send className="h-5 w-5 text-purple-600" />;
       default:
-        return <Bell className="h-5 w-5 text-gray-600" />
+        return <Bell className="h-5 w-5 text-gray-600" />;
     }
-  }
+  };
 
   const getNotificationDescription = (type: string) => {
     switch (type) {
       case 'requisition_created':
-        return "ทดสอบการแจ้งเตือนเมื่อสร้าง requisition ใหม่"
+        return 'ทดสอบการแจ้งเตือนเมื่อสร้าง requisition ใหม่';
       case 'requisition_approved':
-        return "ทดสอบการแจ้งเตือนเมื่อ requisition ได้รับการอนุมัติ"
+        return 'ทดสอบการแจ้งเตือนเมื่อ requisition ได้รับการอนุมัติ';
       case 'requisition_rejected':
-        return "ทดสอบการแจ้งเตือนเมื่อ requisition ถูกปฏิเสธ"
+        return 'ทดสอบการแจ้งเตือนเมื่อ requisition ถูกปฏิเสธ';
       case 'test_email':
-        return "ทดสอบการส่งอีเมลแจ้งเตือน"
+        return 'ทดสอบการส่งอีเมลแจ้งเตือน';
       default:
-        return "ทดสอบระบบการแจ้งเตือน"
+        return 'ทดสอบระบบการแจ้งเตือน';
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -140,7 +137,10 @@ export default function TestNotificationsPage() {
               <CardContent className="p-6 space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="notificationType">ประเภทการแจ้งเตือน</Label>
-                  <Select value={notificationType} onValueChange={setNotificationType}>
+                  <Select
+                    value={notificationType}
+                    onValueChange={setNotificationType}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -193,7 +193,7 @@ export default function TestNotificationsPage() {
                   />
                 </div>
 
-                {notificationType === "requisition_rejected" && (
+                {notificationType === 'requisition_rejected' && (
                   <div className="space-y-2">
                     <Label htmlFor="message">เหตุผลการปฏิเสธ</Label>
                     <Textarea
@@ -262,7 +262,9 @@ export default function TestNotificationsPage() {
                   <div className="text-center text-gray-500 py-8">
                     <Bell className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>ยังไม่มีการทดสอบ</p>
-                    <p className="text-sm">เลือกประเภทการแจ้งเตือนและคลิกปุ่มทดสอบ</p>
+                    <p className="text-sm">
+                      เลือกประเภทการแจ้งเตือนและคลิกปุ่มทดสอบ
+                    </p>
                   </div>
                 )}
 
@@ -273,7 +275,8 @@ export default function TestNotificationsPage() {
                     {getNotificationDescription(notificationType)}
                   </h4>
                   <p className="text-sm text-gray-600">
-                    การทดสอบนี้จะส่งการแจ้งเตือนไปยัง Manager และ User ที่เกี่ยวข้อง
+                    การทดสอบนี้จะส่งการแจ้งเตือนไปยัง Manager และ User
+                    ที่เกี่ยวข้อง
                   </p>
                 </div>
               </CardContent>
@@ -298,24 +301,36 @@ export default function TestNotificationsPage() {
             <CardContent className="space-y-3 text-orange-700">
               <div className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
-                <p><strong>สร้าง Requisition ใหม่:</strong> ทดสอบการแจ้งเตือน Manager เมื่อมีคำขอเบิกใหม่</p>
+                <p>
+                  <strong>สร้าง Requisition ใหม่:</strong> ทดสอบการแจ้งเตือน
+                  Manager เมื่อมีคำขอเบิกใหม่
+                </p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
-                <p><strong>อนุมัติ Requisition:</strong> ทดสอบการแจ้งเตือน User และ Manager อื่นๆ เมื่อคำขอได้รับการอนุมัติ</p>
+                <p>
+                  <strong>อนุมัติ Requisition:</strong> ทดสอบการแจ้งเตือน User
+                  และ Manager อื่นๆ เมื่อคำขอได้รับการอนุมัติ
+                </p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
-                <p><strong>ปฏิเสธ Requisition:</strong> ทดสอบการแจ้งเตือน User และ Manager อื่นๆ เมื่อคำขอถูกปฏิเสธ</p>
+                <p>
+                  <strong>ปฏิเสธ Requisition:</strong> ทดสอบการแจ้งเตือน User
+                  และ Manager อื่นๆ เมื่อคำขอถูกปฏิเสธ
+                </p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
-                <p><strong>ทดสอบอีเมล:</strong> ทดสอบการส่งอีเมลแจ้งเตือนไปยังที่อยู่อีเมลที่กำหนด</p>
+                <p>
+                  <strong>ทดสอบอีเมล:</strong>{' '}
+                  ทดสอบการส่งอีเมลแจ้งเตือนไปยังที่อยู่อีเมลที่กำหนด
+                </p>
               </div>
             </CardContent>
           </Card>
         </motion.div>
       </motion.div>
     </div>
-  )
-} 
+  );
+}

@@ -2,7 +2,7 @@
  * Utility functions for API calls with base path support
  */
 
-import { BASE_PATH } from './base-path'
+import { BASE_PATH } from './base-path';
 
 /**
  * Get the full API URL with base path
@@ -10,22 +10,21 @@ import { BASE_PATH } from './base-path'
  * @returns Full API URL with base path
  */
 export function getApiUrl(endpoint: string): string {
-  // ถ้า endpoint เริ่มต้นด้วย /stationaryhub แล้ว ให้ใช้เลย
-  if (endpoint.startsWith('/stationaryhub')) {
-    return endpoint
+  // ถ้า endpoint เริ่มต้นด้วย basePath แล้ว ให้ใช้เลย
+  if (endpoint.startsWith(BASE_PATH)) {
+    return endpoint;
   }
 
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
 
   if (typeof window !== 'undefined') {
-    // Client-side: Next.js จะจัดการ basePath ให้อัตโนมัติ
-    // ดังนั้นเราใช้ endpoint โดยตรง
-    return endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    // Client-side: ใช้ basePath สำหรับ API calls
+    return `${BASE_PATH}/${cleanEndpoint}`.replace(/\/+/g, '/');
   }
 
   // Server-side: use NEXTAUTH_URL with BASE_PATH
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-  return `${baseUrl}${BASE_PATH}/${cleanEndpoint}`.replace(/\/+/g, '/')
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  return `${baseUrl}${BASE_PATH}/${cleanEndpoint}`.replace(/\/+/g, '/');
 }
 
 /**
@@ -35,36 +34,39 @@ export function getApiUrl(endpoint: string): string {
  * @returns Promise with the response data
  */
 export async function apiFetch<T = any>(
-  endpoint: string, 
+  endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = getApiUrl(endpoint)
-  
+  const url = getApiUrl(endpoint);
+
+  // Debug: แสดง URL ที่ใช้
+  console.log(`API call: ${endpoint} -> ${url}`);
+
   try {
     const response = await fetch(url, {
       ...options,
       credentials: 'include', // Include session cookies by default
       headers: {
         'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    })
+        ...options.headers
+      }
+    });
 
     // Check if response is HTML (error page)
-    const contentType = response.headers.get('content-type')
+    const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('text/html')) {
-      throw new Error(`API endpoint not found: ${endpoint}`)
+      throw new Error(`API endpoint not found: ${endpoint}`);
     }
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json()
-    return data
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error(`API call failed for ${endpoint}:`, error)
-    throw error
+    console.error(`API call failed for ${endpoint}:`, error);
+    throw error;
   }
 }
 
@@ -74,7 +76,7 @@ export async function apiFetch<T = any>(
  * @returns Promise with the response data
  */
 export async function apiGet<T = any>(endpoint: string): Promise<T> {
-  return apiFetch<T>(endpoint, { method: 'GET' })
+  return apiFetch<T>(endpoint, { method: 'GET' });
 }
 
 /**
@@ -83,11 +85,14 @@ export async function apiGet<T = any>(endpoint: string): Promise<T> {
  * @param data - The data to send
  * @returns Promise with the response data
  */
-export async function apiPost<T = any>(endpoint: string, data: any): Promise<T> {
+export async function apiPost<T = any>(
+  endpoint: string,
+  data: any
+): Promise<T> {
   return apiFetch<T>(endpoint, {
     method: 'POST',
-    body: JSON.stringify(data),
-  })
+    body: JSON.stringify(data)
+  });
 }
 
 /**
@@ -99,8 +104,8 @@ export async function apiPost<T = any>(endpoint: string, data: any): Promise<T> 
 export async function apiPut<T = any>(endpoint: string, data: any): Promise<T> {
   return apiFetch<T>(endpoint, {
     method: 'PUT',
-    body: JSON.stringify(data),
-  })
+    body: JSON.stringify(data)
+  });
 }
 
 /**
@@ -109,7 +114,7 @@ export async function apiPut<T = any>(endpoint: string, data: any): Promise<T> {
  * @returns Promise with the response data
  */
 export async function apiDelete<T = any>(endpoint: string): Promise<T> {
-  return apiFetch<T>(endpoint, { method: 'DELETE' })
+  return apiFetch<T>(endpoint, { method: 'DELETE' });
 }
 
 /**
@@ -119,9 +124,9 @@ export async function apiDelete<T = any>(endpoint: string): Promise<T> {
 export function getBaseUrl(): string {
   if (typeof window !== 'undefined') {
     // Browser environment
-    return window.location.origin
+    return window.location.origin;
   }
-  
+
   // Server environment
-  return process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  return process.env.NEXTAUTH_URL || 'http://localhost:3000';
 }

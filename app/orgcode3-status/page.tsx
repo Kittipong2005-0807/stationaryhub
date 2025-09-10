@@ -1,53 +1,55 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { useAuth } from "@/src/contexts/AuthContext"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { motion } from "framer-motion"
-import { Database, Users, FileText, CheckCircle, AlertTriangle, RefreshCw } from "lucide-react"
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { motion } from 'framer-motion';
+import {
+  Database,
+  Users,
+  FileText,
+  CheckCircle,
+  AlertTriangle,
+  RefreshCw
+} from 'lucide-react';
+import { apiGet } from '@/lib/api-utils';
 
 interface SiteIdStats {
-  totalUsers: number
-  usersWithSiteId: number
-  totalRequisitions: number
-  requisitionsWithSiteId: number
-  siteIdList: string[]
+  totalUsers: number;
+  usersWithSiteId: number;
+  totalRequisitions: number;
+  requisitionsWithSiteId: number;
+  siteIdList: string[];
 }
 
 export default function SiteIdStatusPage() {
-  const { user } = useAuth()
-  const [stats, setStats] = useState<SiteIdStats | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  const { user } = useAuth();
+  const [stats, setStats] = useState<SiteIdStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchSiteIdStats()
-  }, [])
+    fetchSiteIdStats();
+  }, []);
 
   const fetchSiteIdStats = async () => {
     try {
-      setLoading(true)
-      setError("")
+      setLoading(true);
+      setError('');
 
       // ดึงข้อมูลสถิติ SITE_ID
-      const response = await fetch("/api/orgcode3?action=getStats")
-      const data = await response.json()
-      
-      if (response.ok) {
-        setStats(data)
-      } else {
-        setError(data.error || "เกิดข้อผิดพลาดในการดึงข้อมูล")
-      }
+      const data = await apiGet('/api/orgcode3?action=getStats');
+      setStats(data);
     } catch (error) {
-      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
-      console.error("Error fetching SITE_ID stats:", error)
+      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      console.error('Error fetching SITE_ID stats:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -59,7 +61,7 @@ export default function SiteIdStatusPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -128,7 +130,10 @@ export default function SiteIdStatusPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">มี SITE_ID:</span>
-                      <Badge variant="default" className="bg-green-100 text-green-800">
+                      <Badge
+                        variant="default"
+                        className="bg-green-100 text-green-800"
+                      >
                         {stats.usersWithSiteId}
                       </Badge>
                     </div>
@@ -160,11 +165,16 @@ export default function SiteIdStatusPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-600">ทั้งหมด:</span>
-                      <span className="font-bold">{stats.totalRequisitions}</span>
+                      <span className="font-bold">
+                        {stats.totalRequisitions}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">มี SITE_ID:</span>
-                      <Badge variant="default" className="bg-green-100 text-green-800">
+                      <Badge
+                        variant="default"
+                        className="bg-green-100 text-green-800"
+                      >
                         {stats.requisitionsWithSiteId}
                       </Badge>
                     </div>
@@ -196,14 +206,32 @@ export default function SiteIdStatusPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-600">ผู้ใช้:</span>
-                      <Badge variant="default" className="bg-blue-100 text-blue-800">
-                        {stats.totalUsers > 0 ? Math.round((stats.usersWithSiteId / stats.totalUsers) * 100) : 0}%
+                      <Badge
+                        variant="default"
+                        className="bg-blue-100 text-blue-800"
+                      >
+                        {stats.totalUsers > 0
+                          ? Math.round(
+                              (stats.usersWithSiteId / stats.totalUsers) * 100
+                            )
+                          : 0}
+                        %
                       </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">คำขอ:</span>
-                      <Badge variant="default" className="bg-green-100 text-green-800">
-                        {stats.totalRequisitions > 0 ? Math.round((stats.requisitionsWithSiteId / stats.totalRequisitions) * 100) : 0}%
+                      <Badge
+                        variant="default"
+                        className="bg-green-100 text-green-800"
+                      >
+                        {stats.totalRequisitions > 0
+                          ? Math.round(
+                              (stats.requisitionsWithSiteId /
+                                stats.totalRequisitions) *
+                                100
+                            )
+                          : 0}
+                        %
                       </Badge>
                     </div>
                   </div>
@@ -228,11 +256,13 @@ export default function SiteIdStatusPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-600">จำนวนแผนก:</span>
-                      <span className="font-bold">{stats.siteIdList.length}</span>
+                      <span className="font-bold">
+                        {stats.siteIdList.length}
+                      </span>
                     </div>
                     <div className="text-xs text-gray-500">
-                      {stats.siteIdList.slice(0, 3).join(", ")}
-                      {stats.siteIdList.length > 3 && "..."}
+                      {stats.siteIdList.slice(0, 3).join(', ')}
+                      {stats.siteIdList.length > 3 && '...'}
                     </div>
                   </div>
                 </CardContent>
@@ -265,5 +295,5 @@ export default function SiteIdStatusPage() {
         </motion.div>
       </motion.div>
     </div>
-  )
-} 
+  );
+}

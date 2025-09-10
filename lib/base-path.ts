@@ -2,7 +2,8 @@
  * Utility functions for handling base path in StationaryHub
  */
 
-export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || (process.env.NODE_ENV === 'production' ? '/stationaryhub' : '');
+// ดึง basePath จาก next.config.js เหมือนกับ middleware
+export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
 
 /**
  * Get the full URL with base path
@@ -10,9 +11,9 @@ export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || (process.env.NODE_
  * @returns Full URL with base path
  */
 export function getBasePathUrl(path: string = ''): string {
-  // ใช้ relative path เสมอ - Next.js จะจัดการ base path ให้อัตโนมัติ
-  console.log('getBasePathUrl', path)
-  return path.startsWith('/') ? path : `/${path}`;
+  // รวม base path กับ path ที่ให้มา
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${BASE_PATH}${cleanPath}`;
 }
 
 /**

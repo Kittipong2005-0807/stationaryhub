@@ -1,138 +1,145 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { useAuth } from "@/src/contexts/AuthContext"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { motion } from "framer-motion"
-import { 
-  Bell, 
-  CheckCircle, 
-  XCircle, 
-  Package, 
-  Trash2, 
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { motion } from 'framer-motion';
+import {
+  Bell,
+  CheckCircle,
+  XCircle,
+  Package,
+  Trash2,
   RefreshCw,
   AlertTriangle,
   Info
-} from "lucide-react"
-import ThaiDateUtils from '@/lib/date-utils'
+} from 'lucide-react';
+import ThaiDateUtils from '@/lib/date-utils';
 
 interface Notification {
-  EMAIL_ID: number
-  TO_USER_ID: string
-  SUBJECT: string
-  BODY: string
-  STATUS: string
-  IS_READ: boolean
-  SENT_AT: Date
+  EMAIL_ID: number;
+  TO_USER_ID: string;
+  SUBJECT: string;
+  BODY: string;
+  STATUS: string;
+  IS_READ: boolean;
+  SENT_AT: Date;
 }
 
 export default function NotificationsPage() {
-  const { user } = useAuth()
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [refreshing, setRefreshing] = useState(false)
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (user?.AdLoginName) {
-      fetchNotifications()
+      fetchNotifications();
     }
-  }, [user?.AdLoginName])
+  }, [user?.AdLoginName]);
 
   const fetchNotifications = async () => {
-    if (!user?.AdLoginName) return
+    if (!user?.AdLoginName) return;
 
     try {
-      setLoading(true)
-      setError("")
+      setLoading(true);
+      setError('');
 
-      const response = await fetch(`/api/notifications?userId=${user.AdLoginName}`)
-      const data = await response.json()
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
+      const response = await fetch(
+        `${basePath}/api/notifications?userId=${user.AdLoginName}`
+      );
+      const data = await response.json();
 
       if (response.ok) {
-        setNotifications(data.notifications || [])
+        setNotifications(data.notifications || []);
       } else {
-        setError(data.error || "เกิดข้อผิดพลาดในการดึงข้อมูล")
+        setError(data.error || 'เกิดข้อผิดพลาดในการดึงข้อมูล');
       }
     } catch (error) {
-      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
-      console.error("Error fetching notifications:", error)
+      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      console.error('Error fetching notifications:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleRefresh = async () => {
-    setRefreshing(true)
-    await fetchNotifications()
-    setRefreshing(false)
-  }
+    setRefreshing(true);
+    await fetchNotifications();
+    setRefreshing(false);
+  };
 
   const handleMarkAsRead = async (notificationId: number) => {
     try {
-      const response = await fetch(`/api/notifications/${notificationId}/read`, {
-        method: 'POST'
-      })
+      const response = await fetch(
+        `/api/notifications/${notificationId}/read`,
+        {
+          method: 'POST'
+        }
+      );
 
       if (response.ok) {
-        setNotifications(prev => 
-          prev.map(n => 
-            n.EMAIL_ID === notificationId 
-              ? { ...n, STATUS: 'READ' }
-              : n
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.EMAIL_ID === notificationId ? { ...n, STATUS: 'READ' } : n
           )
-        )
+        );
       }
     } catch (error) {
-      console.error('Error marking notification as read:', error)
+      console.error('Error marking notification as read:', error);
     }
-  }
+  };
 
   const handleDeleteNotification = async (notificationId: number) => {
     try {
       const response = await fetch(`/api/notifications/${notificationId}`, {
         method: 'DELETE'
-      })
+      });
 
       if (response.ok) {
-        setNotifications(prev => 
-          prev.filter(n => n.EMAIL_ID !== notificationId)
-        )
+        setNotifications((prev) =>
+          prev.filter((n) => n.EMAIL_ID !== notificationId)
+        );
       }
     } catch (error) {
-      console.error('Error deleting notification:', error)
+      console.error('Error deleting notification:', error);
     }
-  }
+  };
 
   const getNotificationIcon = (subject: string) => {
-    if (subject.includes('approved')) return <CheckCircle className="h-5 w-5 text-green-600" />
-    if (subject.includes('rejected')) return <XCircle className="h-5 w-5 text-red-600" />
-    if (subject.includes('created')) return <Package className="h-5 w-5 text-blue-600" />
-    return <Bell className="h-5 w-5 text-gray-600" />
-  }
+    if (subject.includes('approved'))
+      return <CheckCircle className="h-5 w-5 text-green-600" />;
+    if (subject.includes('rejected'))
+      return <XCircle className="h-5 w-5 text-red-600" />;
+    if (subject.includes('created'))
+      return <Package className="h-5 w-5 text-blue-600" />;
+    return <Bell className="h-5 w-5 text-gray-600" />;
+  };
 
   const getNotificationStatus = (subject: string) => {
-    if (subject.includes('approved')) return "อนุมัติแล้ว"
-    if (subject.includes('rejected')) return "ปฏิเสธแล้ว"
-    if (subject.includes('created')) return "สร้างใหม่"
-    return "รอดำเนินการ"
-  }
+    if (subject.includes('approved')) return 'อนุมัติแล้ว';
+    if (subject.includes('rejected')) return 'ปฏิเสธแล้ว';
+    if (subject.includes('created')) return 'สร้างใหม่';
+    return 'รอดำเนินการ';
+  };
 
   const getStatusColor = (subject: string) => {
-    if (subject.includes('approved')) return "bg-green-100 text-green-800"
-    if (subject.includes('rejected')) return "bg-red-100 text-red-800"
-    if (subject.includes('created')) return "bg-blue-100 text-blue-800"
-    return "bg-gray-100 text-gray-800"
-  }
+    if (subject.includes('approved')) return 'bg-green-100 text-green-800';
+    if (subject.includes('rejected')) return 'bg-red-100 text-red-800';
+    if (subject.includes('created')) return 'bg-blue-100 text-blue-800';
+    return 'bg-gray-100 text-gray-800';
+  };
 
   const formatDate = (dateString: string | Date) => {
-    return ThaiDateUtils.formatMediumThaiDate(dateString)
-  }
+    return ThaiDateUtils.formatMediumThaiDate(dateString);
+  };
 
-  const unreadCount = notifications.filter(n => n.STATUS === 'SENT').length
+  const unreadCount = notifications.filter((n) => n.STATUS === 'SENT').length;
 
   if (loading) {
     return (
@@ -144,7 +151,7 @@ export default function NotificationsPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -182,7 +189,9 @@ export default function NotificationsPage() {
               variant="outline"
               className="flex items-center gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}
+              />
               รีเฟรช
             </Button>
           </motion.div>
@@ -199,7 +208,9 @@ export default function NotificationsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">ทั้งหมด</p>
-                    <p className="text-2xl font-bold text-blue-600">{notifications.length}</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {notifications.length}
+                    </p>
                   </div>
                   <Bell className="h-8 w-8 text-blue-600" />
                 </div>
@@ -211,7 +222,9 @@ export default function NotificationsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">ยังไม่อ่าน</p>
-                    <p className="text-2xl font-bold text-orange-600">{unreadCount}</p>
+                    <p className="text-2xl font-bold text-orange-600">
+                      {unreadCount}
+                    </p>
                   </div>
                   <AlertTriangle className="h-8 w-8 text-orange-600" />
                 </div>
@@ -223,7 +236,9 @@ export default function NotificationsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">อ่านแล้ว</p>
-                    <p className="text-2xl font-bold text-green-600">{notifications.length - unreadCount}</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {notifications.length - unreadCount}
+                    </p>
                   </div>
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
@@ -256,7 +271,9 @@ export default function NotificationsPage() {
             <Card className="border-2 border-gray-200 bg-gradient-to-r from-gray-50 to-slate-50">
               <CardContent className="p-8 text-center">
                 <Info className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">ไม่พบการแจ้งเตือน</h3>
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  ไม่พบการแจ้งเตือน
+                </h3>
                 <p className="text-gray-500">คุณยังไม่มีประวัติการแจ้งเตือน</p>
               </CardContent>
             </Card>
@@ -269,11 +286,13 @@ export default function NotificationsPage() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 * index }}
                 >
-                  <Card className={`border-2 transition-all duration-300 hover:shadow-lg ${
-                    notification.STATUS === 'READ' 
-                      ? 'border-gray-200 bg-gray-50' 
-                      : 'border-blue-200 bg-blue-50'
-                  }`}>
+                  <Card
+                    className={`border-2 transition-all duration-300 hover:shadow-lg ${
+                      notification.STATUS === 'READ'
+                        ? 'border-gray-200 bg-gray-50'
+                        : 'border-blue-200 bg-blue-50'
+                    }`}
+                  >
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-4 flex-1">
@@ -285,11 +304,16 @@ export default function NotificationsPage() {
                               <h3 className="font-semibold text-gray-800">
                                 {notification.BODY}
                               </h3>
-                              <Badge className={getStatusColor(notification.SUBJECT)}>
+                              <Badge
+                                className={getStatusColor(notification.SUBJECT)}
+                              >
                                 {getNotificationStatus(notification.SUBJECT)}
                               </Badge>
                               {notification.STATUS === 'SENT' && (
-                                <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-orange-100 text-orange-800"
+                                >
                                   ใหม่
                                 </Badge>
                               )}
@@ -307,7 +331,9 @@ export default function NotificationsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleMarkAsRead(notification.EMAIL_ID)}
+                              onClick={() =>
+                                handleMarkAsRead(notification.EMAIL_ID)
+                              }
                               className="text-green-600 border-green-200 hover:bg-green-50"
                             >
                               <CheckCircle className="h-4 w-4 mr-1" />
@@ -317,7 +343,9 @@ export default function NotificationsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDeleteNotification(notification.EMAIL_ID)}
+                            onClick={() =>
+                              handleDeleteNotification(notification.EMAIL_ID)
+                            }
                             className="text-red-600 border-red-200 hover:bg-red-50"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -333,5 +361,5 @@ export default function NotificationsPage() {
         </motion.div>
       </motion.div>
     </div>
-  )
-} 
+  );
+}

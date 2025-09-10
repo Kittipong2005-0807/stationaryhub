@@ -1,120 +1,164 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { Grid } from "@mui/material"
-import Card from "@mui/material/Card"
-import CardContent from "@mui/material/CardContent"
-import Typography from "@mui/material/Typography"
-import Button from "@mui/material/Button"
-import Dialog from "@mui/material/Dialog"
-import DialogTitle from "@mui/material/DialogTitle"
-import DialogContent from "@mui/material/DialogContent"
-import DialogActions from "@mui/material/DialogActions"
-import TextField from "@mui/material/TextField"
-import Box from "@mui/material/Box"
-import IconButton from "@mui/material/IconButton"
-import Table from "@mui/material/Table"
-import TableBody from "@mui/material/TableBody"
-import TableCell from "@mui/material/TableCell"
-import TableContainer from "@mui/material/TableContainer"
-import TableHead from "@mui/material/TableHead"
-import TableRow from "@mui/material/TableRow"
-import Chip from "@mui/material/Chip"
-import FormControl from "@mui/material/FormControl"
-import InputLabel from "@mui/material/InputLabel"
-import Select from "@mui/material/Select"
-import MenuItem from "@mui/material/MenuItem"
-import { Edit, Delete, Inventory, Image as ImageIcon, Search, FilterList } from "@mui/icons-material"
-import { useAuth } from "@/src/contexts/AuthContext"
-import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import Image from "next/image"
-import ThaiDateUtils from '@/lib/date-utils'
+import { useState, useEffect } from 'react';
+import { Grid } from '@mui/material';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import TextField from '@mui/material/TextField';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Chip from '@mui/material/Chip';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import {
+  Edit,
+  Delete,
+  Inventory,
+  Image as ImageIcon,
+  Search,
+  FilterList
+} from '@mui/icons-material';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import Image from 'next/image';
+import ThaiDateUtils from '@/lib/date-utils';
 
 // Interface สำหรับ Product ตามฐานข้อมูลจริง
 interface Product {
-  PRODUCT_ID: number
-  ITEM_ID?: string
-  PRODUCT_NAME: string
-  CATEGORY_ID: number
-  UNIT_COST?: number
-  ORDER_UNIT?: string
-  PHOTO_URL?: string
-  CREATED_AT?: string
+  PRODUCT_ID: number;
+  ITEM_ID?: string;
+  PRODUCT_NAME: string;
+  CATEGORY_ID: number;
+  UNIT_COST?: number;
+  ORDER_UNIT?: string;
+  PHOTO_URL?: string;
+  CREATED_AT?: string;
   PRODUCT_CATEGORIES?: {
-    CATEGORY_ID: number
-    CATEGORY_NAME: string
-  }
+    CATEGORY_ID: number;
+    CATEGORY_NAME: string;
+  };
 }
 
 // Interface สำหรับ Category
 interface Category {
-  CATEGORY_ID: number
-  CATEGORY_NAME: string
+  CATEGORY_ID: number;
+  CATEGORY_NAME: string;
 }
 
 export default function ProductManagementPage() {
-  const [products, setProducts] = useState<Product[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [existingUnits, setExistingUnits] = useState<string[]>([])
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [existingUnits, setExistingUnits] = useState<string[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
-    ITEM_ID: "",
-    PRODUCT_NAME: "",
+    ITEM_ID: '',
+    PRODUCT_NAME: '',
     CATEGORY_ID: 1,
     UNIT_COST: 0,
-    ORDER_UNIT: "",
-    PHOTO_URL: "",
-  })
-  const [recentUnits, setRecentUnits] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<number | "all">("all")
-  const [imageUploading, setImageUploading] = useState(false)
-  const { user, isAuthenticated } = useAuth()
-  const router = useRouter()
+    ORDER_UNIT: '',
+    PHOTO_URL: ''
+  });
+  const [recentUnits, setRecentUnits] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<number | 'all'>(
+    'all'
+  );
+  const [imageUploading, setImageUploading] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
 
   // ประเภทหน่วยสินค้าที่ใช้ในระบบ
   const commonUnits = [
-    "EA", "Piece", "Box", "Pack", "Set", "Dozen", "Gross", "Bundle", 
-    "Roll", "Sheet", "Pad", "Ream", "Carton", "Case", "Pallet", "Kg", 
-    "Gram", "Liter", "Meter", "Yard", "Foot", "Inch", "Cm", "Mm",
-    "Bottle", "Tube", "Pen", "Pencil", "Marker", "Highlighter", "Eraser",
-    "Stapler", "Clip", "Folder", "File", "Notebook", "Book", "Magazine"
-  ]
+    'EA',
+    'Piece',
+    'Box',
+    'Pack',
+    'Set',
+    'Dozen',
+    'Gross',
+    'Bundle',
+    'Roll',
+    'Sheet',
+    'Pad',
+    'Ream',
+    'Carton',
+    'Case',
+    'Pallet',
+    'Kg',
+    'Gram',
+    'Liter',
+    'Meter',
+    'Yard',
+    'Foot',
+    'Inch',
+    'Cm',
+    'Mm',
+    'Bottle',
+    'Tube',
+    'Pen',
+    'Pencil',
+    'Marker',
+    'Highlighter',
+    'Eraser',
+    'Stapler',
+    'Clip',
+    'Folder',
+    'File',
+    'Notebook',
+    'Book',
+    'Magazine'
+  ];
 
   // ฟังก์ชันจัดการ Recent Units
   const loadRecentUnits = () => {
     try {
-      const saved = localStorage.getItem('recentUnits')
+      const saved = localStorage.getItem('recentUnits');
       if (saved) {
-        setRecentUnits(JSON.parse(saved))
+        setRecentUnits(JSON.parse(saved));
       }
     } catch (error) {
-      console.error('Error loading recent units:', error)
+      console.error('Error loading recent units:', error);
     }
-  }
+  };
 
   const saveRecentUnit = (unit: string) => {
-    if (!unit || unit === "custom") return
-    
+    if (!unit || unit === 'custom') return;
+
     try {
-      const currentRecent = recentUnits.filter(u => u !== unit)
-      const newRecent = [unit, ...currentRecent].slice(0, 10) // เก็บแค่ 10 อันล่าสุด
-      setRecentUnits(newRecent)
-      localStorage.setItem('recentUnits', JSON.stringify(newRecent))
+      const currentRecent = recentUnits.filter((u) => u !== unit);
+      const newRecent = [unit, ...currentRecent].slice(0, 10); // เก็บแค่ 10 อันล่าสุด
+      setRecentUnits(newRecent);
+      localStorage.setItem('recentUnits', JSON.stringify(newRecent));
     } catch (error) {
-      console.error('Error saving recent unit:', error)
+      console.error('Error saving recent unit:', error);
     }
-  }
+  };
 
   // Fetch products and categories
   useEffect(() => {
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
+
     // Fetch products
     const fetchProducts = async () => {
       try {
-        const response = await fetch('/stationaryhub/api/products');
+        const response = await fetch(`${basePath}/api/products`);
         if (response.ok) {
           const data = await response.json();
           setProducts(data);
@@ -127,7 +171,7 @@ export default function ProductManagementPage() {
     // Fetch categories
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/stationaryhub/api/categories');
+        const response = await fetch(`${basePath}/api/categories`);
         if (response.ok) {
           const data = await response.json();
           // ตรวจสอบว่า response มี data field หรือไม่
@@ -149,7 +193,7 @@ export default function ProductManagementPage() {
     // Fetch existing units
     const fetchExistingUnits = async () => {
       try {
-        const response = await fetch('/stationaryhub/api/products/units');
+        const response = await fetch(`${basePath}/api/products/units`);
         if (response.ok) {
           const data = await response.json();
           if (data.success && Array.isArray(data.data)) {
@@ -162,7 +206,7 @@ export default function ProductManagementPage() {
       }
     };
 
-    if (isAuthenticated && user?.ROLE === "ADMIN") {
+    if (isAuthenticated && user?.ROLE === 'ADMIN') {
       fetchProducts();
       fetchCategories();
       fetchExistingUnits();
@@ -170,188 +214,194 @@ export default function ProductManagementPage() {
     }
   }, [isAuthenticated, user, router]);
 
-
   const handleOpenDialog = (product?: Product) => {
     if (product) {
-      setEditingProduct(product)
+      setEditingProduct(product);
       setFormData({
-        ITEM_ID: product.ITEM_ID || "",
+        ITEM_ID: product.ITEM_ID || '',
         PRODUCT_NAME: product.PRODUCT_NAME,
         CATEGORY_ID: product.CATEGORY_ID,
         UNIT_COST: product.UNIT_COST || 0,
-        ORDER_UNIT: product.ORDER_UNIT || "",
-        PHOTO_URL: product.PHOTO_URL || "",
-      })
+        ORDER_UNIT: product.ORDER_UNIT || '',
+        PHOTO_URL: product.PHOTO_URL || ''
+      });
     } else {
-      setEditingProduct(null)
+      setEditingProduct(null);
       setFormData({
-        ITEM_ID: "",
-        PRODUCT_NAME: "",
+        ITEM_ID: '',
+        PRODUCT_NAME: '',
         CATEGORY_ID: 1,
         UNIT_COST: 0,
-        ORDER_UNIT: "",
-        PHOTO_URL: "",
-      })
+        ORDER_UNIT: '',
+        PHOTO_URL: ''
+      });
     }
-    setDialogOpen(true)
-  }
+    setDialogOpen(true);
+  };
 
   const handleCloseDialog = () => {
-    setDialogOpen(false)
-    setEditingProduct(null)
-  }
+    setDialogOpen(false);
+    setEditingProduct(null);
+  };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
     // ตรวจสอบประเภทไฟล์
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      alert("Invalid file type. Only JPEG, PNG, and WebP are allowed.")
-      return
+      alert('Invalid file type. Only JPEG, PNG, and WebP are allowed.');
+      return;
     }
 
     // ตรวจสอบขนาดไฟล์ (max 5MB)
-    const maxSize = 5 * 1024 * 1024 // 5MB
+    const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
-      alert("File too large. Maximum size is 5MB.")
-      return
+      alert('File too large. Maximum size is 5MB.');
+      return;
     }
 
     try {
-      setImageUploading(true)
-      
-      const formData = new FormData()
-      formData.append("file", file)
+      setImageUploading(true);
 
-      const response = await fetch("/api/upload-product-image", {
-        method: "POST",
-        body: formData,
-      })
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${basePath}/api/upload-product-image`, {
+        method: 'POST',
+        body: formData
+      });
 
       if (response.ok) {
-        const result = await response.json()
-        setFormData(prev => ({ ...prev, PHOTO_URL: result.imageUrl }))
-        alert("Image uploaded successfully!")
+        const result = await response.json();
+        setFormData((prev) => ({ ...prev, PHOTO_URL: result.imageUrl }));
+        alert('Image uploaded successfully!');
       } else {
-        const errorData = await response.json()
-        alert(`Upload failed: ${errorData.error}`)
+        const errorData = await response.json();
+        alert(`Upload failed: ${errorData.error}`);
       }
     } catch (error) {
-      console.error("Error uploading image:", error)
-      alert("Failed to upload image")
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image');
     } finally {
-      setImageUploading(false)
+      setImageUploading(false);
     }
-  }
+  };
 
   const handleSubmit = async () => {
     if (!formData.PRODUCT_NAME.trim()) {
-      alert("Please enter product name")
-      return
+      alert('Please enter product name');
+      return;
     }
 
     if (!formData.ORDER_UNIT.trim()) {
-      alert("Please enter unit")
-      return
+      alert('Please enter unit');
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
-      const url = editingProduct 
-        ? `/api/products/${editingProduct.PRODUCT_ID}` 
-        : "/api/products"
-      
-      const method = editingProduct ? "PUT" : "POST"
-      
+      const url = editingProduct
+        ? `/api/products/${editingProduct.PRODUCT_ID}`
+        : '/api/products';
+
+      const method = editingProduct ? 'PUT' : 'POST';
+
       const response = await fetch(url, {
         method,
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData),
-      })
+        body: JSON.stringify(formData)
+      });
 
       if (response.ok) {
-        const _result = await response.json()
+        const _result = await response.json();
         // บันทึกหน่วยที่เลือกเป็น recent unit
-        saveRecentUnit(formData.ORDER_UNIT)
-        alert(`Product ${editingProduct ? "updated" : "created"} successfully!`)
-        handleCloseDialog()
+        saveRecentUnit(formData.ORDER_UNIT);
+        alert(
+          `Product ${editingProduct ? 'updated' : 'created'} successfully!`
+        );
+        handleCloseDialog();
         // รีเฟรชข้อมูล
-        window.location.reload()
+        window.location.reload();
       } else {
-        const errorData = await response.json()
-        alert(`Error: ${errorData.error || "Failed to save data"}`)
+        const errorData = await response.json();
+        alert(`Error: ${errorData.error || 'Failed to save data'}`);
       }
     } catch (error) {
-      console.error("Error saving product:", error)
-      alert("Error saving product")
+      console.error('Error saving product:', error);
+      alert('Error saving product');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDelete = async (productId: number) => {
-    if (!confirm("Are you sure you want to delete this product?")) {
-      return
+    if (!confirm('Are you sure you want to delete this product?')) {
+      return;
     }
 
     try {
       const response = await fetch(`/api/products/${productId}`, {
-        method: "DELETE",
-      })
+        method: 'DELETE'
+      });
 
       if (response.ok) {
-        alert("Product deleted successfully!")
+        alert('Product deleted successfully!');
         // รีเฟรชข้อมูล
-        window.location.reload()
+        window.location.reload();
       } else {
-        const errorData = await response.json()
-        alert(`Error: ${errorData.error || "Failed to delete product"}`)
+        const errorData = await response.json();
+        alert(`Error: ${errorData.error || 'Failed to delete product'}`);
       }
     } catch (error) {
-      console.error("Error deleting product:", error)
-      alert("Error deleting product")
+      console.error('Error deleting product:', error);
+      alert('Error deleting product');
     }
-  }
+  };
 
   // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
   const getImageUrl = (photoUrl: string | null | undefined) => {
-    if (!photoUrl) return '/placeholder.jpg'
-    
+    if (!photoUrl) return '/placeholder.jpg';
+
     // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
     if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-      return photoUrl
+      return photoUrl;
     }
-    
+
     // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ static path
     if (photoUrl.startsWith('/')) {
-      const filename = photoUrl.substring(1) // ลบ / ออก
-      return `/${filename}`
+      const filename = photoUrl.substring(1); // ลบ / ออก
+      return `/${filename}`;
     }
-    
+
     // ถ้าเป็น filename ที่ไม่มี path ให้ใช้ static path
-    return `/${photoUrl}`
-  }
+    return `/${photoUrl}`;
+  };
 
   const getCategoryName = (categoryId: number) => {
-    const category = categories.find(c => c.CATEGORY_ID === categoryId)
-    return category?.CATEGORY_NAME || "Unknown"
-  }
+    const category = categories.find((c) => c.CATEGORY_ID === categoryId);
+    return category?.CATEGORY_NAME || 'Unknown';
+  };
 
   // Filter products based on search and category
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.PRODUCT_NAME.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (product.ITEM_ID && product.ITEM_ID.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesCategory = selectedCategory === "all" || product.CATEGORY_ID === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.PRODUCT_NAME.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.ITEM_ID &&
+        product.ITEM_ID.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory =
+      selectedCategory === 'all' || product.CATEGORY_ID === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
-
-  if (!isAuthenticated || user?.ROLE !== "ADMIN") {
+  if (!isAuthenticated || user?.ROLE !== 'ADMIN') {
     return (
       <div className="text-center py-20">
         <Typography variant="h4" className="text-gray-600">
@@ -361,12 +411,16 @@ export default function ProductManagementPage() {
           This page is only accessible to administrators.
         </Typography>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -386,14 +440,17 @@ export default function ProductManagementPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
                   <Button
                     variant="outlined"
                     startIcon={<span>⟳</span>}
                     onClick={() => window.location.reload()}
                     className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                     size="medium"
-                    style={{ 
+                    style={{
                       minWidth: '120px',
                       height: '40px',
                       display: 'flex',
@@ -405,14 +462,17 @@ export default function ProductManagementPage() {
                   </Button>
                 </motion.div>
 
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
                   <Button
                     variant="contained"
                     startIcon={<span>➕</span>}
                     onClick={() => handleOpenDialog()}
                     className="bg-white text-blue-600 hover:bg-gray-100 font-bold shadow-lg"
                     size="medium"
-                    style={{ 
+                    style={{
                       minWidth: '160px',
                       height: '40px',
                       display: 'flex',
@@ -431,7 +491,6 @@ export default function ProductManagementPage() {
           </div>
         </motion.div>
 
-
         {/* Search and Filter Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -449,7 +508,7 @@ export default function ProductManagementPage() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     InputProps={{
-                      startAdornment: <Search className="text-gray-400 mr-2" />,
+                      startAdornment: <Search className="text-gray-400 mr-2" />
                     }}
                     className="bg-white/50"
                     size="medium"
@@ -460,13 +519,20 @@ export default function ProductManagementPage() {
                     <InputLabel>Category Filter</InputLabel>
                     <Select
                       value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value as number | "all")}
+                      onChange={(e) =>
+                        setSelectedCategory(e.target.value as number | 'all')
+                      }
                       label="Category Filter"
-                      startAdornment={<FilterList className="text-gray-400 mr-2" />}
+                      startAdornment={
+                        <FilterList className="text-gray-400 mr-2" />
+                      }
                     >
                       <MenuItem value="all">All Categories</MenuItem>
                       {categories.map((category) => (
-                        <MenuItem key={category.CATEGORY_ID} value={category.CATEGORY_ID}>
+                        <MenuItem
+                          key={category.CATEGORY_ID}
+                          value={category.CATEGORY_ID}
+                        >
                           {category.CATEGORY_NAME}
                         </MenuItem>
                       ))}
@@ -491,14 +557,30 @@ export default function ProductManagementPage() {
                 <Table>
                   <TableHead>
                     <TableRow className="bg-gradient-to-r from-gray-50 to-blue-50">
-                      <TableCell className="font-bold text-gray-700 py-4">Image</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">Item ID</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">Product Name</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">Category</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">Unit Price</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">Unit</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">Created Date</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">Actions</TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Image
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Item ID
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Product Name
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Category
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Unit Price
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Unit
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Created Date
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Actions
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -527,31 +609,34 @@ export default function ProductManagementPage() {
                           )}
                         </TableCell>
                         <TableCell className="font-medium text-gray-600 py-3">
-                          {product.ITEM_ID || "-"}
+                          {product.ITEM_ID || '-'}
                         </TableCell>
                         <TableCell className="font-semibold text-gray-800 py-3">
                           {product.PRODUCT_NAME}
                         </TableCell>
                         <TableCell className="py-3">
-                          <Chip 
+                          <Chip
                             label={getCategoryName(product.CATEGORY_ID)}
                             color="primary"
                             size="small"
                             className="bg-gradient-to-r from-blue-500 to-purple-500 text-white"
                           />
                         </TableCell>
-                                                 <TableCell className="font-semibold text-green-600 py-3">
-                           {product.UNIT_COST ? `฿${product.UNIT_COST.toLocaleString()}` : "-"}
-                         </TableCell>
+                        <TableCell className="font-semibold text-green-600 py-3">
+                          {product.UNIT_COST
+                            ? `฿${product.UNIT_COST.toLocaleString()}`
+                            : '-'}
+                        </TableCell>
                         <TableCell className="text-gray-600 py-3">
-                          {product.ORDER_UNIT || "-"}
+                          {product.ORDER_UNIT || '-'}
                         </TableCell>
 
                         <TableCell className="text-gray-600 py-3">
-                          {product.CREATED_AT 
-                            ? ThaiDateUtils.formatShortThaiDate(product.CREATED_AT)
-                            : "-"
-                          }
+                          {product.CREATED_AT
+                            ? ThaiDateUtils.formatShortThaiDate(
+                                product.CREATED_AT
+                              )
+                            : '-'}
                         </TableCell>
                         <TableCell className="py-3">
                           <div className="flex gap-2">
@@ -581,13 +666,14 @@ export default function ProductManagementPage() {
                 <Box className="text-center py-16">
                   <Inventory className="text-gray-300 text-7xl mb-6" />
                   <Typography variant="h5" className="text-gray-500 mb-3">
-                    {searchTerm || selectedCategory !== "all" ? "No products found" : "No products in system"}
+                    {searchTerm || selectedCategory !== 'all'
+                      ? 'No products found'
+                      : 'No products in system'}
                   </Typography>
                   <Typography variant="body1" className="text-gray-400">
-                    {searchTerm || selectedCategory !== "all" 
-                      ? "Try adjusting your search or filter criteria" 
-                      : "Click 'Add New Product' to get started"
-                    }
+                    {searchTerm || selectedCategory !== 'all'
+                      ? 'Try adjusting your search or filter criteria'
+                      : "Click 'Add New Product' to get started"}
                   </Typography>
                 </Box>
               )}
@@ -596,179 +682,216 @@ export default function ProductManagementPage() {
         </motion.div>
 
         {/* Add/Edit Product Dialog */}
-        <Dialog 
-          open={dialogOpen} 
-          onClose={handleCloseDialog} 
-          maxWidth="md" 
+        <Dialog
+          open={dialogOpen}
+          onClose={handleCloseDialog}
+          maxWidth="md"
           fullWidth
           PaperProps={{
             style: {
               borderRadius: '16px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+              boxShadow:
+                '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
             }
           }}
         >
-          <DialogTitle 
+          <DialogTitle
             className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-2xl"
             style={{ padding: '24px 32px' }}
             component="div"
           >
             <div className="font-bold text-xl">
-              {editingProduct ? "✏️ Edit Product" : "➕ Add New Product"}
+              {editingProduct ? '✏️ Edit Product' : '➕ Add New Product'}
             </div>
             <div className="text-blue-100 mt-1 text-sm">
-              {editingProduct ? "Update product information" : "Create a new product in your inventory"}
+              {editingProduct
+                ? 'Update product information'
+                : 'Create a new product in your inventory'}
             </div>
           </DialogTitle>
-          <DialogContent 
-            className="pt-8 pb-6"
-            style={{ padding: '32px' }}
-          >
-                                                   <Grid container spacing={3}>
-                {/* Basic Information */}
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Item ID"
-                    value={formData.ITEM_ID}
-                    onChange={(e) => setFormData({ ...formData, ITEM_ID: e.target.value })}
-                    placeholder="P001, SKU123, etc."
-                    variant="outlined"
-                    size="medium"
-                    helperText="Optional: Enter a unique identifier"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Product Name *"
-                    value={formData.PRODUCT_NAME}
-                    onChange={(e) => setFormData({ ...formData, PRODUCT_NAME: e.target.value })}
-                    placeholder="Enter product name"
-                    required
-                    variant="outlined"
-                    size="medium"
-                    helperText="Required: Enter the name of the product"
-                  />
-                </Grid>
+          <DialogContent className="pt-8 pb-6" style={{ padding: '32px' }}>
+            <Grid container spacing={3}>
+              {/* Basic Information */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Item ID"
+                  value={formData.ITEM_ID}
+                  onChange={(e) =>
+                    setFormData({ ...formData, ITEM_ID: e.target.value })
+                  }
+                  placeholder="P001, SKU123, etc."
+                  variant="outlined"
+                  size="medium"
+                  helperText="Optional: Enter a unique identifier"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Product Name *"
+                  value={formData.PRODUCT_NAME}
+                  onChange={(e) =>
+                    setFormData({ ...formData, PRODUCT_NAME: e.target.value })
+                  }
+                  placeholder="Enter product name"
+                  required
+                  variant="outlined"
+                  size="medium"
+                  helperText="Required: Enter the name of the product"
+                />
+              </Grid>
 
-                {/* Category and Pricing */}
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth size="medium">
-                    <InputLabel>Category *</InputLabel>
-                    <Select
-                      value={formData.CATEGORY_ID}
-                      onChange={(e) => setFormData({ ...formData, CATEGORY_ID: e.target.value as number })}
-                      label="Category *"
-                    >
-                      {categories.map((category) => (
-                        <MenuItem key={category.CATEGORY_ID} value={category.CATEGORY_ID}>
-                          {category.CATEGORY_NAME}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Unit Price"
-                    value={formData.UNIT_COST ? formData.UNIT_COST.toLocaleString() : ''}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/,/g, '')
-                      const numValue = value === '' ? 0 : parseFloat(value) || 0
-                      setFormData({ ...formData, UNIT_COST: numValue })
-                    }}
-                    placeholder="0.00"
-                    variant="outlined"
-                    size="medium"
-                    InputProps={{
-                      startAdornment: <span className="text-gray-500 mr-2">฿</span>,
-                    }}
-                    helperText="Enter the price per unit"
-                  />
-                </Grid>
+              {/* Category and Pricing */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="medium">
+                  <InputLabel>Category *</InputLabel>
+                  <Select
+                    value={formData.CATEGORY_ID}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        CATEGORY_ID: e.target.value as number
+                      })
+                    }
+                    label="Category *"
+                  >
+                    {categories.map((category) => (
+                      <MenuItem
+                        key={category.CATEGORY_ID}
+                        value={category.CATEGORY_ID}
+                      >
+                        {category.CATEGORY_NAME}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Unit Price"
+                  value={
+                    formData.UNIT_COST
+                      ? formData.UNIT_COST.toLocaleString()
+                      : ''
+                  }
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/,/g, '');
+                    const numValue = value === '' ? 0 : parseFloat(value) || 0;
+                    setFormData({ ...formData, UNIT_COST: numValue });
+                  }}
+                  placeholder="0.00"
+                  variant="outlined"
+                  size="medium"
+                  InputProps={{
+                    startAdornment: (
+                      <span className="text-gray-500 mr-2">฿</span>
+                    )
+                  }}
+                  helperText="Enter the price per unit"
+                />
+              </Grid>
 
-                {/* Unit */}
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth size="medium">
-                    <InputLabel>Unit Type *</InputLabel>
-                    <Select
-                      value={formData.ORDER_UNIT}
-                      onChange={(e) => setFormData({ ...formData, ORDER_UNIT: e.target.value })}
-                      label="Unit Type *"
-                    >
-                      {[...recentUnits, ...existingUnits, ...commonUnits].map((unit) => (
+              {/* Unit */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="medium">
+                  <InputLabel>Unit Type *</InputLabel>
+                  <Select
+                    value={formData.ORDER_UNIT}
+                    onChange={(e) =>
+                      setFormData({ ...formData, ORDER_UNIT: e.target.value })
+                    }
+                    label="Unit Type *"
+                  >
+                    {[...recentUnits, ...existingUnits, ...commonUnits].map(
+                      (unit) => (
                         <MenuItem key={unit} value={unit}>
                           {unit}
                         </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                                 {/* Image Upload */}
-                 <Grid item xs={12}>
-                   <Box className="space-y-3">
-                     {/* Image Preview */}
-                     {formData.PHOTO_URL && (
-                       <Box className="relative">
-                         <Image
-                           src={getImageUrl(formData.PHOTO_URL)}
-                           alt="Product preview"
-                           width={120}
-                           height={120}
-                           className="rounded-lg object-cover border border-gray-200"
-                           unoptimized
-                         />
-                         <IconButton
-                           size="small"
-                           onClick={() => setFormData({ ...formData, PHOTO_URL: "" })}
-                           className="absolute -top-2 -right-2 bg-red-500 text-white hover:bg-red-600"
-                           style={{ width: '20px', height: '20px' }}
-                         >
-                           <span className="text-xs">×</span>
-                         </IconButton>
-                       </Box>
-                     )}
-                     
-                     {/* File Upload */}
-                     <Box className="space-y-2">
-                       <input
-                         type="file"
-                         accept="image/*"
-                         onChange={handleImageUpload}
-                         className="hidden"
-                         id="image-upload"
-                       />
-                       <label htmlFor="image-upload">
-                         <Button
-                           variant="outlined"
-                           component="span"
-                           startIcon={imageUploading ? <span className="animate-spin">⟳</span> : <ImageIcon />}
-                           className="w-full border border-gray-300 hover:border-gray-400"
-                           disabled={imageUploading}
-                           size="small"
-                         >
-                           {imageUploading ? "Uploading..." : (formData.PHOTO_URL ? "Change Image" : "Upload Image")}
-                         </Button>
-                       </label>
-                       <Typography variant="caption" className="text-gray-500 block text-center">
-                         JPEG, PNG, WebP (max 5MB)
-                       </Typography>
-                     </Box>
-                   </Box>
-                 </Grid>
+                      )
+                    )}
+                  </Select>
+                </FormControl>
               </Grid>
+
+              {/* Image Upload */}
+              <Grid item xs={12}>
+                <Box className="space-y-3">
+                  {/* Image Preview */}
+                  {formData.PHOTO_URL && (
+                    <Box className="relative">
+                      <Image
+                        src={getImageUrl(formData.PHOTO_URL)}
+                        alt="Product preview"
+                        width={120}
+                        height={120}
+                        className="rounded-lg object-cover border border-gray-200"
+                        unoptimized
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          setFormData({ ...formData, PHOTO_URL: '' })
+                        }
+                        className="absolute -top-2 -right-2 bg-red-500 text-white hover:bg-red-600"
+                        style={{ width: '20px', height: '20px' }}
+                      >
+                        <span className="text-xs">×</span>
+                      </IconButton>
+                    </Box>
+                  )}
+
+                  {/* File Upload */}
+                  <Box className="space-y-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <label htmlFor="image-upload">
+                      <Button
+                        variant="outlined"
+                        component="span"
+                        startIcon={
+                          imageUploading ? (
+                            <span className="animate-spin">⟳</span>
+                          ) : (
+                            <ImageIcon />
+                          )
+                        }
+                        className="w-full border border-gray-300 hover:border-gray-400"
+                        disabled={imageUploading}
+                        size="small"
+                      >
+                        {imageUploading
+                          ? 'Uploading...'
+                          : formData.PHOTO_URL
+                            ? 'Change Image'
+                            : 'Upload Image'}
+                      </Button>
+                    </label>
+                    <Typography
+                      variant="caption"
+                      className="text-gray-500 block text-center"
+                    >
+                      JPEG, PNG, WebP (max 5MB)
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+            </Grid>
           </DialogContent>
-          <DialogActions 
+          <DialogActions
             className="p-6 bg-gray-50 rounded-b-2xl"
             style={{ padding: '24px 32px' }}
           >
-            <Button 
-              onClick={handleCloseDialog} 
-              color="inherit" 
-              variant="outlined" 
+            <Button
+              onClick={handleCloseDialog}
+              color="inherit"
+              variant="outlined"
               size="large"
               style={{ borderRadius: '12px', padding: '10px 24px' }}
             >
@@ -777,16 +900,24 @@ export default function ProductManagementPage() {
             <Button
               onClick={handleSubmit}
               variant="contained"
-              disabled={loading || !formData.PRODUCT_NAME.trim() || !formData.ORDER_UNIT.trim()}
+              disabled={
+                loading ||
+                !formData.PRODUCT_NAME.trim() ||
+                !formData.ORDER_UNIT.trim()
+              }
               className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold"
               size="large"
               style={{ borderRadius: '12px', padding: '10px 24px' }}
             >
-              {loading ? "Saving..." : (editingProduct ? "Update Product" : "Add Product")}
+              {loading
+                ? 'Saving...'
+                : editingProduct
+                  ? 'Update Product'
+                  : 'Add Product'}
             </Button>
           </DialogActions>
         </Dialog>
       </motion.div>
     </div>
-  )
+  );
 }

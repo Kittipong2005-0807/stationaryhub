@@ -1,54 +1,71 @@
-"use client"
+'use client';
 
-import type React from "react"
-import { useState } from "react"
+import type React from 'react';
+import { useState } from 'react';
 // ส่วน import library และ component ที่ใช้ในหน้า login
-import { Card, CardContent, TextField, Button, Typography, Alert, InputAdornment, IconButton } from "@mui/material"
-import { Login as LoginIcon, Visibility, VisibilityOff, Person, Lock } from "@mui/icons-material"
-import { useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
-import { signIn } from "next-auth/react"
-import { useSearchParams } from 'next/navigation'
-import Link from "next/link"
-import { getBasePathUrl } from "@/lib/base-path"
+import {
+  Card,
+  CardContent,
+  TextField,
+  Button,
+  Typography,
+  Alert,
+  InputAdornment,
+  IconButton
+} from '@mui/material';
+import {
+  Login as LoginIcon,
+  Visibility,
+  VisibilityOff,
+  Person,
+  Lock
+} from '@mui/icons-material';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { signIn } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { getBasePathUrl } from '@/lib/base-path';
 
 export default function LoginPage() {
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
   const searchParams = useSearchParams();
   // ส่วนประกาศ state และตัวแปรสำหรับจัดการข้อมูล login
   const errorFromQuery = searchParams.get('error');
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState(errorFromQuery ? "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" : "");
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState(
+    errorFromQuery ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' : ''
+  );
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-  // ส่วน redirect ถ้า login แล้ว
-    setLoading(true)
-    setError("")
+    e.preventDefault();
+    // ส่วน redirect ถ้า login แล้ว
+    setLoading(true);
+    setError('');
     try {
-      const res = await signIn("credentials", {
+      const res = await signIn('credentials', {
         redirect: false,
         username,
         password,
-        // basePath: "/api/auth",
-        // callbackUrl: "/"
-      })
+        basePath: `${basePath}/api/auth`
+      });
       if (res?.ok && !res?.error) {
-        console.log("T : ",res)
-        router.push(getBasePathUrl("/"))
+        console.log('T : ', res);
+        router.push('/');
       } else {
-        setError("Invalid username or password")
+        setError('Invalid username or password');
       }
-  // ส่วนแสดง loading หรือซ่อนหน้า login ถ้า login แล้ว
+      // ส่วนแสดง loading หรือซ่อนหน้า login ถ้า login แล้ว
     } catch (err) {
-      setError("Login failed. Please try again.")
+      setError('Login failed. Please try again.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // ส่วน handleSubmit สำหรับ login
   return (
@@ -63,7 +80,7 @@ export default function LoginPage() {
       <motion.div
         initial={{ opacity: 0, y: 50, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.8, type: "spring", stiffness: 100 }}
+        transition={{ duration: 0.8, type: 'spring', stiffness: 100 }}
         className="w-full max-w-md relative z-10"
       >
         <Card className="modern-card overflow-hidden">
@@ -74,12 +91,12 @@ export default function LoginPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
               className="text-center mb-8"
-  // ส่วน render UI login form
+              // ส่วน render UI login form
             >
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+                transition={{ delay: 0.4, type: 'spring', stiffness: 200 }}
                 className="mb-4"
               >
                 <div className="w-20 h-20 mx-auto bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-lg">
@@ -100,7 +117,7 @@ export default function LoginPage() {
               {error && (
                 <motion.div
                   initial={{ opacity: 0, x: -20, height: 0 }}
-                  animate={{ opacity: 1, x: 0, height: "auto" }}
+                  animate={{ opacity: 1, x: 0, height: 'auto' }}
                   exit={{ opacity: 0, x: 20, height: 0 }}
                   className="mb-6"
                 >
@@ -119,7 +136,11 @@ export default function LoginPage() {
               onSubmit={handleSubmit}
               className="space-y-6"
             >
-              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.7 }}>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.7 }}
+              >
                 <TextField
                   fullWidth
                   label="Username"
@@ -132,23 +153,27 @@ export default function LoginPage() {
                       <InputAdornment position="start">
                         <Person className="text-gray-400" />
                       </InputAdornment>
-                    ),
+                    )
                   }}
                   sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: "16px",
-                      backgroundColor: "rgba(255, 255, 255, 0.8)",
-                      backdropFilter: "blur(10px)",
-                    },
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '16px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)'
+                    }
                   }}
                 />
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.8 }}>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.8 }}
+              >
                 <TextField
                   fullWidth
                   label="Password"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   variant="outlined"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -161,18 +186,21 @@ export default function LoginPage() {
                     ),
                     endAdornment: (
                       <InputAdornment position="end">
-                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                        >
                           {showPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
                       </InputAdornment>
-                    ),
+                    )
                   }}
                   sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: "16px",
-                      backgroundColor: "rgba(255, 255, 255, 0.8)",
-                      backdropFilter: "blur(10px)",
-                    },
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '16px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)'
+                    }
                   }}
                 />
               </motion.div>
@@ -192,10 +220,12 @@ export default function LoginPage() {
                   disabled={loading}
                   className="btn-modern py-4 text-lg font-bold rounded-2xl"
                   sx={{
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    "&:hover": {
-                      background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
-                    },
+                    background:
+                      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    '&:hover': {
+                      background:
+                        'linear-gradient(135deg, #764ba2 0%, #667eea 100%)'
+                    }
                   }}
                 >
                   <AnimatePresence mode="wait">
@@ -211,7 +241,12 @@ export default function LoginPage() {
                         Signing In...
                       </motion.div>
                     ) : (
-                      <motion.span key="signin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <motion.span
+                        key="signin"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
                         Sign In
                       </motion.span>
                     )}
@@ -223,5 +258,5 @@ export default function LoginPage() {
         </Card>
       </motion.div>
     </div>
-  )
+  );
 }

@@ -1,66 +1,56 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { UserPlus, CheckCircle, AlertTriangle } from "lucide-react"
-import { motion } from "framer-motion"
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { UserPlus, CheckCircle, AlertTriangle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { apiPost } from '@/lib/api-utils';
 
 export default function CreateUserPage() {
-  const [userId, setUserId] = useState("9C154")
-  const [username, setUsername] = useState("9C154")
-  const [email, setEmail] = useState("9C154@ube.co.th")
-  const [role, setRole] = useState("DEV")
-  const [department, setDepartment] = useState("IT")
-  const [submitting, setSubmitting] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState("")
+  const [userId, setUserId] = useState('9C154');
+  const [username, setUsername] = useState('9C154');
+  const [email, setEmail] = useState('9C154@ube.co.th');
+  const [role, setRole] = useState('DEV');
+  const [department, setDepartment] = useState('IT');
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   const handleCreateUser = async () => {
     if (!userId) {
-      setError("กรุณากรอก User ID")
-      return
+      setError('กรุณากรอก User ID');
+      return;
     }
 
-    setSubmitting(true)
-    setError("")
-    setSuccess(false)
+    setSubmitting(true);
+    setError('');
+    setSuccess(false);
 
     try {
-      const response = await fetch("/api/create-user", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          userId, 
-          username, 
-          email, 
-          role, 
-          department 
-        }),
-      })
+      await apiPost('/api/create-user', {
+        userId,
+        username,
+        email,
+        role,
+        department
+      });
 
-      if (response.ok) {
-        setSuccess(true)
-      } else {
-        const errorData = await response.json()
-        setError(errorData.error || "เกิดข้อผิดพลาด")
-      }
-    } catch (error) {
-      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ")
+      setSuccess(true);
+    } catch (error: any) {
+      setError(error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         className="container mx-auto px-4 py-8"
       >
@@ -79,9 +69,7 @@ export default function CreateUserPage() {
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Create New User
               </h1>
-              <p className="text-gray-600 mt-2">
-                สร้างผู้ใช้ใหม่ในระบบ
-              </p>
+              <p className="text-gray-600 mt-2">สร้างผู้ใช้ใหม่ในระบบ</p>
             </div>
           </motion.div>
         </div>
@@ -102,7 +90,9 @@ export default function CreateUserPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700">User ID</label>
+                <label className="text-sm font-medium text-gray-700">
+                  User ID
+                </label>
                 <Input
                   type="text"
                   value={userId}
@@ -113,7 +103,9 @@ export default function CreateUserPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Username</label>
+                <label className="text-sm font-medium text-gray-700">
+                  Username
+                </label>
                 <Input
                   type="text"
                   value={username}
@@ -124,7 +116,9 @@ export default function CreateUserPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Email</label>
+                <label className="text-sm font-medium text-gray-700">
+                  Email
+                </label>
                 <Input
                   type="email"
                   value={email}
@@ -135,7 +129,9 @@ export default function CreateUserPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Role</label>
+                <label className="text-sm font-medium text-gray-700">
+                  Role
+                </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
@@ -150,7 +146,9 @@ export default function CreateUserPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Department</label>
+                <label className="text-sm font-medium text-gray-700">
+                  Department
+                </label>
                 <Input
                   type="text"
                   value={department}
@@ -160,12 +158,12 @@ export default function CreateUserPage() {
                 />
               </div>
 
-              <Button 
+              <Button
                 onClick={handleCreateUser}
                 disabled={submitting || !userId}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
               >
-                {submitting ? "Creating..." : "Create User"}
+                {submitting ? 'Creating...' : 'Create User'}
               </Button>
 
               {/* Success Alert */}
@@ -177,7 +175,8 @@ export default function CreateUserPage() {
                   <Alert className="border-green-200 bg-green-50">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <AlertDescription className="text-green-800">
-                      User created successfully! You can now login with this user.
+                      User created successfully! You can now login with this
+                      user.
                     </AlertDescription>
                   </Alert>
                 </motion.div>
@@ -218,12 +217,13 @@ export default function CreateUserPage() {
               <p>3. Click "Create User" button</p>
               <p>4. Log in with the created User ID</p>
               <p className="text-blue-600 font-medium mt-4">
-                💡 Tip: After creating a user, edit the Role directly in the database
+                💡 Tip: After creating a user, edit the Role directly in the
+                database
               </p>
             </CardContent>
           </Card>
         </motion.div>
       </motion.div>
     </div>
-  )
-} 
+  );
+}

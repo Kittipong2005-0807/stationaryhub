@@ -1,6 +1,6 @@
-"use client"
+'use client';
 
-import React from "react"
+import React from 'react';
 import {
   Card,
   CardContent,
@@ -15,53 +15,54 @@ import {
   IconButton,
   Box,
   Divider,
-  TextField,
-} from "@mui/material"
-import { Delete, Add, Remove, ShoppingCart } from "@mui/icons-material"
-import { RefreshCw } from "lucide-react"
-import { useCart } from "@/src/contexts/CartContext"
-import { useAuth } from "@/src/contexts/AuthContext"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { motion } from "framer-motion"
-import Image from "next/image"
-import { getBasePathUrl } from "@/lib/base-path"
+  TextField
+} from '@mui/material';
+import { Delete, Add, Remove, ShoppingCart } from '@mui/icons-material';
+import { RefreshCw } from 'lucide-react';
+import { useCart } from '@/src/contexts/CartContext';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import Image from 'next/image';
+import { getBasePathUrl } from '@/lib/base-path';
+import { apiPost } from '@/lib/api-utils';
 
 export default function CartPage() {
-  console.log('🛒 CartPage component rendering...')
-  
-  const { 
-    items, 
-    removeFromCart, 
-    updateQuantity, 
-    getTotalAmount, 
-    clearCart, 
-    isLoading, 
-    error, 
-    refreshCart 
-  } = useCart()
-  
-  console.log('🛒 Cart context values:', { 
-    items: items?.length, 
-    isLoading, 
-    error, 
-    hasRefreshCart: !!refreshCart 
-  })
-  
-  const { user, isAuthenticated } = useAuth()
-  const router = useRouter()
+  console.log('🛒 CartPage component rendering...');
 
-  console.log('🛒 Auth context values:', { 
-    isAuthenticated, 
+  const {
+    items,
+    removeFromCart,
+    updateQuantity,
+    getTotalAmount,
+    clearCart,
+    isLoading,
+    error,
+    refreshCart
+  } = useCart();
+
+  console.log('🛒 Cart context values:', {
+    items: items?.length,
+    isLoading,
+    error,
+    hasRefreshCart: !!refreshCart
+  });
+
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  console.log('🛒 Auth context values:', {
+    isAuthenticated,
     userRole: user?.ROLE,
-    hasUser: !!user 
-  })
+    hasUser: !!user
+  });
 
   React.useEffect(() => {
-    if (!isAuthenticated || user?.ROLE !== "USER") {
-      router.push(getBasePathUrl("/login"))
+    if (!isAuthenticated || user?.ROLE !== 'USER') {
+      router.push(getBasePathUrl('/login'));
     }
-  }, [isAuthenticated, user, router])
+  }, [isAuthenticated, user, router]);
 
   // แสดง Loading state
   if (isLoading) {
@@ -72,7 +73,7 @@ export default function CartPage() {
           <p className="text-gray-600">กำลังโหลดข้อมูลตะกร้า...</p>
         </div>
       </div>
-    )
+    );
   }
 
   // แสดง Error state
@@ -81,7 +82,9 @@ export default function CartPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">เกิดข้อผิดพลาด</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">
+            เกิดข้อผิดพลาด
+          </h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={refreshCart}
@@ -91,101 +94,93 @@ export default function CartPage() {
           </button>
         </div>
       </div>
-    )
+    );
   }
-  
+
   const handleSubmitRequisition = async () => {
-    if (items.length === 0) return
-    console.log(" Cart user data: ", user)
-    
+    if (items.length === 0) return;
+    console.log(' Cart user data: ', user);
+
     // ใช้ OrgCode3Service เพื่อสร้าง requisition พร้อม SITE_ID
     const requisitionData = {
-      action: "createRequisition",
+      action: 'createRequisition',
       userId: user?.EmpCode || user?.USER_ID || user?.AdLoginName, // ใช้ EmpCode เป็นหลัก
       totalAmount: getTotalAmount(),
-      issueNote: "Requisition submitted from cart",
+      issueNote: 'Requisition submitted from cart',
       siteId: user?.SITE_ID || user?.orgcode3 || null, // ใช้ SITE_ID หรือ orgcode3 จาก session
       REQUISITION_ITEMS: items.map((item) => ({
         PRODUCT_ID: item.PRODUCT_ID,
         QUANTITY: item.quantity,
         UNIT_PRICE: item.UNIT_COST,
-        TOTAL_PRICE: item.UNIT_COST * item.quantity,
-      })),
-    }
-    
+        TOTAL_PRICE: item.UNIT_COST * item.quantity
+      }))
+    };
+
     // แสดง userId ที่จะใช้
-    console.log("EmpCode from session:", user?.EmpCode)
-    console.log("USER_ID from session:", user?.USER_ID)
-    console.log("AdLoginName from session:", user?.AdLoginName)
-    console.log("Final userId to be used:", requisitionData.userId)
-    console.log("Cart data being sent:", requisitionData)
-    console.log("User data from session:", { 
+    console.log('EmpCode from session:', user?.EmpCode);
+    console.log('USER_ID from session:', user?.USER_ID);
+    console.log('AdLoginName from session:', user?.AdLoginName);
+    console.log('Final userId to be used:', requisitionData.userId);
+    console.log('Cart data being sent:', requisitionData);
+    console.log('User data from session:', {
       USER_ID: user?.USER_ID,
-      AdLoginName: user?.AdLoginName, 
-      EmpCode: user?.EmpCode, 
+      AdLoginName: user?.AdLoginName,
+      EmpCode: user?.EmpCode,
       SITE_ID: user?.SITE_ID,
       ROLE: user?.ROLE,
       EMAIL: user?.EMAIL,
       USERNAME: user?.USERNAME,
       orgcode3: user?.orgcode3
-    })
-    
+    });
+
     // แสดงข้อมูล session ทั้งหมด
-    console.log("Full session user object:", user)
-    
+    console.log('Full session user object:', user);
+
     // แสดง userId ที่จะใช้
-    const finalUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName
-    console.log("Final userId to be used:", finalUserId)
-    
+    const finalUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName;
+    console.log('Final userId to be used:', finalUserId);
+
     // ตรวจสอบว่าข้อมูลครบหรือไม่
     if (!user?.EmpCode) {
-      console.error("EmpCode is missing from session")
-      alert("ข้อมูลผู้ใช้ไม่ครบถ้วน กรุณาเข้าสู่ระบบใหม่")
-      return
+      console.error('EmpCode is missing from session');
+      alert('ข้อมูลผู้ใช้ไม่ครบถ้วน กรุณาเข้าสู่ระบบใหม่');
+      return;
     }
-    
+
     if (getTotalAmount() <= 0) {
-      console.error("Total amount is zero or negative")
-      alert("จำนวนเงินรวมต้องมากกว่า 0")
-      return
+      console.error('Total amount is zero or negative');
+      alert('จำนวนเงินรวมต้องมากกว่า 0');
+      return;
     }
 
     try {
       // ใช้ API orgcode3 เพื่อสร้าง requisition พร้อม orgcode3
-      const res = await fetch("/api/orgcode3", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requisitionData),
-      })
-      
-      console.log("API response status:", res.status)
-      if (!res.ok) {
-        const errorData = await res.json()
-        console.error("API error:", errorData)
-        throw new Error(errorData.error || "Failed to submit requisition")
-      }
-      
-      const result = await res.json()
-      console.log("Requisition created with ID:", result.requisitionId)
-      
-      // ไม่ต้องเรียก API /api/requisitions อีกครั้ง เพราะ OrgCode3Service สร้าง requisition items ให้แล้ว
-      
-      alert("Requisition submitted successfully!")
-      clearCart()
-      router.push(getBasePathUrl("/orders"))
-    } catch (err) {
-      console.error("Error submitting requisition:", err)
-      alert("เกิดข้อผิดพลาดในการส่งใบเบิก กรุณาลองใหม่")
-    }
-  }
+      const result = await apiPost('/api/orgcode3', requisitionData);
 
-  if (!isAuthenticated || user?.ROLE !== "USER") {
-    return null
+      console.log('Requisition created with ID:', result.requisitionId);
+
+      // ไม่ต้องเรียก API /api/requisitions อีกครั้ง เพราะ OrgCode3Service สร้าง requisition items ให้แล้ว
+
+      alert('Requisition submitted successfully!');
+      clearCart();
+      router.push(getBasePathUrl('/orders'));
+    } catch (err: any) {
+      console.error('Error submitting requisition:', err);
+      alert('เกิดข้อผิดพลาดในการส่งใบเบิก กรุณาลองใหม่');
+    }
+  };
+
+  if (!isAuthenticated || user?.ROLE !== 'USER') {
+    return null;
   }
 
   if (items.length === 0) {
     return (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center py-20"
+      >
         <ShoppingCart className="text-6xl text-gray-400 mb-4" />
         <Typography variant="h4" className="text-gray-600 mb-2">
           Your cart is empty
@@ -194,46 +189,47 @@ export default function CartPage() {
           Add some products to get started
         </Typography>
         <Link href="/" style={{ textDecoration: 'none' }}>
-          <Button
-            variant="contained"
-            className="btn-gradient-primary"
-          >
+          <Button variant="contained" className="btn-gradient-primary">
             Browse Products
           </Button>
         </Link>
       </motion.div>
-    )
+    );
   }
 
   // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
   const getImageUrl = (photoUrl: string | null | undefined) => {
-    if (!photoUrl) return '/stationaryhub/placeholder.svg'
-    
+    if (!photoUrl) return '/stationaryhub/placeholder.svg';
+
     // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
     if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-      return photoUrl
+      return photoUrl;
     }
-    
+
     // ถ้าเป็น path ที่มี basepath แล้ว ให้ใช้เลย
     if (photoUrl.startsWith('/stationaryhub/')) {
-      return photoUrl
+      return photoUrl;
     }
-    
+
     // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ API route
     if (photoUrl.startsWith('/')) {
-      const filename = photoUrl.substring(1) // ลบ / ออก
-      return `/stationaryhub/api/image/${filename}`
+      const filename = photoUrl.substring(1); // ลบ / ออก
+      return `/stationaryhub/api/image/${filename}`;
     }
-    
-    return `/stationaryhub/api/image/${photoUrl}`
-  }
+
+    return `/stationaryhub/api/image/${photoUrl}`;
+  };
 
   const handleQuantityChange = (itemId: number, newQuantity: number) => {
-    updateQuantity(itemId, newQuantity)
-  }
+    updateQuantity(itemId, newQuantity);
+  };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       <Box className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -249,13 +245,17 @@ export default function CartPage() {
               variant="outlined"
               onClick={refreshCart}
               disabled={isLoading}
-              startIcon={<RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />}
+              startIcon={
+                <RefreshCw
+                  className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+                />
+              }
             >
               รีเฟรช
             </Button>
           </div>
         </div>
-        
+
         {/* แสดงสถานะการโหลดข้อมูล */}
         {isLoading && (
           <div className="flex items-center gap-2 text-blue-600 mb-4">
@@ -263,7 +263,7 @@ export default function CartPage() {
             <span className="text-sm">กำลังโหลดข้อมูลตะกร้า...</span>
           </div>
         )}
-        
+
         {/* แสดงข้อผิดพลาด */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
@@ -314,7 +314,10 @@ export default function CartPage() {
                           className="rounded-lg"
                         />
                         <Box>
-                          <Typography variant="subtitle1" className="font-semibold">
+                          <Typography
+                            variant="subtitle1"
+                            className="font-semibold"
+                          >
                             {item.PRODUCT_NAME}
                           </Typography>
                           <Typography variant="body2" className="text-gray-500">
@@ -332,7 +335,9 @@ export default function CartPage() {
                       <Box className="flex items-center gap-1">
                         <IconButton
                           size="small"
-                          onClick={() => updateQuantity(item.PRODUCT_ID, item.quantity - 1)}
+                          onClick={() =>
+                            updateQuantity(item.PRODUCT_ID, item.quantity - 1)
+                          }
                           disabled={item.quantity <= 1}
                         >
                           <Remove />
@@ -341,23 +346,34 @@ export default function CartPage() {
                           type="number"
                           value={item.quantity}
                           onChange={(e) => {
-                            const val = Number.parseInt(e.target.value) || 1
-                            updateQuantity(item.PRODUCT_ID, val)
+                            const val = Number.parseInt(e.target.value) || 1;
+                            updateQuantity(item.PRODUCT_ID, val);
                           }}
                           size="small"
                           className="w-16"
-                          inputProps={{ min: 1, className: "text-center" }}
+                          inputProps={{ min: 1, className: 'text-center' }}
                         />
-                        <IconButton size="small" onClick={() => updateQuantity(item.PRODUCT_ID, item.quantity + 1)}>
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            updateQuantity(item.PRODUCT_ID, item.quantity + 1)
+                          }
+                        >
                           <Add />
                         </IconButton>
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Typography className="font-bold">฿{Number(item.UNIT_COST * item.quantity || 0).toFixed(2)}</Typography>
+                      <Typography className="font-bold">
+                        ฿
+                        {Number(item.UNIT_COST * item.quantity || 0).toFixed(2)}
+                      </Typography>
                     </TableCell>
                     <TableCell>
-                      <IconButton color="error" onClick={() => removeFromCart(item.PRODUCT_ID)}>
+                      <IconButton
+                        color="error"
+                        onClick={() => removeFromCart(item.PRODUCT_ID)}
+                      >
                         <Delete />
                       </IconButton>
                     </TableCell>
@@ -371,7 +387,10 @@ export default function CartPage() {
 
           {/* ข้อมูลสรุปตะกร้า */}
           <Box className="bg-gray-50 rounded-lg p-4 mb-4">
-            <Typography variant="h6" className="font-semibold mb-3 text-gray-700">
+            <Typography
+              variant="h6"
+              className="font-semibold mb-3 text-gray-700"
+            >
               📊 สรุปข้อมูลตะกร้า
             </Typography>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -403,10 +422,10 @@ export default function CartPage() {
           </Box>
 
           <Box className="flex gap-2 md:gap-4 justify-end">
-            <Button 
-              variant="outlined" 
-              onClick={clearCart} 
-              color="error" 
+            <Button
+              variant="outlined"
+              onClick={clearCart}
+              color="error"
               style={{ minWidth: 120 }}
               disabled={isLoading}
             >
@@ -428,5 +447,5 @@ export default function CartPage() {
         </CardContent>
       </Card>
     </motion.div>
-  )
+  );
 }

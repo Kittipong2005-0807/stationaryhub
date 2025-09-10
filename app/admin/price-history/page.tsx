@@ -1,147 +1,154 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { Grid } from "@mui/material"
-import Card from "@mui/material/Card"
-import CardContent from "@mui/material/CardContent"
-import Typography from "@mui/material/Typography"
-import Button from "@mui/material/Button"
-import Table from "@mui/material/Table"
-import TableBody from "@mui/material/TableBody"
-import TableCell from "@mui/material/TableCell"
-import TableContainer from "@mui/material/TableContainer"
-import TableHead from "@mui/material/TableHead"
-import TableRow from "@mui/material/TableRow"
-import Chip from "@mui/material/Chip"
-import FormControl from "@mui/material/FormControl"
-import InputLabel from "@mui/material/InputLabel"
-import Select from "@mui/material/Select"
-import MenuItem from "@mui/material/MenuItem"
-import TextField from "@mui/material/TextField"
-import Box from "@mui/material/Box"
-import { Refresh, TrendingUp, TrendingDown, Remove } from "@mui/icons-material"
-import { useAuth } from "@/src/contexts/AuthContext"
-import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import ThaiDateUtils from '@/lib/date-utils'
+import { useState, useEffect } from 'react';
+import { Grid } from '@mui/material';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Chip from '@mui/material/Chip';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Box from '@mui/material/Box';
+import { Refresh, TrendingUp, TrendingDown, Remove } from '@mui/icons-material';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import ThaiDateUtils from '@/lib/date-utils';
 
 // Interface สำหรับ Price History
 interface PriceHistory {
-  HISTORY_ID: number
-  PRODUCT_ID: number
-  OLD_PRICE: number | null
-  NEW_PRICE: number | null
-  PRICE_CHANGE: number | null
-  PERCENTAGE_CHANGE: number | null
-  YEAR: number
-  RECORDED_DATE: string
-  NOTES: string | null
-  CREATED_BY: string | null
+  HISTORY_ID: number;
+  PRODUCT_ID: number;
+  OLD_PRICE: number | null;
+  NEW_PRICE: number | null;
+  PRICE_CHANGE: number | null;
+  PERCENTAGE_CHANGE: number | null;
+  YEAR: number;
+  RECORDED_DATE: string;
+  NOTES: string | null;
+  CREATED_BY: string | null;
   PRODUCTS?: {
-    PRODUCT_NAME: string
+    PRODUCT_NAME: string;
     PRODUCT_CATEGORIES?: {
-      CATEGORY_NAME: string
-    }
-  }
+      CATEGORY_NAME: string;
+    };
+  };
 }
 
 // Interface สำหรับ Product
 interface Product {
-  PRODUCT_ID: number
-  PRODUCT_NAME: string
-  CATEGORY_ID: number
+  PRODUCT_ID: number;
+  PRODUCT_NAME: string;
+  CATEGORY_ID: number;
   PRODUCT_CATEGORIES?: {
-    CATEGORY_ID: number
-    CATEGORY_NAME: string
-  }
+    CATEGORY_ID: number;
+    CATEGORY_NAME: string;
+  };
 }
 
 export default function PriceHistoryPage() {
-  const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<number | "all">("all")
-  const [selectedYear, setSelectedYear] = useState<number | "all">("all")
-  const [searchTerm, setSearchTerm] = useState("")
-  const { user, isAuthenticated } = useAuth()
-  const router = useRouter()
+  const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<number | 'all'>('all');
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
 
   // Fetch price history and products
   useEffect(() => {
-    if (isAuthenticated && user?.ROLE === "ADMIN") {
-      fetchPriceHistory()
-      fetchProducts()
+    if (isAuthenticated && user?.ROLE === 'ADMIN') {
+      fetchPriceHistory();
+      fetchProducts();
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, user]);
 
   const fetchPriceHistory = async () => {
     try {
-      setLoading(true)
-      const response = await fetch('/stationaryhub/api/products/price-history')
+      setLoading(true);
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
+      const response = await fetch(`${basePath}/api/products/price-history`);
       if (response.ok) {
-        const data = await response.json()
-        setPriceHistory(data)
+        const data = await response.json();
+        setPriceHistory(data);
       }
     } catch (error) {
-      console.error('Error fetching price history:', error)
+      console.error('Error fetching price history:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/stationaryhub/api/products')
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
+      const response = await fetch(`${basePath}/api/products`);
       if (response.ok) {
-        const data = await response.json()
-        setProducts(data)
+        const data = await response.json();
+        setProducts(data);
       }
     } catch (error) {
-      console.error('Error fetching products:', error)
+      console.error('Error fetching products:', error);
     }
-  }
+  };
 
   const handleRefresh = async () => {
-    setRefreshing(true)
-    await fetchPriceHistory()
-    setRefreshing(false)
-  }
+    setRefreshing(true);
+    await fetchPriceHistory();
+    setRefreshing(false);
+  };
 
   // Filter price history based on search and filters
-  const filteredPriceHistory = priceHistory.filter(history => {
-    const matchesProduct = selectedProduct === "all" || history.PRODUCT_ID === selectedProduct
-    const matchesYear = selectedYear === "all" || history.YEAR === selectedYear
-    const matchesSearch = history.PRODUCTS?.PRODUCT_NAME?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         history.NOTES?.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesProduct && matchesYear && (searchTerm === "" || matchesSearch)
-  })
+  const filteredPriceHistory = priceHistory.filter((history) => {
+    const matchesProduct =
+      selectedProduct === 'all' || history.PRODUCT_ID === selectedProduct;
+    const matchesYear = selectedYear === 'all' || history.YEAR === selectedYear;
+    const matchesSearch =
+      history.PRODUCTS?.PRODUCT_NAME?.toLowerCase().includes(
+        searchTerm.toLowerCase()
+      ) || history.NOTES?.toLowerCase().includes(searchTerm.toLowerCase());
+    return (
+      matchesProduct && matchesYear && (searchTerm === '' || matchesSearch)
+    );
+  });
 
   const getChangeIcon = (percentageChange: number | null) => {
-    if (!percentageChange) return <Remove className="text-gray-400" />
-    if (percentageChange > 0) return <TrendingUp className="text-green-500" />
-    if (percentageChange < 0) return <TrendingDown className="text-red-500" />
-    return <Remove className="text-gray-400" />
-  }
+    if (!percentageChange) return <Remove className="text-gray-400" />;
+    if (percentageChange > 0) return <TrendingUp className="text-green-500" />;
+    if (percentageChange < 0) return <TrendingDown className="text-red-500" />;
+    return <Remove className="text-gray-400" />;
+  };
 
   const getChangeColor = (percentageChange: number | null) => {
-    if (!percentageChange) return "default"
-    if (percentageChange > 0) return "success"
-    if (percentageChange < 0) return "error"
-    return "default"
-  }
+    if (!percentageChange) return 'default';
+    if (percentageChange > 0) return 'success';
+    if (percentageChange < 0) return 'error';
+    return 'default';
+  };
 
   const getProductName = (productId: number) => {
-    const product = products.find(p => p.PRODUCT_ID === productId)
-    return product?.PRODUCT_NAME || "Unknown Product"
-  }
+    const product = products.find((p) => p.PRODUCT_ID === productId);
+    return product?.PRODUCT_NAME || 'Unknown Product';
+  };
 
   const getCategoryName = (productId: number) => {
-    const product = products.find(p => p.PRODUCT_ID === productId)
-    return product?.PRODUCT_CATEGORIES?.CATEGORY_NAME || "Unknown"
-  }
+    const product = products.find((p) => p.PRODUCT_ID === productId);
+    return product?.PRODUCT_CATEGORIES?.CATEGORY_NAME || 'Unknown';
+  };
 
-  if (!isAuthenticated || user?.ROLE !== "ADMIN") {
+  if (!isAuthenticated || user?.ROLE !== 'ADMIN') {
     return (
       <div className="text-center py-20">
         <Typography variant="h4" className="text-gray-600">
@@ -151,12 +158,16 @@ export default function PriceHistoryPage() {
           This page is only accessible to administrators.
         </Typography>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -175,7 +186,10 @@ export default function PriceHistoryPage() {
                 </Typography>
               </div>
 
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
                 <Button
                   variant="outlined"
                   startIcon={<Refresh />}
@@ -184,7 +198,7 @@ export default function PriceHistoryPage() {
                   className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                   size="medium"
                 >
-                  {refreshing ? "Loading..." : "Refresh"}
+                  {refreshing ? 'Loading...' : 'Refresh'}
                 </Button>
               </motion.div>
             </div>
@@ -208,17 +222,22 @@ export default function PriceHistoryPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   size="medium"
                 />
-                
+
                 <FormControl fullWidth size="medium">
                   <InputLabel>Product Filter</InputLabel>
                   <Select
                     value={selectedProduct}
-                    onChange={(e) => setSelectedProduct(e.target.value as number | "all")}
+                    onChange={(e) =>
+                      setSelectedProduct(e.target.value as number | 'all')
+                    }
                     label="Product Filter"
                   >
                     <MenuItem value="all">All Products</MenuItem>
                     {products.map((product) => (
-                      <MenuItem key={product.PRODUCT_ID} value={product.PRODUCT_ID}>
+                      <MenuItem
+                        key={product.PRODUCT_ID}
+                        value={product.PRODUCT_ID}
+                      >
                         {product.PRODUCT_NAME}
                       </MenuItem>
                     ))}
@@ -229,15 +248,19 @@ export default function PriceHistoryPage() {
                   <InputLabel>Year Filter</InputLabel>
                   <Select
                     value={selectedYear}
-                    onChange={(e) => setSelectedYear(e.target.value as number | "all")}
+                    onChange={(e) =>
+                      setSelectedYear(e.target.value as number | 'all')
+                    }
                     label="Year Filter"
                   >
                     <MenuItem value="all">All Years</MenuItem>
-                    {Array.from(new Set(priceHistory.map(h => h.YEAR))).sort((a, b) => b - a).map((year) => (
-                      <MenuItem key={year} value={year}>
-                        {year}
-                      </MenuItem>
-                    ))}
+                    {Array.from(new Set(priceHistory.map((h) => h.YEAR)))
+                      .sort((a, b) => b - a)
+                      .map((year) => (
+                        <MenuItem key={year} value={year}>
+                          {year}
+                        </MenuItem>
+                      ))}
                   </Select>
                 </FormControl>
 
@@ -264,14 +287,30 @@ export default function PriceHistoryPage() {
                 <Table>
                   <TableHead>
                     <TableRow className="bg-gradient-to-r from-gray-50 to-green-50">
-                      <TableCell className="font-bold text-gray-700 py-4">Product</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">Category</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">Old Price</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">New Price</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">Change</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">% Change</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">Date</TableCell>
-                      <TableCell className="font-bold text-gray-700 py-4">Notes</TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Product
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Category
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Old Price
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        New Price
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Change
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        % Change
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Date
+                      </TableCell>
+                      <TableCell className="font-bold text-gray-700 py-4">
+                        Notes
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -287,7 +326,7 @@ export default function PriceHistoryPage() {
                           {getProductName(history.PRODUCT_ID)}
                         </TableCell>
                         <TableCell className="py-3">
-                          <Chip 
+                          <Chip
                             label={getCategoryName(history.PRODUCT_ID)}
                             color="primary"
                             size="small"
@@ -295,37 +334,54 @@ export default function PriceHistoryPage() {
                           />
                         </TableCell>
                         <TableCell className="font-medium text-gray-600 py-3">
-                          {history.OLD_PRICE ? `฿${history.OLD_PRICE.toLocaleString()}` : "-"}
+                          {history.OLD_PRICE
+                            ? `฿${history.OLD_PRICE.toLocaleString()}`
+                            : '-'}
                         </TableCell>
                         <TableCell className="font-semibold text-green-600 py-3">
-                          {history.NEW_PRICE ? `฿${history.NEW_PRICE.toLocaleString()}` : "-"}
+                          {history.NEW_PRICE
+                            ? `฿${history.NEW_PRICE.toLocaleString()}`
+                            : '-'}
                         </TableCell>
                         <TableCell className="py-3">
                           <div className="flex items-center gap-2">
                             {getChangeIcon(history.PERCENTAGE_CHANGE)}
-                            <span className={`font-medium ${
-                              history.PRICE_CHANGE && history.PRICE_CHANGE > 0 
-                                ? 'text-green-600' 
-                                : history.PRICE_CHANGE && history.PRICE_CHANGE < 0 
-                                ? 'text-red-600' 
-                                : 'text-gray-600'
-                            }`}>
-                              {history.PRICE_CHANGE ? `฿${history.PRICE_CHANGE.toLocaleString()}` : "-"}
+                            <span
+                              className={`font-medium ${
+                                history.PRICE_CHANGE && history.PRICE_CHANGE > 0
+                                  ? 'text-green-600'
+                                  : history.PRICE_CHANGE &&
+                                      history.PRICE_CHANGE < 0
+                                    ? 'text-red-600'
+                                    : 'text-gray-600'
+                              }`}
+                            >
+                              {history.PRICE_CHANGE
+                                ? `฿${history.PRICE_CHANGE.toLocaleString()}`
+                                : '-'}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell className="py-3">
                           <Chip
-                            label={history.PERCENTAGE_CHANGE ? `${history.PERCENTAGE_CHANGE >= 0 ? '+' : ''}${history.PERCENTAGE_CHANGE.toFixed(1)}%` : "-"}
-                            color={getChangeColor(history.PERCENTAGE_CHANGE) as any}
+                            label={
+                              history.PERCENTAGE_CHANGE
+                                ? `${history.PERCENTAGE_CHANGE >= 0 ? '+' : ''}${history.PERCENTAGE_CHANGE.toFixed(1)}%`
+                                : '-'
+                            }
+                            color={
+                              getChangeColor(history.PERCENTAGE_CHANGE) as any
+                            }
                             size="small"
                           />
                         </TableCell>
                         <TableCell className="text-gray-600 py-3">
-                          {ThaiDateUtils.formatShortThaiDate(history.RECORDED_DATE)}
+                          {ThaiDateUtils.formatShortThaiDate(
+                            history.RECORDED_DATE
+                          )}
                         </TableCell>
                         <TableCell className="text-gray-600 py-3 max-w-xs truncate">
-                          {history.NOTES || "-"}
+                          {history.NOTES || '-'}
                         </TableCell>
                       </motion.tr>
                     ))}
@@ -337,13 +393,14 @@ export default function PriceHistoryPage() {
                 <Box className="text-center py-16">
                   <TrendingUp className="text-gray-300 text-7xl mb-6" />
                   <Typography variant="h5" className="text-gray-500 mb-3">
-                    {loading ? "Loading price history..." : "No price history found"}
+                    {loading
+                      ? 'Loading price history...'
+                      : 'No price history found'}
                   </Typography>
                   <Typography variant="body1" className="text-gray-400">
-                    {loading 
-                      ? "Please wait while we load the data..." 
-                      : "Try adjusting your search or filter criteria"
-                    }
+                    {loading
+                      ? 'Please wait while we load the data...'
+                      : 'Try adjusting your search or filter criteria'}
                   </Typography>
                 </Box>
               )}
@@ -352,5 +409,5 @@ export default function PriceHistoryPage() {
         </motion.div>
       </motion.div>
     </div>
-  )
+  );
 }

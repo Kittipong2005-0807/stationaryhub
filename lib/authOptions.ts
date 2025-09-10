@@ -1,4 +1,3 @@
-
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { AuthOptions } from 'next-auth';
 import { prisma } from '@/lib/prisma';
@@ -23,21 +22,20 @@ interface ExtendedUser {
 export const authOptions: AuthOptions = {
   // NextAuth configuration
   pages: {
-    signIn: getBasePathUrl('/login'),
-    error: getBasePathUrl('/login'),
+    signIn: '/login'
   },
-  
+
   // Session configuration
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60 // 30 days
   },
-  
+
   // JWT configuration
   jwt: {
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60 // 30 days
   },
-  
+
   providers: [
     CredentialsProvider({
       name: 'LDAP',
@@ -45,17 +43,17 @@ export const authOptions: AuthOptions = {
         username: {
           label: 'ชื่อผู้ใช้',
           type: 'text',
-          placeholder: 'กรุณากรอกชื่อผู้ใช้',
+          placeholder: 'กรุณากรอกชื่อผู้ใช้'
         },
         password: {
           label: 'รหัสผ่าน',
           type: 'password',
-          placeholder: 'กรุณากรอกรหัสผ่าน',
-        },
+          placeholder: 'กรุณากรอกรหัสผ่าน'
+        }
       },
       async authorize(credentials?: Record<'username' | 'password', string>) {
         console.log('🔐 Starting LDAP authentication...');
-        
+
         if (!credentials?.username || !credentials?.password) {
           console.log('❌ Missing credentials');
           return null;
@@ -70,7 +68,7 @@ export const authOptions: AuthOptions = {
         }
 
         const client = ldap.createClient({
-          url: process.env.LDAP_URI,
+          url: process.env.LDAP_URI
         });
 
         return new Promise((resolve) => {
@@ -112,14 +110,14 @@ export const authOptions: AuthOptions = {
               }
 
               console.log(`✅ ${test.name} successful!`);
-              
+
               // LDAP bind สำเร็จ - สร้าง user object
               const username = credentials.username;
               const email = `${username}@ube.co.th`;
               const fullName = username; // ใช้ username เป็นชื่อเริ่มต้น
               const department = 'General';
               const title = 'Employee';
-              
+
               console.log('📝 Creating user data:', {
                 username,
                 email,
@@ -130,36 +128,45 @@ export const authOptions: AuthOptions = {
               // ดึงข้อมูลจาก userWithRoles view และบันทึกข้อมูลในฐานข้อมูล
               let empCode = username; // default to username if not found
               let userFullName = fullName; // default to username
-              
+
               (async () => {
                 try {
                   if (prisma) {
                     // ดึงข้อมูลจาก userWithRoles view เพื่อหา EmpCode, orgcode3 และ role
                     let siteId = null; // default value
                     let userRole = 'USER'; // default role
-                    
+
                     try {
                       const userData = await prisma.$queryRaw`
                         SELECT EmpCode, orgcode3, PostNameEng, FullNameEng FROM userWithRoles 
                         WHERE AdLoginName = ${username} 
                       `;
-                      
+
                       if (Array.isArray(userData) && userData.length > 0) {
                         if (userData[0].EmpCode) {
                           empCode = userData[0].EmpCode.toString();
-                          console.log('✅ Found EmpCode from userWithRoles:', empCode);
+                          console.log(
+                            '✅ Found EmpCode from userWithRoles:',
+                            empCode
+                          );
                         }
-                        
+
                         if (userData[0].orgcode3) {
                           siteId = userData[0].orgcode3.toString();
-                          console.log('✅ Found orgcode3 from userWithRoles:', siteId);
+                          console.log(
+                            '✅ Found orgcode3 from userWithRoles:',
+                            siteId
+                          );
                         }
-                        
+
                         if (userData[0].FullNameEng) {
                           userFullName = userData[0].FullNameEng.toString();
-                          console.log('✅ Found FullNameEng from userWithRoles:', userFullName);
+                          console.log(
+                            '✅ Found FullNameEng from userWithRoles:',
+                            userFullName
+                          );
                         }
-                        
+
                         // กำหนด role ตาม PostNameEng
                         if (userData[0].PostNameEng) {
                           const postName = userData[0].PostNameEng.toString();
@@ -168,13 +175,21 @@ export const authOptions: AuthOptions = {
                           } else {
                             userRole = 'USER';
                           }
-                          console.log('✅ Determined role from PostNameEng:', userRole);
+                          console.log(
+                            '✅ Determined role from PostNameEng:',
+                            userRole
+                          );
                         }
                       } else {
-                        console.log('⚠️ No user data found in userWithRoles, using defaults');
+                        console.log(
+                          '⚠️ No user data found in userWithRoles, using defaults'
+                        );
                       }
                     } catch (viewError) {
-                      console.log('⚠️ Error querying userWithRoles:', viewError);
+                      console.log(
+                        '⚠️ Error querying userWithRoles:',
+                        viewError
+                      );
                     }
 
                     // ตรวจสอบว่ามี user ในฐานข้อมูลหรือไม่
@@ -184,7 +199,10 @@ export const authOptions: AuthOptions = {
                         where: { USER_ID: empCode }
                       });
                     } catch (dbError) {
-                      console.log('⚠️ Database error when finding user:', dbError);
+                      console.log(
+                        '⚠️ Database error when finding user:',
+                        dbError
+                      );
                     }
 
                     if (existingUser) {
@@ -206,7 +224,9 @@ export const authOptions: AuthOptions = {
                         console.log('⚠️ Error updating user:', updateError);
                       }
                       */
-                      console.log('ℹ️ Auto-update disabled - using existing user data');
+                      console.log(
+                        'ℹ️ Auto-update disabled - using existing user data'
+                      );
                     } else {
                       // สร้าง user ใหม่
                       try {
@@ -221,19 +241,29 @@ export const authOptions: AuthOptions = {
                             SITE_ID: siteId
                           }
                         });
-                        console.log('✅ Created new user in database with USER_ID:', empCode, 'SITE_ID:', siteId, 'and ROLE:', userRole);
+                        console.log(
+                          '✅ Created new user in database with USER_ID:',
+                          empCode,
+                          'SITE_ID:',
+                          siteId,
+                          'and ROLE:',
+                          userRole
+                        );
                       } catch (createError) {
                         console.log('⚠️ Error creating user:', createError);
                       }
                     }
 
                     if (existingUser) {
-                      console.log('✅ User data saved/updated in USERS table:', {
-                        USER_ID: existingUser.USER_ID,
-                        USERNAME: existingUser.USERNAME,
-                        EMAIL: existingUser.EMAIL,
-                        DEPARTMENT: existingUser.DEPARTMENT
-                      });
+                      console.log(
+                        '✅ User data saved/updated in USERS table:',
+                        {
+                          USER_ID: existingUser.USER_ID,
+                          USERNAME: existingUser.USERNAME,
+                          EMAIL: existingUser.EMAIL,
+                          DEPARTMENT: existingUser.DEPARTMENT
+                        }
+                      );
                     }
                   }
                 } catch (dbError) {
@@ -258,23 +288,11 @@ export const authOptions: AuthOptions = {
 
           tryNextBind();
         });
-      },
-    }),
+      }
+    })
   ],
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async redirect({ url, baseUrl }) {
-      console.log('🔄 Redirect callback - url:', url, 'baseUrl:', baseUrl);
-      
-      // ถ้า url เป็น relative path ให้ใช้ baseUrl ที่มี base path แล้ว
-      if (url.startsWith('/')) {
-        // Next.js จะจัดการ basePath ให้อัตโนมัติ ดังนั้นเราใช้ url โดยตรง
-        return url;
-      }
-      
-      // ถ้า url เป็น absolute path ให้ใช้ตามเดิม
-      return url;
-    },
     async jwt({ token, user }) {
       console.log('🧠 JWT Callback - user:', user);
       console.log('🧠 JWT Callback - token:', token);
@@ -303,7 +321,7 @@ export const authOptions: AuthOptions = {
               token.ROLE = userFromDB.ROLE; // Use ROLE from USERS table
               token.SITE_ID = userFromDB.SITE_ID;
               token.EmpCode = user.id; // Add EmpCode to token
-              
+
               console.log('✅ Token populated from USERS table:', {
                 USERNAME: token.USERNAME,
                 EMAIL: token.EMAIL,
@@ -331,7 +349,9 @@ export const authOptions: AuthOptions = {
 
               console.log('🔍 UserWithRoles data:', getUserData);
 
-              const userData = Array.isArray(getUserData) ? getUserData[0] : getUserData;
+              const userData = Array.isArray(getUserData)
+                ? getUserData[0]
+                : getUserData;
               if (userData) {
                 token.AdLoginName = userData.AdLoginName;
                 token.EmpCode = userData.EmpCode;
@@ -340,13 +360,16 @@ export const authOptions: AuthOptions = {
                 token.PostNameEng = userData.PostNameEng;
                 token.CostCenterEng = userData.CostCenterEng;
                 token.orgcode3 = userData.orgcode3;
-                
+
                 // Update SITE_ID from orgcode3
                 if (userData.orgcode3) {
                   token.SITE_ID = userData.orgcode3.toString();
-                  console.log('✅ Updated SITE_ID from orgcode3:', token.SITE_ID);
+                  console.log(
+                    '✅ Updated SITE_ID from orgcode3:',
+                    token.SITE_ID
+                  );
                 }
-                
+
                 // Update DEPARTMENT in USERS table from CostCenterEng
                 if (userData.CostCenterEng) {
                   try {
@@ -355,12 +378,18 @@ export const authOptions: AuthOptions = {
                       SET DEPARTMENT = ${userData.CostCenterEng.toString()}
                       WHERE USER_ID = ${user.name ?? ''}
                     `;
-                    console.log('✅ Updated DEPARTMENT in USERS table from CostCenterEng:', userData.CostCenterEng);
+                    console.log(
+                      '✅ Updated DEPARTMENT in USERS table from CostCenterEng:',
+                      userData.CostCenterEng
+                    );
                   } catch (updateError) {
-                    console.error('❌ Failed to update DEPARTMENT in USERS table:', updateError);
+                    console.error(
+                      '❌ Failed to update DEPARTMENT in USERS table:',
+                      updateError
+                    );
                   }
                 }
-                
+
                 // Update ROLE from PostNameEng - temporarily disabled
                 /*
                 if (userData.PostNameEng) {
@@ -373,15 +402,22 @@ export const authOptions: AuthOptions = {
                   console.log('✅ Updated ROLE from PostNameEng:', token.ROLE);
                 }
                 */
-                console.log('ℹ️ ROLE update from userWithRoles disabled - using ROLE from USERS table');
-                
+                console.log(
+                  'ℹ️ ROLE update from userWithRoles disabled - using ROLE from USERS table'
+                );
+
                 console.log('✅ Token populated from userWithRoles view');
               } else {
-                console.log('⚠️ User not found in userWithRoles view for:', user.name);
+                console.log(
+                  '⚠️ User not found in userWithRoles view for:',
+                  user.name
+                );
                 // Fallback: use data from user object from authorize
                 token.AdLoginName = user.name;
-                token.FullNameEng = (user as ExtendedUser).fullName || user.name;
-                token.FullNameThai = (user as ExtendedUser).fullName || user.name;
+                token.FullNameEng =
+                  (user as ExtendedUser).fullName || user.name;
+                token.FullNameThai =
+                  (user as ExtendedUser).fullName || user.name;
               }
             } catch (error) {
               console.error('❌ Error querying userWithRoles view:', error);
@@ -431,7 +467,7 @@ export const authOptions: AuthOptions = {
           PostNameEng: token.PostNameEng,
           CostCenterEng: token.CostCenterEng,
           orgcode3: token.orgcode3
-        },
+        }
       };
 
       console.log('📦 Session object being returned to client:', {
@@ -443,6 +479,6 @@ export const authOptions: AuthOptions = {
       });
 
       return sessionWithUser;
-    },
-  },
+    }
+  }
 };

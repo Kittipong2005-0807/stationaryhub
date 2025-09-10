@@ -1,115 +1,126 @@
-"use client"
+'use client';
 
-import { useSession } from "next-auth/react"
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Shield, UserCheck, Settings, Users, AlertTriangle, CheckCircle, Code } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import { getBasePathUrl } from "@/lib/base-path"
+import { useSession } from 'next-auth/react';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import {
+  Shield,
+  UserCheck,
+  Settings,
+  Users,
+  AlertTriangle,
+  CheckCircle,
+  Code
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { getBasePathUrl } from '@/lib/base-path';
+import { apiPost } from '@/lib/api-utils';
 
 export default function SimpleChangeRolePage() {
-  const [loading, setLoading] = useState(true)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [newRole, setNewRole] = useState("")
-  const [reason, setReason] = useState("")
-  const [submitting, setSubmitting] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [currentRole, setCurrentRole] = useState("")
-  const router = useRouter()
-  const { data: session } = useSession()
-  const user = session?.user as any
-  const isAuthenticated = !!session
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newRole, setNewRole] = useState('');
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [currentRole, setCurrentRole] = useState('');
+  const router = useRouter();
+  const { data: session } = useSession();
+  const user = session?.user as any;
+  const isAuthenticated = !!session;
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push(getBasePathUrl("/login"))
-      return
+      router.push(getBasePathUrl('/login'));
+      return;
     }
 
     // ดึงข้อมูล Role ปัจจุบัน
-    setCurrentRole(user?.ROLE || "USER")
-    setLoading(false)
-  }, [isAuthenticated, router, user])
+    setCurrentRole(user?.ROLE || 'USER');
+    setLoading(false);
+  }, [isAuthenticated, router, user]);
 
   const handleChangeRole = async () => {
-    if (!newRole) return
+    if (!newRole) return;
 
-    setSubmitting(true)
+    setSubmitting(true);
     try {
-      const response = await fetch("/api/roles", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          targetUserId: user.AdLoginName || user.USER_ID,
-          newRole,
-          reason,
-        }),
-      })
+      await apiPost('/api/roles', {
+        targetUserId: user.AdLoginName || user.USER_ID,
+        newRole,
+        reason
+      });
 
-      if (response.ok) {
-        setSuccess(true)
-        setDialogOpen(false)
-        setCurrentRole(newRole)
-        // รีเฟรชหน้าเว็บหลังจาก 2 วินาที
-        setTimeout(() => {
-          window.location.reload()
-        }, 2000)
-      } else {
-        const error = await response.json()
-        alert(`Failed to change role: ${error.error}`)
-      }
-    } catch (error) {
-      alert("Failed to change role")
+      setSuccess(true);
+      setDialogOpen(false);
+      setCurrentRole(newRole);
+      // รีเฟรชหน้าเว็บหลังจาก 2 วินาที
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (error: any) {
+      alert(`Failed to change role: ${error.message}`);
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case "SUPER_ADMIN":
-        return "bg-red-50 text-red-700 border-red-200"
-      case "ADMIN":
-        return "bg-purple-50 text-purple-700 border-purple-200"
-      case "MANAGER":
-        return "bg-blue-50 text-blue-700 border-blue-200"
-      case "USER":
-        return "bg-green-50 text-green-700 border-green-200"
-      case "DEV":
-        return "bg-green-50 text-green-700 border-green-200"
+      case 'SUPER_ADMIN':
+        return 'bg-red-50 text-red-700 border-red-200';
+      case 'ADMIN':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'MANAGER':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'USER':
+        return 'bg-green-50 text-green-700 border-green-200';
+      case 'DEV':
+        return 'bg-green-50 text-green-700 border-green-200';
       default:
-        return "bg-gray-50 text-gray-700 border-gray-200"
+        return 'bg-gray-50 text-gray-700 border-gray-200';
     }
-  }
+  };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case "SUPER_ADMIN":
-        return <Shield className="h-4 w-4" />
-      case "ADMIN":
-        return <Settings className="h-4 w-4" />
-      case "MANAGER":
-        return <UserCheck className="h-4 w-4" />
-      case "USER":
-        return <Users className="h-4 w-4" />
-      case "DEV":
-        return <Code className="h-4 w-4" />
+      case 'SUPER_ADMIN':
+        return <Shield className="h-4 w-4" />;
+      case 'ADMIN':
+        return <Settings className="h-4 w-4" />;
+      case 'MANAGER':
+        return <UserCheck className="h-4 w-4" />;
+      case 'USER':
+        return <Users className="h-4 w-4" />;
+      case 'DEV':
+        return <Code className="h-4 w-4" />;
       default:
-        return <Users className="h-4 w-4" />
+        return <Users className="h-4 w-4" />;
     }
-  }
+  };
 
   if (!isAuthenticated) {
-    return null
+    return null;
   }
 
   if (loading) {
@@ -120,14 +131,14 @@ export default function SimpleChangeRolePage() {
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         className="container mx-auto px-4 py-8"
       >
@@ -169,7 +180,9 @@ export default function SimpleChangeRolePage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-3 mb-4">
-                <Badge className={`${getRoleColor(currentRole)} border px-3 py-1 rounded-full flex items-center gap-1`}>
+                <Badge
+                  className={`${getRoleColor(currentRole)} border px-3 py-1 rounded-full flex items-center gap-1`}
+                >
                   {getRoleIcon(currentRole)}
                   {currentRole}
                 </Badge>
@@ -179,7 +192,9 @@ export default function SimpleChangeRolePage() {
               </div>
 
               <div className="space-y-2">
-                <h4 className="font-semibold text-gray-700">Available Roles:</h4>
+                <h4 className="font-semibold text-gray-700">
+                  Available Roles:
+                </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div className="flex items-center gap-2 p-2 bg-white rounded border">
                     <Users className="h-4 w-4 text-green-500" />
@@ -187,20 +202,26 @@ export default function SimpleChangeRolePage() {
                   </div>
                   <div className="flex items-center gap-2 p-2 bg-white rounded border">
                     <UserCheck className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm">Manager - Can approve requisitions</span>
+                    <span className="text-sm">
+                      Manager - Can approve requisitions
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 p-2 bg-white rounded border">
                     <Settings className="h-4 w-4 text-purple-500" />
                     <span className="text-sm">Admin - Full system access</span>
                   </div>
-                                     <div className="flex items-center gap-2 p-2 bg-white rounded border">
-                     <Shield className="h-4 w-4 text-red-500" />
-                     <span className="text-sm">Super Admin - Complete control</span>
-                   </div>
-                   <div className="flex items-center gap-2 p-2 bg-white rounded border">
-                     <Code className="h-4 w-4 text-green-500" />
-                     <span className="text-sm">Developer - Full access for development</span>
-                   </div>
+                  <div className="flex items-center gap-2 p-2 bg-white rounded border">
+                    <Shield className="h-4 w-4 text-red-500" />
+                    <span className="text-sm">
+                      Super Admin - Complete control
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-white rounded border">
+                    <Code className="h-4 w-4 text-green-500" />
+                    <span className="text-sm">
+                      Developer - Full access for development
+                    </span>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -214,7 +235,7 @@ export default function SimpleChangeRolePage() {
           transition={{ delay: 0.4 }}
           className="text-center"
         >
-          <Button 
+          <Button
             onClick={() => setDialogOpen(true)}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg shadow-lg"
           >
@@ -244,13 +265,16 @@ export default function SimpleChangeRolePage() {
             <DialogHeader>
               <DialogTitle>Change Your Role</DialogTitle>
               <DialogDescription>
-                Select a new role for your account. This will update your permissions immediately.
+                Select a new role for your account. This will update your
+                permissions immediately.
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700">New Role</label>
+                <label className="text-sm font-medium text-gray-700">
+                  New Role
+                </label>
                 <Select value={newRole} onValueChange={setNewRole}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select a role" />
@@ -274,24 +298,26 @@ export default function SimpleChangeRolePage() {
                         Admin - Full system access
                       </div>
                     </SelectItem>
-                                         <SelectItem value="SUPER_ADMIN">
-                       <div className="flex items-center gap-2">
-                         <Shield className="h-4 w-4" />
-                         Super Admin - Complete control
-                       </div>
-                     </SelectItem>
-                     <SelectItem value="DEV">
-                       <div className="flex items-center gap-2">
-                         <Code className="h-4 w-4" />
-                         Developer - Full access for development
-                       </div>
-                     </SelectItem>
+                    <SelectItem value="SUPER_ADMIN">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        Super Admin - Complete control
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="DEV">
+                      <div className="flex items-center gap-2">
+                        <Code className="h-4 w-4" />
+                        Developer - Full access for development
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700">Reason (Optional)</label>
+                <label className="text-sm font-medium text-gray-700">
+                  Reason (Optional)
+                </label>
                 <Textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
@@ -305,17 +331,17 @@ export default function SimpleChangeRolePage() {
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleChangeRole}
                 disabled={!newRole || submitting}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
-                {submitting ? "Changing..." : "Change Role"}
+                {submitting ? 'Changing...' : 'Change Role'}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </motion.div>
     </div>
-  )
-} 
+  );
+}
