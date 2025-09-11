@@ -500,7 +500,6 @@ export default function ApprovalsPage() {
             </div>
            <div style="text-align: right;">
              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
-             <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Time:</strong> ${new Date(requisition.SUBMITTED_AT).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
            </div>
          </div>
@@ -527,7 +526,7 @@ export default function ApprovalsPage() {
             <thead>
               <tr>
                 <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 10%;">Itemnum</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 40%;">Description</th>
+                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 50%;">Description</th>
                 <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 12%;">Order</th>
                 <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 10%;">Unit</th>
                 <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 12%;">Cost</th>
@@ -540,7 +539,7 @@ export default function ApprovalsPage() {
                 (item, index) => `
                 <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'};">
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #1976d2;">SA${String(index + 1).padStart(3, '0')}</td>
-                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 9px; word-wrap: break-word; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${item.PRODUCT_NAME || 'Unknown Product'}">${(item.PRODUCT_NAME || 'Unknown Product').length > 25 ? (item.PRODUCT_NAME || 'Unknown Product').substring(0, 25) + '...' : item.PRODUCT_NAME || 'Unknown Product'}</td>
+                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 9px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.2;" title="${item.PRODUCT_NAME || 'Unknown Product'}">${item.PRODUCT_NAME || 'Unknown Product'}</td>
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${Math.round(item.QUANTITY)}</td>
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ORDER_UNIT || 'EA'}</td>
                   <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>

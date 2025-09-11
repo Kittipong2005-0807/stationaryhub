@@ -373,14 +373,19 @@ export const authOptions: AuthOptions = {
                 // Update DEPARTMENT in USERS table from CostCenterEng
                 if (userData.CostCenterEng) {
                   try {
-                    await prisma.$executeRaw`
+                    // ใช้ EmpCode เป็น USER_ID ในการอัปเดต
+                    const updateResult = await prisma.$executeRaw`
                       UPDATE USERS 
                       SET DEPARTMENT = ${userData.CostCenterEng.toString()}
-                      WHERE USER_ID = ${user.name ?? ''}
+                      WHERE USER_ID = ${userData.EmpCode ?? user.name ?? ''}
                     `;
                     console.log(
                       '✅ Updated DEPARTMENT in USERS table from CostCenterEng:',
-                      userData.CostCenterEng
+                      userData.CostCenterEng,
+                      'for USER_ID:',
+                      userData.EmpCode ?? user.name,
+                      'Rows affected:',
+                      updateResult
                     );
                   } catch (updateError) {
                     console.error(
@@ -388,6 +393,8 @@ export const authOptions: AuthOptions = {
                       updateError
                     );
                   }
+                } else {
+                  console.log('⚠️ CostCenterEng is null/undefined for user:', user.name);
                 }
 
                 // Update ROLE from PostNameEng - temporarily disabled
