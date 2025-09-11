@@ -38,6 +38,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import ThaiDateUtils from '@/lib/date-utils';
 import { getBasePathUrl } from '@/lib/base-path';
+import { uploadProductImage, getProductImageUrl } from '@/lib/image-utils';
 
 // Interface สำหรับ Product ตามฐานข้อมูลจริง
 interface Product {
@@ -266,24 +267,17 @@ export default function ProductManagementPage() {
     try {
       setImageUploading(true);
 
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch(
-        getBasePathUrl('/api/upload-product-image'),
-        {
-          method: 'POST',
-          body: formData
-        }
+      // ใช้ uploadProductImage function และส่ง oldImageUrl เพื่อลบรูปเก่า
+      const result = await uploadProductImage(
+        file, 
+        editingProduct ? formData.PHOTO_URL : undefined
       );
 
-      if (response.ok) {
-        const result = await response.json();
-        setFormData((prev) => ({ ...prev, PHOTO_URL: result.imageUrl }));
+      if (result.success) {
+        setFormData((prev) => ({ ...prev, PHOTO_URL: result.imageUrl || '' }));
         alert('Image uploaded successfully!');
       } else {
-        const errorData = await response.json();
-        alert(`Upload failed: ${errorData.error}`);
+        alert(`Upload failed: ${result.error}`);
       }
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -372,20 +366,7 @@ export default function ProductManagementPage() {
 
   // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
   const getImageUrl = (photoUrl: string | null | undefined) => {
-    if (!photoUrl) return getBasePathUrl('/placeholder.jpg');
-
-    // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
-    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-      return photoUrl;
-    }
-
-    // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ getBasePathUrl
-    if (photoUrl.startsWith('/')) {
-      return getBasePathUrl(photoUrl);
-    }
-
-    // ถ้าเป็น filename ที่ไม่มี path ให้ใช้ getBasePathUrl
-    return getBasePathUrl(`/${photoUrl}`);
+    return getProductImageUrl(photoUrl || '');
   };
 
   const getCategoryName = (categoryId: number) => {

@@ -206,13 +206,15 @@ export default function CartPage() {
       return photoUrl;
     }
 
-    // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ getBasePathUrl
+    // เรียกผ่าน API image โดยใช้ base path แต่ API จะใช้ PATH_FILE_URL เป็น root
+    // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้เรียกผ่าน API image
     if (photoUrl.startsWith('/')) {
-      return getBasePathUrl(photoUrl);
+      const filename = photoUrl.substring(1); // ลบ / ออก
+      return getBasePathUrl(`/api/image/${filename}`);
     }
 
-    // ถ้าเป็น filename ที่ไม่มี path ให้ใช้ getBasePathUrl
-    return getBasePathUrl(`/${photoUrl}`);
+    // ถ้าเป็น filename ที่ไม่มี path ให้เรียกผ่าน API image
+    return getBasePathUrl(`/api/image/${photoUrl}`);
   };
 
   const handleQuantityChange = (itemId: number, newQuantity: number) => {

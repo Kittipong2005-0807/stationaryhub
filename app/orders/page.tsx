@@ -147,22 +147,22 @@ export default function OrdersPage() {
 
   // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
   const getImageUrl = (photoUrl: string | null | undefined) => {
-    if (!photoUrl) return '/placeholder.jpg';
+    if (!photoUrl) return getBasePathUrl('/placeholder.jpg');
 
     // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
     if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
       return photoUrl;
     }
 
-    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
-
-    // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ API route
+    // เรียกผ่าน API image โดยใช้ base path แต่ API จะใช้ PATH_FILE_URL เป็น root
+    // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้เรียกผ่าน API image
     if (photoUrl.startsWith('/')) {
       const filename = photoUrl.substring(1); // ลบ / ออก
-      return `${basePath}/api/image/${filename}`;
+      return getBasePathUrl(`/api/image/${filename}`);
     }
 
-    return `${basePath}/api/image/${photoUrl}`;
+    // ถ้าเป็น filename ที่ไม่มี path ให้เรียกผ่าน API image
+    return getBasePathUrl(`/api/image/${photoUrl}`);
   };
 
   if (!isAuthenticated) {

@@ -7,6 +7,26 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
 import { prisma } from "@/lib/prisma"
+import { unlink } from "fs/promises"
+import { join } from "path"
+import { existsSync } from "fs"
+
+// ฟังก์ชันสำหรับลบไฟล์รูปภาพ
+async function deleteImageFile(filename: string): Promise<boolean> {
+  try {
+    const pathFileUrl = process.env.PATH_FILE_URL || 'D:/stationaryhub';
+    const filePath = join(pathFileUrl, filename);
+    
+    if (existsSync(filePath)) {
+      await unlink(filePath);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error deleting image file:', error);
+    return false;
+  }
+}
 
 export async function PUT(
   request: NextRequest,
@@ -124,7 +144,7 @@ export async function DELETE(
 
     const productId = parseInt(params.id)
 
-    // Check if product exists
+    // Check if product exists and get image info
     const existingProduct = await prisma.pRODUCTS.findUnique({
       where: { PRODUCT_ID: productId },
     })
@@ -134,6 +154,11 @@ export async function DELETE(
         { error: "Product not found" },
         { status: 404 }
       )
+    }
+
+    // Delete associated image file if exists
+    if (existingProduct.PHOTO_URL) {
+      await deleteImageFile(existingProduct.PHOTO_URL);
     }
 
     // Delete product
