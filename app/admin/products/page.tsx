@@ -37,6 +37,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import ThaiDateUtils from '@/lib/date-utils';
+import { getBasePathUrl } from '@/lib/base-path';
 
 // Interface สำหรับ Product ตามฐานข้อมูลจริง
 interface Product {
@@ -153,12 +154,10 @@ export default function ProductManagementPage() {
 
   // Fetch products and categories
   useEffect(() => {
-    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
-
     // Fetch products
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${basePath}/api/products`);
+        const response = await fetch(getBasePathUrl('/api/products'));
         if (response.ok) {
           const data = await response.json();
           setProducts(data);
@@ -171,7 +170,7 @@ export default function ProductManagementPage() {
     // Fetch categories
     const fetchCategories = async () => {
       try {
-        const response = await fetch(`${basePath}/api/categories`);
+        const response = await fetch(getBasePathUrl('/api/categories'));
         if (response.ok) {
           const data = await response.json();
           // ตรวจสอบว่า response มี data field หรือไม่
@@ -193,7 +192,7 @@ export default function ProductManagementPage() {
     // Fetch existing units
     const fetchExistingUnits = async () => {
       try {
-        const response = await fetch(`${basePath}/api/products/units`);
+        const response = await fetch(getBasePathUrl('/api/products/units'));
         if (response.ok) {
           const data = await response.json();
           if (data.success && Array.isArray(data.data)) {
@@ -267,14 +266,16 @@ export default function ProductManagementPage() {
     try {
       setImageUploading(true);
 
-      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`${basePath}/api/upload-product-image`, {
-        method: 'POST',
-        body: formData
-      });
+      const response = await fetch(
+        getBasePathUrl('/api/upload-product-image'),
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
 
       if (response.ok) {
         const result = await response.json();
@@ -307,8 +308,8 @@ export default function ProductManagementPage() {
 
     try {
       const url = editingProduct
-        ? `/api/products/${editingProduct.PRODUCT_ID}`
-        : '/api/products';
+        ? getBasePathUrl(`/api/products/${editingProduct.PRODUCT_ID}`)
+        : getBasePathUrl('/api/products');
 
       const method = editingProduct ? 'PUT' : 'POST';
 
@@ -348,9 +349,12 @@ export default function ProductManagementPage() {
     }
 
     try {
-      const response = await fetch(`/api/products/${productId}`, {
-        method: 'DELETE'
-      });
+      const response = await fetch(
+        getBasePathUrl(`/api/products/${productId}`),
+        {
+          method: 'DELETE'
+        }
+      );
 
       if (response.ok) {
         alert('Product deleted successfully!');
@@ -368,21 +372,20 @@ export default function ProductManagementPage() {
 
   // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
   const getImageUrl = (photoUrl: string | null | undefined) => {
-    if (!photoUrl) return '/placeholder.jpg';
+    if (!photoUrl) return getBasePathUrl('/placeholder.jpg');
 
     // ถ้าเป็น URL เต็มแล้ว ให้ใช้เลย
     if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
       return photoUrl;
     }
 
-    // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ static path
+    // ถ้าเป็น path ที่เริ่มต้นด้วย / ให้ใช้ getBasePathUrl
     if (photoUrl.startsWith('/')) {
-      const filename = photoUrl.substring(1); // ลบ / ออก
-      return `/${filename}`;
+      return getBasePathUrl(photoUrl);
     }
 
-    // ถ้าเป็น filename ที่ไม่มี path ให้ใช้ static path
-    return `/${photoUrl}`;
+    // ถ้าเป็น filename ที่ไม่มี path ให้ใช้ getBasePathUrl
+    return getBasePathUrl(`/${photoUrl}`);
   };
 
   const getCategoryName = (categoryId: number) => {
