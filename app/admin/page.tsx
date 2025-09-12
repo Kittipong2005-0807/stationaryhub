@@ -42,6 +42,7 @@ import {
   Timeline,
   Analytics,
   Schedule,
+  ShoppingCart,
 } from "@mui/icons-material"
 import { useAuth } from "@/src/contexts/AuthContext"
 // import { useRouter } from "next/navigation"
@@ -486,24 +487,31 @@ export default function AdminDashboard() {
 
   const quickActions = [
     {
-      title: "Manage Products",
+      title: "Product Management",
       description: "Add, edit, or remove products",
       icon: Inventory,
       color: "from-blue-500 to-purple-600",
       href: "/admin/products",
     },
     {
+      title: "Order Products",
+      description: "Order products for your department",
+      icon: ShoppingCart,
+      color: "from-green-500 to-emerald-600",
+      href: "/admin/products-order",
+    },
+    {
       title: "Review Approvals",
       description: "Process pending requisitions",
       icon: Assignment,
-      color: "from-green-500 to-teal-600",
+      color: "from-orange-500 to-red-600",
       href: "/approvals",
     },
     {
       title: "Export Reports",
       description: "Generate PDF and Excel reports",
       icon: GetApp,
-      color: "from-orange-500 to-red-600",
+      color: "from-purple-500 to-pink-600",
       action: () => alert("Bulk export functionality coming soon!"),
     },
     {

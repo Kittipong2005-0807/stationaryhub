@@ -283,7 +283,10 @@ export default function Layout({ children }: LayoutProps) {
     if (user?.ROLE === "ADMIN") {
       items.push(
         { label: "Dashboard", path: "/admin", icon: Dashboard },
-        { label: "Products", path: "/admin/products", icon: Inventory },
+        { label: "Products", path: "/admin/products-order", icon: ShoppingCart },
+        { label: "Product Management", path: "/admin/products", icon: Inventory },
+        { label: "Cart", path: "/admin/cart", icon: ShoppingCart, badge: cartItemCount > 0 ? cartItemCount : undefined },
+        { label: "Orders", path: "/admin/orders", icon: Assignment },
         { label: "Approvals", path: "/approvals", icon: Assignment },
       )
     }
@@ -430,6 +433,7 @@ export default function Layout({ children }: LayoutProps) {
                 {navigationItems.map((item) => (
                   <NavigationButton key={item.path} item={item} />
                 ))}
+                
               </Box>
             )}
 
@@ -693,6 +697,7 @@ export default function Layout({ children }: LayoutProps) {
             {navigationItems.map((item) => (
               <NavigationButton key={item.path} item={item} mobile />
             ))}
+            
           </List>
         </Box>
       </Drawer>

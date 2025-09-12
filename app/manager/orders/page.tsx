@@ -87,11 +87,13 @@ export default function ManagerOrdersPage() {
     try {
       setLoading(true);
       // ดึง order ของตัว Manager เองเท่านั้น
-      const response = await fetch(getApiUrl('/api/requisitions?mine=1'));
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
+      const response = await fetch(`${basePath}/api/my-orders`);
       const data = await response.json();
 
       if (response.ok) {
         setRequisitions(data || []);
+        console.log(`✅ Fetched ${data.length} manager orders`);
       } else {
         console.error('Failed to fetch requisitions:', data.error);
       }
