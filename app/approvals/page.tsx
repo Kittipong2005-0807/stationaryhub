@@ -35,7 +35,7 @@ import {
   CheckSquare,
   AlertTriangle,
   RefreshCw,
-  Download,
+  Download as _Download,
   FileText
 } from 'lucide-react';
 import {
@@ -81,6 +81,9 @@ interface Requisition {
   APPROVALS?: unknown[];
   STATUS_HISTORY?: unknown[];
   DEPARTMENT?: string;
+  deliveryDate?: string;
+  contactPerson?: string;
+  category?: string;
 }
 
 export default function ApprovalsPage() {
@@ -103,11 +106,19 @@ export default function ApprovalsPage() {
     deliveryDate: '',
     contactPerson: '',
     category: '',
-    companyName: '',
-    fax: '',
-    phone: '',
-    contact: ''
+    companyName: 'บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)',
+    companyAddress: '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
+    fax: '(038) 623433',
+    phone: '(038) 623126',
+    taxId: '0215542000264',
+    fileName: ''
   });
+  const [editItemsDialogOpen, setEditItemsDialogOpen] = useState(false);
+  const [editingItems, setEditingItems] = useState<RequisitionItem[]>([]);
+  const [savingItems, setSavingItems] = useState(false);
+  const [editAllDialogOpen, setEditAllDialogOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
   const [notifyMessage, setNotifyMessage] = useState('');
   const [notifying, setNotifying] = useState(false);
@@ -264,7 +275,7 @@ export default function ApprovalsPage() {
       } else {
         alert('Failed to update requisition. Please try again.');
       }
-    } catch (error) {
+    } catch (_error) {
       alert('Failed to update requisition. Please try again.');
     } finally {
       setSubmitting(false);
@@ -312,7 +323,7 @@ export default function ApprovalsPage() {
   };
 
   // เพิ่มฟังก์ชันดาวน์โหลดไฟล์ Excel/CSV สำหรับ Admin
-  const handleDownload = () => {
+  const _handleDownload = () => {
     if (!requisitions.length) {
       alert('ไม่มีข้อมูลให้ดาวน์โหลด');
       return;
@@ -396,7 +407,7 @@ export default function ApprovalsPage() {
   };
 
   // เพิ่มฟังก์ชันดาวน์โหลดเฉพาะรายการ
-  const handleDownloadSingle = (requisition: Requisition) => {
+  const _handleDownloadSingle = (requisition: Requisition) => {
     if (
       !requisition.REQUISITION_ITEMS ||
       requisition.REQUISITION_ITEMS.length === 0
@@ -461,6 +472,333 @@ export default function ApprovalsPage() {
     document.body.removeChild(link);
   };
 
+
+
+  // เพิ่มฟังก์ชันสำหรับแจ้งเตือนว่าสินค้ามาแล้ว
+  const handleNotifyArrival = (requisition: Requisition) => {
+    setSelectedRequisition(requisition);
+    setNotifyMessage(
+      `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`
+    );
+    setNotifyDialogOpen(true);
+  };
+
+  const handleSubmitNotification = async () => {
+    if (!selectedRequisition) return;
+
+    setNotifying(true);
+    try {
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
+      const response = await fetch(`${basePath}/api/notifications/arrival`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          requisitionId: selectedRequisition.REQUISITION_ID,
+          message: notifyMessage
+        })
+      });
+
+      if (response.ok) {
+        alert('ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ!');
+        setNotifyDialogOpen(false);
+        setNotifyMessage('');
+        setSelectedRequisition(null);
+      } else {
+        const errorData = await response.json();
+        alert(`เกิดข้อผิดพลาด: ${errorData.error}`);
+      }
+    } catch (error) {
+      alert('เกิดข้อผิดพลาดในการส่งการแจ้งเตือน');
+      console.error('Error sending notification:', error);
+    } finally {
+      setNotifying(false);
+    }
+  };
+
+  // เพิ่มฟังก์ชันสำหรับบันทึกการแก้ไข
+  const handleSaveEdit = () => {
+    setEditDialogOpen(false);
+    if (editingRequisition) {
+      generatePDF(editingRequisition);
+    }
+  };
+
+  // เพิ่มฟังก์ชันสำหรับแก้ไขรายการสินค้า
+  const handleEditItems = async (requisition: Requisition) => {
+    try {
+      setSavingItems(true);
+      const response = await fetch(
+        getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`)
+      );
+      
+      if (response.ok) {
+        const items = await response.json();
+        setEditingItems(items);
+        setEditItemsDialogOpen(true);
+      } else {
+        alert('ไม่สามารถโหลดรายการสินค้าได้');
+      }
+    } catch (error) {
+      console.error('Error loading items:', error);
+      alert('เกิดข้อผิดพลาดในการโหลดรายการสินค้า');
+    } finally {
+      setSavingItems(false);
+    }
+  };
+
+  // เพิ่มฟังก์ชันสำหรับบันทึกรายการสินค้าที่แก้ไข
+  const handleSaveItems = async () => {
+    if (!editingRequisition) return;
+
+    try {
+      setSavingItems(true);
+      const response = await fetch(
+        getApiUrl(`/api/requisitions/${editingRequisition.REQUISITION_ID}/items`),
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ items: editingItems })
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`บันทึกรายการสินค้าเรียบร้อยแล้ว! ยอดรวมใหม่: ฿${result.totalAmount.toFixed(2)}`);
+        setEditItemsDialogOpen(false);
+        
+        // รีเฟรชข้อมูล
+        await handleRefresh();
+      } else {
+        const errorData = await response.json();
+        alert(`เกิดข้อผิดพลาด: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error saving items:', error);
+      alert('เกิดข้อผิดพลาดในการบันทึกรายการสินค้า');
+    } finally {
+      setSavingItems(false);
+    }
+  };
+
+  // เพิ่มฟังก์ชันสำหรับอัปเดตจำนวนสินค้า
+  const handleUpdateItemQuantity = (itemId: number, quantity: number) => {
+    if (quantity < 0) return;
+    
+    setEditingItems(prev => 
+      prev.map(item => 
+        item.ITEM_ID === itemId 
+          ? { 
+              ...item, 
+              QUANTITY: quantity,
+              TOTAL_PRICE: quantity * (item.UNIT_PRICE || 0)
+            }
+          : item
+      )
+    );
+  };
+
+  // เพิ่มฟังก์ชันสำหรับลบรายการสินค้า
+  const handleRemoveItem = (itemId: number) => {
+    setEditingItems(prev => prev.filter(item => item.ITEM_ID !== itemId));
+  };
+
+  // ฟังก์ชันคำนวณยอดรวมที่ปลอดภัย
+  const calculateTotalAmount = (items: RequisitionItem[] | undefined | null): number => {
+    if (!items || !Array.isArray(items)) return 0;
+    return items.reduce((sum, item) => {
+      const price = Number(item.TOTAL_PRICE) || 0;
+      return sum + price;
+    }, 0);
+  };
+
+  // เพิ่มฟังก์ชันเปิด Dialog แก้ไขข้อมูลสำหรับ PDF ทั้งหมด
+  const handleEditAllData = () => {
+    setEditFormData({
+      deliveryDate: '',
+      contactPerson: '',
+      category: '',
+      companyName: 'บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)',
+      companyAddress: '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
+      fax: '(038) 623433',
+      phone: '(038) 623126',
+      taxId: '0215542000264',
+      fileName: `ALL_SUPPLY_REQUEST_ORDERS_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`
+    });
+    setEditAllDialogOpen(true);
+  };
+
+  // เพิ่มฟังก์ชันสร้าง PDF ทั้งหมดทุกรายการ
+  const generateAllPDFs = async () => {
+    if (filteredRequisitions.length === 0) {
+      alert('ไม่มีข้อมูลให้สร้าง PDF');
+      return;
+    }
+
+    try {
+      // สร้าง PDF หลัก
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let isFirstPage = true;
+
+      for (let i = 0; i < filteredRequisitions.length; i++) {
+        const requisition = filteredRequisitions[i];
+        
+        if (!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0) {
+          continue; // ข้ามรายการที่ไม่มี items
+        }
+
+        // เพิ่มหน้าใหม่ (ยกเว้นหน้าแรก)
+        if (!isFirstPage) {
+          pdf.addPage();
+        }
+        isFirstPage = false;
+
+        // สร้าง HTML content สำหรับ SUPPLY REQUEST ORDER
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.top = '-9999px';
+        tempDiv.style.width = '210mm';
+        tempDiv.style.padding = '20mm';
+        tempDiv.style.backgroundColor = 'white';
+        tempDiv.style.fontFamily = 'Arial, sans-serif';
+        tempDiv.style.fontSize = '12px';
+        tempDiv.style.lineHeight = '1.4';
+
+        tempDiv.innerHTML = `
+          <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
+            <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px;">
+            <div style="text-align: left;">
+              <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold; text-transform: uppercase;">TO:</h3>
+              <p style="margin: 0 0 3px 0; font-size: 11px; font-weight: bold;">บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">TEL: (038) 623126 FAX: (038) 623433</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">เลขประจำตัวผู้เสียภาษี 0215542000264</p>
+            </div>
+            <div style="text-align: right;">
+              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+            <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
+            <p style="margin: 0 0 3px 0; font-size: 11px;">${editFormData.deliveryDate || '_________________________________'}</p>
+            <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
+            <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson || 'N/A'}</p>
+          </div>
+          
+          <div style="margin-bottom: 20px; padding: 8px; background: #e8f4fd; border-left: 4px solid #2196f3;">
+            <h3 style="margin: 0; font-size: 12px; font-weight: bold; color: #1976d2;">หมวดหมู่: ${editFormData.category || 'ทั่วไป'}</h3>
+          </div>
+        
+          <div style="margin-bottom: 25px;">
+            <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
+              <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${requisition.SITE_ID}</div>
+              <div style="font-size: 11px; color: #666; margin-top: 2px;">UCHA ${requisition.SITE_ID} - ${requisition.USER_ID}</div>
+              <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisition.DEPARTMENT || 'N/A'}</div>
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; font-size: 10px; table-layout: fixed;">
+              <thead>
+                <tr>
+                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 10%;">Itemnum</th>
+                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 50%;">Description</th>
+                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 12%;">Order</th>
+                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 10%;">Unit</th>
+                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 12%;">Cost</th>
+                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 8%;">Sent</th>
+                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 8%;">SRNum</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${requisition.REQUISITION_ITEMS.map(
+                  (item, index) => `
+                  <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'};">
+                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #1976d2;">SA${String(index + 1).padStart(3, '0')}</td>
+                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 9px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.2;" title="${item.PRODUCT_NAME || 'Unknown Product'}">${item.PRODUCT_NAME || 'Unknown Product'}</td>
+                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${Math.round(item.QUANTITY)}</td>
+                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ORDER_UNIT || 'EA'}</td>
+                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>
+                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center; color: #1976d2; font-weight: bold;">${Math.round(item.QUANTITY)}</td>
+                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center; font-weight: bold; color: #1976d2;">${requisition.REQUISITION_ID}</td>
+                  </tr>
+                `
+                ).join('')}
+              </tbody>
+            </table>
+          </div>
+          
+          <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
+            <h3 style="margin: 0 0 10px 0; color: #1976d2;">สรุปยอดรวม</h3>
+            <div style="font-size: 18px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${Number(requisition.TOTAL_AMOUNT).toFixed(2)}</div>
+            <p style="margin: 10px 0 0 0; color: #1976d2;">จำนวนรายการ: ${requisition.REQUISITION_ITEMS.length} รายการ</p>
+            <p style="margin: 5px 0 0 0; color: #1976d2;">สถานะ: ${requisition.STATUS}</p>
+            <p style="margin: 5px 0 0 0; color: #1976d2;">แผนก: ${requisition.DEPARTMENT || 'N/A'}</p>
+          </div>
+          
+          <div style="margin-top: 30px; text-align: center; color: #666; font-size: 10px; border-top: 1px solid #ddd; padding-top: 15px;">
+            <p style="margin: 0 0 5px 0;">เอกสารนี้ถูกสร้างโดยระบบ StationaryHub</p>
+            <p style="margin: 0 0 5px 0;">วันที่สร้าง: ${new Date().toLocaleDateString('th-TH')} เวลา: ${new Date().toLocaleTimeString('th-TH')}</p>
+            <p style="margin: 0;">Page ${i + 1} of ${filteredRequisitions.length}</p>
+          </div>
+        `;
+
+        // เพิ่ม element ลงใน DOM
+        document.body.appendChild(tempDiv);
+
+        // รอให้ content render เสร็จ
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // แปลง HTML เป็น canvas
+        const canvas = await html2canvas(tempDiv, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        });
+
+        // ลบ element ชั่วคราว
+        document.body.removeChild(tempDiv);
+
+        // เพิ่มรูปภาพลงใน PDF
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 210; // A4 width in mm
+        const pageHeight = 295; // A4 height in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        // เพิ่มหน้าแรก
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        // เพิ่มหน้าถัดไปถ้าจำเป็น
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+      }
+
+      // ดาวน์โหลด PDF
+      const fileName = editFormData.fileName || `ALL_SUPPLY_REQUEST_ORDERS_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
+      pdf.save(`${fileName}.pdf`);
+
+      alert(`ไฟล์ PDF ทั้งหมด ${filteredRequisitions.length} รายการถูกสร้างและดาวน์โหลดแล้ว!`);
+    } catch (error) {
+      console.error('Error generating all PDFs:', error);
+      alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + (error as Error).message);
+    }
+  };
+
   // เพิ่มฟังก์ชันสร้าง PDF สำหรับใบเบิกสินค้า
   const generatePDF = async (requisition: Requisition) => {
     if (
@@ -493,10 +831,10 @@ export default function ApprovalsPage() {
                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px;">
             <div style="text-align: left;">
               <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold; text-transform: uppercase;">TO:</h3>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">${editFormData.companyName}</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">FAX: ${editFormData.fax}</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">PHONE: ${editFormData.phone}</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">CONTACT: ${editFormData.contact}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px; font-weight: bold;">บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">TEL: (038) 623126 FAX: (038) 623433</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">เลขประจำตัวผู้เสียภาษี 0215542000264</p>
             </div>
            <div style="text-align: right;">
              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
@@ -606,9 +944,8 @@ export default function ApprovalsPage() {
       }
 
       // ดาวน์โหลด PDF
-      pdf.save(
-        `SUPPLY_REQUEST_ORDER_${requisition.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}.pdf`
-      );
+      const fileName = editFormData.fileName || `SUPPLY_REQUEST_ORDER_${requisition.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}`;
+      pdf.save(`${fileName}.pdf`);
 
       alert('ไฟล์ SUPPLY REQUEST ORDER PDF ถูกสร้างและดาวน์โหลดแล้ว!');
     } catch (error) {
@@ -620,58 +957,18 @@ export default function ApprovalsPage() {
   // เพิ่มฟังก์ชันสำหรับเปิดหน้าแก้ไข
   const handleEdit = (requisition: Requisition) => {
     setEditingRequisition(requisition);
+    setEditFormData({
+      deliveryDate: requisition.deliveryDate || '',
+      contactPerson: requisition.contactPerson || '',
+      category: requisition.category || '',
+      companyName: 'บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)',
+      companyAddress: '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
+      fax: '(038) 623433',
+      phone: '(038) 623126',
+      taxId: '0215542000264',
+      fileName: `SUPPLY_REQUEST_ORDER_${requisition.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}`
+    });
     setEditDialogOpen(true);
-  };
-
-  // เพิ่มฟังก์ชันสำหรับแจ้งเตือนว่าสินค้ามาแล้ว
-  const handleNotifyArrival = (requisition: Requisition) => {
-    setSelectedRequisition(requisition);
-    setNotifyMessage(
-      `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`
-    );
-    setNotifyDialogOpen(true);
-  };
-
-  const handleSubmitNotification = async () => {
-    if (!selectedRequisition) return;
-
-    setNotifying(true);
-    try {
-      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/stationaryhub';
-      const response = await fetch(`${basePath}/api/notifications/arrival`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          requisitionId: selectedRequisition.REQUISITION_ID,
-          message: notifyMessage
-        })
-      });
-
-      if (response.ok) {
-        alert('ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ!');
-        setNotifyDialogOpen(false);
-        setNotifyMessage('');
-        setSelectedRequisition(null);
-      } else {
-        const errorData = await response.json();
-        alert(`เกิดข้อผิดพลาด: ${errorData.error}`);
-      }
-    } catch (error) {
-      alert('เกิดข้อผิดพลาดในการส่งการแจ้งเตือน');
-      console.error('Error sending notification:', error);
-    } finally {
-      setNotifying(false);
-    }
-  };
-
-  // เพิ่มฟังก์ชันสำหรับบันทึกการแก้ไข
-  const handleSaveEdit = () => {
-    setEditDialogOpen(false);
-    if (editingRequisition) {
-      generatePDF(editingRequisition);
-    }
   };
 
   const handleView = async (requisition: Requisition) => {
@@ -754,6 +1051,16 @@ export default function ApprovalsPage() {
         break;
     }
 
+    // กรองตามเดือนและปีที่เลือก
+    if (selectedMonth && selectedYear) {
+      filtered = filtered.filter((r) => {
+        const date = new Date(r.SUBMITTED_AT);
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear().toString();
+        return month === selectedMonth && year === selectedYear;
+      });
+    }
+
     return filtered;
   };
 
@@ -826,13 +1133,27 @@ export default function ApprovalsPage() {
               </div>
             </div>
 
-            {/* Refresh Button */}
+            {/* Action Buttons */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.4 }}
               className="flex gap-3"
             >
+              {/* Download All PDFs Button - แสดงเฉพาะเมื่อมีข้อมูล */}
+              {filteredRequisitions.length > 0 && (
+                <Button
+                  onClick={handleEditAllData}
+                  disabled={loading}
+                  className="px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:shadow-lg bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-md hover:shadow-xl"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    แก้ไข & ดาวน์โหลด PDF ทั้งหมด ({filteredRequisitions.length})
+                  </div>
+                </Button>
+              )}
+
               <Button
                 onClick={handleRefresh}
                 disabled={loading}
@@ -971,6 +1292,105 @@ export default function ApprovalsPage() {
           </Card>
         </motion.div>
 
+        {/* Month/Year Filter - แสดงเฉพาะเมื่อ activeFilter เป็น 'all' */}
+        {activeFilter === 'all' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mb-6"
+          >
+            <Card className="bg-white shadow-lg border-0 rounded-2xl overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                  <div className="flex items-center gap-2">
+                    <CalendarToday className="h-5 w-5 text-blue-600" />
+                    <span className="text-lg font-semibold text-gray-800">กรองตามเดือน:</span>
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    {/* Year Dropdown */}
+                    <div className="flex flex-col">
+                      <label className="text-sm font-medium text-gray-600 mb-1">ปี</label>
+                      <select
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        {Array.from({ length: 5 }, (_, i) => {
+                          const year = new Date().getFullYear() - 2 + i;
+                          return (
+                            <option key={year} value={year.toString()}>
+                              {year}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    {/* Month Dropdown */}
+                    <div className="flex flex-col">
+                      <label className="text-sm font-medium text-gray-600 mb-1">เดือน</label>
+                      <select
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">ทั้งหมด</option>
+                        {[
+                          { value: '01', label: 'มกราคม' },
+                          { value: '02', label: 'กุมภาพันธ์' },
+                          { value: '03', label: 'มีนาคม' },
+                          { value: '04', label: 'เมษายน' },
+                          { value: '05', label: 'พฤษภาคม' },
+                          { value: '06', label: 'มิถุนายน' },
+                          { value: '07', label: 'กรกฎาคม' },
+                          { value: '08', label: 'สิงหาคม' },
+                          { value: '09', label: 'กันยายน' },
+                          { value: '10', label: 'ตุลาคม' },
+                          { value: '11', label: 'พฤศจิกายน' },
+                          { value: '12', label: 'ธันวาคม' }
+                        ].map((month) => (
+                          <option key={month.value} value={month.value}>
+                            {month.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Clear Filter Button */}
+                    {(selectedMonth || selectedYear !== new Date().getFullYear().toString()) && (
+                      <button
+                        onClick={() => {
+                          setSelectedMonth('');
+                          setSelectedYear(new Date().getFullYear().toString());
+                        }}
+                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        ล้างตัวกรอง
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Filter Summary */}
+                {(selectedMonth || selectedYear !== new Date().getFullYear().toString()) && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <span className="font-medium">แสดงข้อมูล:</span> 
+                      {selectedMonth ? ` เดือน${[
+                        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+                      ][parseInt(selectedMonth) - 1]}` : ' ทุกเดือน'} 
+                      {selectedYear} ({filteredRequisitions.length} รายการ)
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {user?.ROLE === 'MANAGER' && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -1062,12 +1482,12 @@ export default function ApprovalsPage() {
             <CardContent className="p-0">
               {loading ? (
                 <div className="p-6 space-y-4">
-                  {[...Array(3)].map((_, index) => (
+                  {[...Array(3)].map((_, _index) => (
                     <motion.div
-                      key={index}
+                      key={_index}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
+                      transition={{ delay: _index * 0.1 }}
                     >
                       <Skeleton className="h-20 w-full rounded-xl" />
                     </motion.div>
@@ -1250,13 +1670,13 @@ export default function ApprovalsPage() {
                       </TableHeader>
                       <TableBody>
                         <AnimatePresence>
-                          {filteredRequisitions.map((requisition, index) => (
+                          {filteredRequisitions.map((requisition, _index) => (
                             <motion.tr
                               key={requisition.REQUISITION_ID}
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -20 }}
-                              transition={{ delay: index * 0.1 }}
+                              transition={{ delay: _index * 0.1 }}
                               className={`transition-colors duration-200 ${
                                 activeFilter === 'pending'
                                   ? 'hover:bg-yellow-50/50'
@@ -1391,6 +1811,30 @@ export default function ApprovalsPage() {
                                       >
                                         <FileText className="h-4 w-4 mr-2" />
                                         แก้ไข & PDF
+                                      </Button>
+
+                                      {/* ปุ่มแก้ไขรายการสินค้า */}
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setEditingRequisition(requisition);
+                                          handleEditItems(requisition);
+                                        }}
+                                        disabled={
+                                          !requisition.REQUISITION_ITEMS ||
+                                          requisition.REQUISITION_ITEMS
+                                            .length === 0 ||
+                                          savingItems
+                                        }
+                                        className="hover:bg-blue-50 hover:border-blue-300 transition-colors border-blue-200 text-blue-600"
+                                      >
+                                        {savingItems ? (
+                                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2" />
+                                        ) : (
+                                          <Inventory className="h-4 w-4 mr-2" />
+                                        )}
+                                        แก้ไขรายการ
                                       </Button>
 
                                       {/* ปุ่มแจ้งเตือนว่าสินค้ามาแล้ว */}
@@ -1960,11 +2404,11 @@ export default function ApprovalsPage() {
                     </label>
                     <input
                       type="text"
-                      value={editFormData.contact}
+                      value={editFormData.contactPerson}
                       onChange={(e) =>
                         setEditFormData({
                           ...editFormData,
-                          contact: e.target.value
+                          contactPerson: e.target.value
                         })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -2037,6 +2481,33 @@ export default function ApprovalsPage() {
                   />
                 </div>
               </div>
+
+              {/* ชื่อไฟล์ */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                  ชื่อไฟล์ PDF
+                </h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ชื่อไฟล์
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.fileName}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        fileName: e.target.value
+                      })
+                    }
+                    placeholder="เช่น SUPPLY_REQUEST_ORDER_001_2025-01-15"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    ไฟล์จะถูกบันทึกเป็น: {editFormData.fileName || 'SUPPLY_REQUEST_ORDER'}.pdf
+                  </p>
+                </div>
+              </div>
             </div>
 
             <DialogFooter className="gap-3 pt-6 border-t border-gray-200">
@@ -2053,6 +2524,414 @@ export default function ApprovalsPage() {
               >
                 <FileText className="h-5 w-5 mr-2" />
                 สร้าง PDF
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog สำหรับแก้ไขรายการสินค้า */}
+        <Dialog open={editItemsDialogOpen} onOpenChange={setEditItemsDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] bg-white overflow-y-auto">
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Inventory className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-gray-900">
+                    แก้ไขรายการสินค้า
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    Requisition #{editingRequisition?.REQUISITION_ID}
+                  </div>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              {/* สรุปยอดรวม */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">ยอดรวมปัจจุบัน</h3>
+                    <p className="text-2xl font-bold text-green-600">
+                      ฿{calculateTotalAmount(editingItems).toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">จำนวนรายการ</p>
+                    <p className="text-xl font-semibold text-blue-600">
+                      {(editingItems || []).length} รายการ
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* รายการสินค้า */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                  รายการสินค้า
+                </h3>
+                
+                {(editingItems || []).length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Inventory className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                    <p>ไม่มีรายการสินค้า</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {(editingItems || []).map((item, _index) => (
+                      <div
+                        key={item.ITEM_ID}
+                        className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                      >
+                        {/* รูปภาพสินค้า */}
+                        <div className="flex-shrink-0">
+                          <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                            {item.PHOTO_URL ? (
+                              <img
+                                src={getImageUrl(item.PHOTO_URL)}
+                                alt={item.PRODUCT_NAME}
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                            ) : (
+                              <Category className="h-8 w-8 text-gray-400" />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* ข้อมูลสินค้า */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-800 truncate">
+                            {item.PRODUCT_NAME || 'Unknown Product'}
+                          </h4>
+                          {item.CATEGORY_NAME && (
+                            <p className="text-sm text-gray-500">
+                              {item.CATEGORY_NAME}
+                            </p>
+                          )}
+                          <p className="text-sm text-gray-600">
+                            ราคาต่อหน่วย: ฿{Number(item.UNIT_PRICE || 0).toFixed(2)}
+                          </p>
+                        </div>
+
+                        {/* จำนวนสินค้า */}
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm font-medium text-gray-700">
+                            จำนวน:
+                          </label>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleUpdateItemQuantity(item.ITEM_ID, Math.max(0, item.QUANTITY - 1))}
+                              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              value={item.QUANTITY}
+                              onChange={(e) => handleUpdateItemQuantity(item.ITEM_ID, Math.max(0, parseFloat(e.target.value) || 0))}
+                              className="w-16 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              min="0"
+                            />
+                            <button
+                              onClick={() => handleUpdateItemQuantity(item.ITEM_ID, item.QUANTITY + 1)}
+                              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* ยอดรวม */}
+                        <div className="text-right">
+                          <p className="text-sm text-gray-600">ยอดรวม</p>
+                          <p className="text-lg font-bold text-green-600">
+                            ฿{Number(item.TOTAL_PRICE || 0).toFixed(2)}
+                          </p>
+                        </div>
+
+                        {/* ปุ่มลบ */}
+                        <button
+                          onClick={() => handleRemoveItem(item.ITEM_ID)}
+                          className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition-colors"
+                          title="ลบรายการนี้"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="gap-3 pt-6 border-t border-gray-200">
+              <Button
+                variant="outline"
+                onClick={() => setEditItemsDialogOpen(false)}
+                className="flex-1 h-12 text-base font-medium"
+                disabled={savingItems}
+              >
+                ยกเลิก
+              </Button>
+              <Button
+                onClick={handleSaveItems}
+                disabled={savingItems || (editingItems || []).length === 0}
+                className="flex-1 h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base font-medium"
+              >
+                {savingItems ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    กำลังบันทึก...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Inventory className="h-5 w-5" />
+                    บันทึกการแก้ไข
+                  </div>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog สำหรับแก้ไขข้อมูลก่อนดาวน์โหลด PDF ทั้งหมด */}
+        <Dialog open={editAllDialogOpen} onOpenChange={setEditAllDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] bg-white overflow-y-auto">
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <FileText className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-gray-900">
+                    แก้ไขข้อมูลก่อนดาวน์โหลด PDF ทั้งหมด
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    {filteredRequisitions.length} รายการ
+                  </div>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              {/* ข้อมูลบริษัท */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                  ข้อมูลบริษัท
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ชื่อบริษัท
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.companyName}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          companyName: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ที่อยู่บริษัท
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.companyAddress}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          companyAddress: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      โทรศัพท์
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.phone}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          phone: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      FAX
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.fax}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          fax: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      เลขประจำตัวผู้เสียภาษี
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.taxId}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          taxId: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ข้อมูลการจัดส่ง */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                  ข้อมูลการจัดส่ง
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      วันที่จัดส่ง
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.deliveryDate}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          deliveryDate: e.target.value
+                        })
+                      }
+                      placeholder="เช่น 15/01/2025 หรือ ภายใน 7 วัน"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ผู้ติดต่อเพิ่มเติม
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.contactPerson}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          contactPerson: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* หมวดหมู่ */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                  หมวดหมู่สินค้า
+                </h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    หมวดหมู่
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.category}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        category: e.target.value
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* ชื่อไฟล์ */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                  ชื่อไฟล์ PDF
+                </h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ชื่อไฟล์
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.fileName}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        fileName: e.target.value
+                      })
+                    }
+                    placeholder="เช่น ALL_SUPPLY_REQUEST_ORDERS_2025_2025-01-15"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    ไฟล์จะถูกบันทึกเป็น: {editFormData.fileName || 'ALL_SUPPLY_REQUEST_ORDERS'}.pdf
+                  </p>
+                </div>
+              </div>
+
+              {/* สรุปข้อมูล */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">สรุปข้อมูลที่จะสร้าง PDF</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-600">จำนวนรายการ:</p>
+                    <p className="font-semibold text-blue-600">{filteredRequisitions.length} รายการ</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">ชื่อไฟล์:</p>
+                    <p className="font-semibold text-green-600">
+                      {editFormData.fileName || `ALL_SUPPLY_REQUEST_ORDERS_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`}.pdf
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-3 pt-6 border-t border-gray-200">
+              <Button
+                variant="outline"
+                onClick={() => setEditAllDialogOpen(false)}
+                className="flex-1 h-12 text-base font-medium"
+              >
+                ยกเลิก
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditAllDialogOpen(false);
+                  generateAllPDFs();
+                }}
+                className="flex-1 h-12 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base font-medium"
+              >
+                <FileText className="h-5 w-5 mr-2" />
+                สร้าง PDF ทั้งหมด
               </Button>
             </DialogFooter>
           </DialogContent>
