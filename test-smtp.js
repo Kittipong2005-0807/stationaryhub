@@ -1,5 +1,7 @@
-const nodemailer = require('nodemailer');
-require('dotenv').config({ path: '.env.local' });
+import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: '.env.local' });
 
 async function testSMTP() {
   console.log('🔧 SMTP Configuration Check:');

@@ -181,16 +181,22 @@ export default function ProductCard({
                 variant="body2"
                 style={{ color: '#666', marginBottom: 4 }}
               >
-                Category: {product.CATEGORY_NAME || 'N/A'}
+                📂 Category: {product.CATEGORY_NAME || 'N/A'}
               </Typography>
               <Typography
                 variant="body2"
                 style={{ color: '#666', marginBottom: 4 }}
               >
-                Stock: {product.STOCK_QUANTITY} units
+                📦 Unit: {product.ORDER_UNIT || 'Piece'}
+              </Typography>
+              <Typography
+                variant="body2"
+                style={{ color: '#666', marginBottom: 4 }}
+              >
+                📦 Stock: {product.STOCK_QUANTITY} units
               </Typography>
               <Typography variant="body2" style={{ color: '#666' }}>
-                SKU: {product?.PRODUCT_ID || 'N/A'}
+                🔢 SKU: {product?.PRODUCT_ID || 'N/A'}
               </Typography>
             </Box>
             {/* Quantity Selector and Price Row */}
@@ -379,9 +385,14 @@ export default function ProductCard({
               </Typography>
               <Box className="flex items-center gap-2 mb-2">
                 <Chip
-                  label={product.CATEGORY_NAME}
+                  label={`📂 ${product.CATEGORY_NAME || 'Uncategorized'}`}
                   size="small"
                   className="bg-blue-100 text-blue-800 font-medium hover-lift"
+                />
+                <Chip
+                  label={`📦 Unit: ${product.ORDER_UNIT || 'Piece'}`}
+                  size="small"
+                  className="bg-green-100 text-green-800 font-medium hover-lift"
                 />
               </Box>
               <Typography variant="body2" className="text-gray-500 mb-1">

@@ -9,7 +9,6 @@ export interface Product {
   PRODUCT_NAME: string
   CATEGORY_ID: number
   CATEGORY_NAME?: string
-  STOCK_TYPE: string
   STOCK_QUANTITY: number
   UNIT_COST: number
   ORDER_UNIT: string

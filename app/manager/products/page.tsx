@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Grid, Typography, TextField, InputAdornment, Box, Chip, Skeleton, Button, Container, Paper, Divider } from "@mui/material"
-import { Search, Category, ViewModule, ViewList, TrendingUp, LocalShipping, Shield, Star, FilterList, Sort, ShoppingCart } from "@mui/icons-material"
+import { Grid, Typography, TextField, InputAdornment, Box, Chip, Skeleton, Button, Container, Paper, Divider, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Card, CardContent, FormControl, InputLabel, Select, MenuItem } from "@mui/material"
+import { Search, Category, ViewModule, ViewList, TrendingUp, LocalShipping, Shield, Star, FilterList, Sort, ShoppingCart, Image as ImageIcon } from "@mui/icons-material"
 import ProductCart from "@/components/ProductCart"
 import { type Product } from "@/lib/database"
 import { useAuth } from "@/src/contexts/AuthContext"
@@ -10,6 +10,9 @@ import { useRouter } from "next/navigation"
 import { getBasePathUrl } from "@/lib/base-path"
 import { getApiUrl } from "@/lib/api-utils"
 import { motion, AnimatePresence } from "framer-motion"
+import Image from "next/image"
+import ThaiDateUtils from "@/lib/date-utils"
+import { getProductImageUrl } from "@/lib/image-utils"
 
 export default function ManagerProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -24,6 +27,11 @@ export default function ManagerProductsPage() {
   
   // Create categories array from products
   const categories: (string | undefined)[] = Array.from(new Set((products || []).map((p: Product) => p.CATEGORY_NAME).filter(Boolean)));
+
+  // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
+  const getImageUrl = (photoUrl: string | null | undefined) => {
+    return getProductImageUrl(photoUrl || '');
+  };
   
   console.log("Manager Products - User:", user)
 
@@ -108,307 +116,302 @@ export default function ManagerProductsPage() {
     return null;
   }
 
-  // Debug log: echo filteredProducts and viewMode
+  // Debug log: echo filteredProducts
   console.log("filteredProducts:", filteredProducts);
-  console.log("viewMode:", viewMode);
 
   return (
-    <Container maxWidth="xl" className="py-6">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
-        
+    <div className="min-h-screen w-full bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
         {/* Header Section */}
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          transition={{ duration: 0.8 }}
-          className="mb-12"
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="w-full px-6 py-6"
         >
-          <Paper 
-            elevation={0}
-            className="gradient-primary text-white p-8 rounded-3xl text-center relative overflow-hidden"
-            style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              position: 'relative'
-            }}
-          >
-            {/* Background Pattern */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
-              <div className="absolute top-1/2 right-0 w-24 h-24 bg-white rounded-full translate-x-12 -translate-y-12"></div>
-              <div className="absolute bottom-0 left-1/4 w-20 h-20 bg-white rounded-full -translate-x-10 translate-y-10"></div>
+          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-2xl">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="flex-1">
+                <Typography variant="h3" className="font-bold text-white mb-2">
+                  🛒 Manager Products
+                </Typography>
+                <Typography variant="h6" className="text-blue-100">
+                  Browse and order products for your team
+                </Typography>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button
+                    variant="outlined"
+                    startIcon={<span>⟳</span>}
+                    onClick={() => window.location.reload()}
+                    className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                    size="medium"
+                    style={{
+                      minWidth: '120px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    Refresh
+                  </Button>
+                </motion.div>
+
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button
+                    variant="contained"
+                    startIcon={<ShoppingCart />}
+                    onClick={() => router.push('/manager/cart')}
+                    className="bg-white text-blue-600 hover:bg-gray-100 font-bold shadow-lg"
+                    size="medium"
+                    style={{
+                      minWidth: '160px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#ffffff',
+                      color: '#2563eb',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    View Cart
+                  </Button>
+                </motion.div>
+              </div>
             </div>
-            
-            <Typography variant="h3" className="font-bold mb-4 relative z-10">
-              🛒 Manager Products
-            </Typography>
-            <Typography variant="h6" className="mb-6 opacity-90 relative z-10">
-              Browse and order products for your team
-            </Typography>
-            
-            {/* Manager Features */}
-            <Box className="flex flex-wrap justify-center gap-6 mt-8 relative z-10">
-              <Box className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <ShoppingCart className="text-white" />
-                <Typography variant="body2" className="text-white font-medium">Order Products</Typography>
-              </Box>
-              <Box className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <Shield className="text-white" />
-                <Typography variant="body2" className="text-white font-medium">Team Management</Typography>
-              </Box>
-              <Box className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <Star className="text-white" />
-                <Typography variant="body2" className="text-white font-medium">Quality Products</Typography>
-              </Box>
-            </Box>
-          </Paper>
+          </div>
         </motion.div>
 
         {/* Search and Filter Section */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mb-8"
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="w-full px-6 mb-6"
         >
-          <Paper elevation={0} className="glass-card-strong p-6 rounded-2xl">
-            {/* Search Bar */}
-            <Box className="mb-6">
-              <TextField
-                fullWidth
-                placeholder="🔍 Search products... (product name, category)"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search className="text-gray-400" />
-                    </InputAdornment>
-                  ),
-                }}
-                size="medium"
-                className="search-field"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '16px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 1)',
-                    },
-                    '&.Mui-focused': {
-                      backgroundColor: 'rgba(255, 255, 255, 1)',
-                    }
-                  }
-                }}
-              />
-            </Box>
-
-            {/* Controls Row */}
-            <Box className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-              {/* View Mode Toggle */}
-              <Box className="flex items-center gap-2">
-                <Typography variant="body2" className="text-gray-600 font-medium">View:</Typography>
-                <Button
-                  variant={viewMode === "grid" ? "contained" : "outlined"}
-                  onClick={() => setViewMode("grid")}
-                  startIcon={<ViewModule />}
-                  size="small"
-                  className="rounded-full"
-                >
-                  Grid
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "contained" : "outlined"}
-                  onClick={() => setViewMode("list")}
-                  startIcon={<ViewList />}
-                  size="small"
-                  className="rounded-full"
-                >
-                  List
-                </Button>
-              </Box>
-
-              {/* Sort Options */}
-              <Box className="flex items-center gap-2">
-                <Typography variant="body2" className="text-gray-600 font-medium">Sort by:</Typography>
-                <Button
-                  variant={sortBy === "newest" ? "contained" : "outlined"}
-                  onClick={() => setSortBy("newest")}
-                  size="small"
-                  className="rounded-full"
-                >
-                  Newest
-                </Button>
-                <Button
-                  variant={sortBy === "name" ? "contained" : "outlined"}
-                  onClick={() => setSortBy("name")}
-                  size="small"
-                  className="rounded-full"
-                >
-                  Name A-Z
-                </Button>
-                <Button
-                  variant={sortBy === "price" ? "contained" : "outlined"}
-                  onClick={() => setSortBy("price")}
-                  size="small"
-                  className="rounded-full"
-                >
-                  Price
-                </Button>
-              </Box>
-            </Box>
-
-            {/* Categories */}
-            <Box className="mt-6">
-              <Typography variant="body2" className="text-gray-600 font-medium mb-3 flex items-center gap-2">
-                <Category className="text-gray-500" />
-                Product Categories:
-              </Typography>
-              <Box className="flex flex-wrap gap-2">
-                <Chip
-                  label="All"
-                  onClick={() => setSelectedCategory("")}
-                  color={selectedCategory === "" ? "primary" : "default"}
+          <Card className="bg-white/95 backdrop-blur-md shadow-lg border border-white/20">
+            <CardContent className="p-6">
+              {/* Search Bar */}
+              <Box className="mb-6">
+                <TextField
+                  fullWidth
+                  placeholder="🔍 Search products... (product name, category)"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search className="text-gray-400" />
+                      </InputAdornment>
+                    ),
+                  }}
                   size="medium"
-                  className="hover:scale-105 transition-transform cursor-pointer"
-                  variant={selectedCategory === "" ? "filled" : "outlined"}
+                  className="bg-white/50"
                 />
-                {categories.map((category: string | undefined) => (
-                  <Chip
-                    key={category}
-                    label={category}
-                    onClick={() => setSelectedCategory(category || "")}
-                    color={selectedCategory === category ? "primary" : "default"}
-                    size="medium"
-                    className="hover:scale-105 transition-transform cursor-pointer"
-                    variant={selectedCategory === category ? "filled" : "outlined"}
-                  />
-                ))}
               </Box>
-            </Box>
-          </Paper>
+
+              {/* Controls Row */}
+              <Box className="flex flex-col lg:flex-row gap-4 items-center justify-between mb-6">
+                {/* View Mode Toggle */}
+                <Box className="flex items-center gap-2">
+                  <Typography variant="body2" className="text-gray-600 font-medium">View:</Typography>
+                  <Button
+                    variant={viewMode === "grid" ? "contained" : "outlined"}
+                    onClick={() => setViewMode("grid")}
+                    startIcon={<ViewModule />}
+                    size="small"
+                    className="rounded-full"
+                  >
+                    Grid
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "contained" : "outlined"}
+                    onClick={() => setViewMode("list")}
+                    startIcon={<ViewList />}
+                    size="small"
+                    className="rounded-full"
+                  >
+                    List
+                  </Button>
+                </Box>
+
+                {/* Sort Options */}
+                <Box className="flex items-center gap-2">
+                  <Typography variant="body2" className="text-gray-600 font-medium">Sort by:</Typography>
+                  <Button
+                    variant={sortBy === "newest" ? "contained" : "outlined"}
+                    onClick={() => setSortBy("newest")}
+                    size="small"
+                    className="rounded-full"
+                  >
+                    Newest
+                  </Button>
+                  <Button
+                    variant={sortBy === "name" ? "contained" : "outlined"}
+                    onClick={() => setSortBy("name")}
+                    size="small"
+                    className="rounded-full"
+                  >
+                    Name A-Z
+                  </Button>
+                  <Button
+                    variant={sortBy === "price" ? "contained" : "outlined"}
+                    onClick={() => setSortBy("price")}
+                    size="small"
+                    className="rounded-full"
+                  >
+                    Price
+                  </Button>
+                </Box>
+              </Box>
+
+              {/* Categories Dropdown */}
+              <Box>
+                <FormControl fullWidth size="medium">
+                  <InputLabel>Category Filter</InputLabel>
+                  <Select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    label="Category Filter"
+                    startAdornment={
+                      <Category className="text-gray-400 mr-2" />
+                    }
+                  >
+                    <MenuItem value="">All Categories</MenuItem>
+                    {categories.map((category: string | undefined) => (
+                      <MenuItem
+                        key={category}
+                        value={category || ""}
+                      >
+                        {category}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </CardContent>
+          </Card>
         </motion.div>
 
-        {/* Results Summary */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="mb-6"
-        >
-          <Box className="flex items-center justify-between">
-            <Typography variant="h6" className="text-gray-700 font-semibold">
-              Search Results: {filteredProducts.length} items
-            </Typography>
-            {searchTerm && (
-              <Typography variant="body2" className="text-gray-500">
-                Search: "{searchTerm}"
-              </Typography>
-            )}
-          </Box>
-        </motion.div>
-
-        {/* Products Grid/List */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          transition={{ duration: 0.6, delay: 0.4 }}
+        {/* Products Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="w-full px-6 mb-8"
         >
           {loading ? (
-            // Loading Skeleton
-            <Grid container spacing={3}>
-              {[...Array(6)].map((_, index) => (
-                <Grid item xs={12} sm={6} md={4} key={index}>
-                  <Paper elevation={0} className="glass-card p-4 rounded-2xl">
-                    <Skeleton variant="rectangular" height={200} className="rounded-xl mb-3" />
-                    <Skeleton variant="text" width="80%" height={24} className="mb-2" />
-                    <Skeleton variant="text" width="60%" height={20} className="mb-3" />
-                    <Skeleton variant="rectangular" height={40} className="rounded-xl" />
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
-          ) : filteredProducts.length === 0 ? (
-            // No Results
-            <Paper elevation={0} className="glass-card text-center py-16 rounded-2xl">
-              <Box className="text-gray-500">
-                <Typography variant="h5" className="mb-3">
-                  😔 No products found
-                </Typography>
-                <Typography variant="body1" className="mb-4">
-                  Try changing your search terms or category
-                </Typography>
-                <Button 
-                  variant="outlined" 
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSelectedCategory("");
-                  }}
-                  className="rounded-full"
-                >
-                  Clear Search
-                </Button>
-              </Box>
-            </Paper>
+            viewMode === 'list' ? (
+              // List View Skeleton
+              <div className="space-y-4">
+                {[...Array(6)].map((_, index) => (
+                  <Card key={index} className="bg-white/95 backdrop-blur-md shadow-lg border border-white/20">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col items-center">
+                        <Skeleton variant="rectangular" height={200} width={200} className="rounded-xl mb-3" />
+                        <Skeleton variant="text" width="80%" height={24} className="mb-2" />
+                        <Skeleton variant="text" width="60%" height={20} className="mb-3" />
+                        <Skeleton variant="rectangular" height={40} width={120} className="rounded-xl" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              // Grid View Skeleton - แสดงเป็นตาราง 4 คอลัมน์
+              <Grid container spacing={3}>
+                {[...Array(8)].map((_, index) => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+                    <Card className="bg-white/95 backdrop-blur-md shadow-lg border border-white/20">
+                      <CardContent className="p-4">
+                        <Skeleton variant="rectangular" height={200} className="rounded-xl mb-3" />
+                        <Skeleton variant="text" width="80%" height={24} className="mb-2" />
+                        <Skeleton variant="text" width="60%" height={20} className="mb-3" />
+                        <Skeleton variant="rectangular" height={40} className="rounded-xl" />
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )
           ) : (
-            // Products Display
-            <Grid container spacing={3}>
-              {filteredProducts.map((product, index) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={product.PRODUCT_ID}>
+            viewMode === 'list' ? (
+              // List View - แถวละ 1 รายการ
+              <div className="space-y-4">
+                {filteredProducts.map((product, index) => (
                   <motion.div
+                    key={product.PRODUCT_ID}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
                   >
                     <ProductCart product={product} viewMode={viewMode} />
                   </motion.div>
-                </Grid>
-              ))}
-            </Grid>
+                ))}
+              </div>
+            ) : (
+              // Grid View - แสดงเป็นตาราง 4 คอลัมน์
+              <Grid container spacing={3}>
+                {filteredProducts.map((product, index) => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={product.PRODUCT_ID}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                    >
+                      <ProductCart product={product} viewMode={viewMode} />
+                    </motion.div>
+                  </Grid>
+                ))}
+              </Grid>
+            )
+          )}
+
+          {/* Empty State */}
+          {!loading && filteredProducts.length === 0 && (
+            <Card className="bg-white/95 backdrop-blur-md shadow-lg border border-white/20 text-center py-16">
+              <CardContent>
+                <ImageIcon className="text-gray-300 text-7xl mb-6 mx-auto" />
+                <Typography variant="h5" className="text-gray-500 mb-3">
+                  {searchTerm || selectedCategory !== ""
+                    ? 'No products found'
+                    : 'No products available'}
+                </Typography>
+                <Typography variant="body1" className="text-gray-400 mb-4">
+                  {searchTerm || selectedCategory !== ""
+                    ? 'Try adjusting your search or filter criteria'
+                    : 'Products will appear here when available'}
+                </Typography>
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedCategory("");
+                  }}
+                  className="rounded-full"
+                >
+                  Clear Filters
+                </Button>
+              </CardContent>
+            </Card>
           )}
         </motion.div>
 
-        {/* Quick Actions */}
-        {!loading && filteredProducts.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.6, delay: 0.6 }}
-            className="mt-12"
-          >
-            <Paper elevation={0} className="glass-card p-6 rounded-2xl text-center">
-              <Typography variant="h6" className="text-gray-700 mb-4">
-                Need help?
-              </Typography>
-              <Box className="flex flex-wrap justify-center gap-4">
-                <Button 
-                  variant="outlined" 
-                  startIcon={<TrendingUp />}
-                  className="rounded-full"
-                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                >
-                  Back to Top
-                </Button>
-                <Button 
-                  variant="contained" 
-                  startIcon={<Search />}
-                  className="rounded-full gradient-primary"
-                  onClick={() => setSearchTerm("")}
-                >
-                  New Search
-                </Button>
-                <Button 
-                  variant="contained" 
-                  startIcon={<ShoppingCart />}
-                  className="rounded-full gradient-success"
-                  onClick={() => router.push("/manager/cart")}
-                >
-                  View Cart
-                </Button>
-              </Box>
-            </Paper>
-          </motion.div>
-        )}
       </motion.div>
-    </Container>
+    </div>
   );
 }

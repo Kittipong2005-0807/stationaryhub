@@ -665,25 +665,29 @@ export default function ApprovalsPage() {
         tempDiv.style.padding = '20mm';
         tempDiv.style.backgroundColor = 'white';
         tempDiv.style.fontFamily = 'Arial, sans-serif';
-        tempDiv.style.fontSize = '12px';
-        tempDiv.style.lineHeight = '1.4';
+        tempDiv.style.fontSize = '11px';
+        tempDiv.style.lineHeight = '1.2';
+
+        // ตรวจสอบว่าเป็นคำสั่งซื้อสุดท้ายหรือไม่
+        const isLastRequisition = i === filteredRequisitions.length - 1;
 
         tempDiv.innerHTML = `
-          <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
-            <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
-          </div>
+          <div style="padding: 20px;">
+            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px;">
+              <h1 style="margin: 0; font-size: 22px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
+            </div>
           
-          <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 11px;">
             <div style="text-align: left;">
-              <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold; text-transform: uppercase;">TO:</h3>
-              <p style="margin: 0 0 3px 0; font-size: 11px; font-weight: bold;">บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">TEL: (038) 623126 FAX: (038) 623433</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">เลขประจำตัวผู้เสียภาษี 0215542000264</p>
+              <h3 style="margin: 0 0 3px 0; font-size: 11px; font-weight: bold; text-transform: uppercase;">TO:</h3>
+              <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editFormData.companyName}</p>
+              <p style="margin: 0 0 2px 0; font-size: 10px;">${editFormData.companyAddress}</p>
+              <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
+              <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
             </div>
             <div style="text-align: right;">
-              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
+              <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
+              <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
             </div>
           </div>
           
@@ -694,9 +698,6 @@ export default function ApprovalsPage() {
             <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson || 'N/A'}</p>
           </div>
           
-          <div style="margin-bottom: 20px; padding: 8px; background: #e8f4fd; border-left: 4px solid #2196f3;">
-            <h3 style="margin: 0; font-size: 12px; font-weight: bold; color: #1976d2;">หมวดหมู่: ${editFormData.category || 'ทั่วไป'}</h3>
-          </div>
         
           <div style="margin-bottom: 25px;">
             <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
@@ -705,49 +706,69 @@ export default function ApprovalsPage() {
               <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisition.DEPARTMENT || 'N/A'}</div>
             </div>
             
-            <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; font-size: 10px; table-layout: fixed;">
-              <thead>
-                <tr>
-                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 10%;">Itemnum</th>
-                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 50%;">Description</th>
-                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 12%;">Order</th>
-                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 10%;">Unit</th>
-                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 12%;">Cost</th>
-                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 8%;">Sent</th>
-                  <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 8%;">SRNum</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${requisition.REQUISITION_ITEMS.map(
-                  (item, index) => `
-                  <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'};">
-                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #1976d2;">SA${String(index + 1).padStart(3, '0')}</td>
-                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 9px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.2;" title="${item.PRODUCT_NAME || 'Unknown Product'}">${item.PRODUCT_NAME || 'Unknown Product'}</td>
-                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${Math.round(item.QUANTITY)}</td>
-                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ORDER_UNIT || 'EA'}</td>
-                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>
-                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center; color: #1976d2; font-weight: bold;">${Math.round(item.QUANTITY)}</td>
-                    <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center; font-weight: bold; color: #1976d2;">${requisition.REQUISITION_ID}</td>
-                  </tr>
-                `
-                ).join('')}
-              </tbody>
-            </table>
+            ${(() => {
+              const groupedItems = requisition.REQUISITION_ITEMS.reduce((acc, item) => {
+                const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
+                if (!acc[category]) {
+                  acc[category] = [];
+                }
+                acc[category].push(item);
+                return acc;
+              }, {} as Record<string, typeof requisition.REQUISITION_ITEMS>);
+
+              const sortedCategories = Object.keys(groupedItems).sort();
+              let itemCounter = 1;
+
+              return sortedCategories.map(category => {
+                const items = groupedItems[category];
+                return `
+                  <div style="margin-bottom: 10px;">
+               <div style="background: #e3f2fd; padding: 6px 10px; border: 1px solid #2196f3; border-bottom: none; font-weight: bold; font-size: 11px; color: #1976d2;">
+                 ${category} (${items.length} รายการ)
+               </div>
+               <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; font-size: 9px; table-layout: fixed;">
+                 <thead>
+                   <tr>
+                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: left; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Itemnum</th>
+                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: left; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 55%;">Description</th>
+                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Order</th>
+                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Unit</th>
+                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Cost</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   ${items.map((item, index) => `
+                     <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'};">
+                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; font-weight: bold; color: #1976d2;">SA${String(itemCounter++).padStart(3, '0')}</td>
+                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 8px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.1;" title="${item.PRODUCT_NAME || 'Unknown Product'}">${item.PRODUCT_NAME || 'Unknown Product'}</td>
+                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${Math.round(item.QUANTITY)}</td>
+                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${item.ORDER_UNIT || 'EA'}</td>
+                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; text-align: right;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>
+                     </tr>
+                   `).join('')}
+                 </tbody>
+               </table>
+                  </div>
+                `;
+              }).join('');
+            })()}
           </div>
           
           <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
-            <h3 style="margin: 0 0 10px 0; color: #1976d2;">สรุปยอดรวม</h3>
-            <div style="font-size: 18px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${Number(requisition.TOTAL_AMOUNT).toFixed(2)}</div>
-            <p style="margin: 10px 0 0 0; color: #1976d2;">จำนวนรายการ: ${requisition.REQUISITION_ITEMS.length} รายการ</p>
-            <p style="margin: 5px 0 0 0; color: #1976d2;">สถานะ: ${requisition.STATUS}</p>
-            <p style="margin: 5px 0 0 0; color: #1976d2;">แผนก: ${requisition.DEPARTMENT || 'N/A'}</p>
+            <h3 style="margin: 0 0 5px 0; color: #1976d2; font-size: 12px;">สรุปยอดรวม</h3>
+            <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${Number(requisition.TOTAL_AMOUNT).toFixed(2)}</div>
+            <p style="margin: 5px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนรายการ: ${requisition.REQUISITION_ITEMS.length} รายการ</p>
+            <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">สถานะ: ${requisition.STATUS}</p>
+            <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">แผนก: ${requisition.DEPARTMENT || 'N/A'}</p>
           </div>
           
+          ${isLastRequisition ? `
           <div style="margin-top: 30px; text-align: center; color: #666; font-size: 10px; border-top: 1px solid #ddd; padding-top: 15px;">
             <p style="margin: 0 0 5px 0;">เอกสารนี้ถูกสร้างโดยระบบ StationaryHub</p>
-            <p style="margin: 0 0 5px 0;">วันที่สร้าง: ${new Date().toLocaleDateString('th-TH')} เวลา: ${new Date().toLocaleTimeString('th-TH')}</p>
-            <p style="margin: 0;">Page ${i + 1} of ${filteredRequisitions.length}</p>
+            <p style="margin: 0;">วันที่สร้าง: ${new Date().toLocaleDateString('th-TH')} เวลา: ${new Date().toLocaleTimeString('th-TH')}</p>
           </div>
+          ` : ''}
+        </div>
         `;
 
         // เพิ่ม element ลงใน DOM
@@ -770,21 +791,43 @@ export default function ApprovalsPage() {
         // เพิ่มรูปภาพลงใน PDF
         const imgData = canvas.toDataURL('image/png');
         const imgWidth = 210; // A4 width in mm
-        const pageHeight = 295; // A4 height in mm
+        const pageHeight = 275; // A4 height in mm (ลดลงเพื่อให้มี margin)
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 0;
-
-        // เพิ่มหน้าแรก
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-
-        // เพิ่มหน้าถัดไปถ้าจำเป็น
-        while (heightLeft >= 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
+        
+        // ตรวจสอบว่าต้องแบ่งหน้าไหม
+        if (imgHeight <= pageHeight) {
+          // เนื้อหาไม่เกินหน้าเดียว
+          pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+          
+          // เพิ่มหมายเลขหน้า
+          pdf.setFontSize(10);
+          pdf.setTextColor(102, 102, 102);
+          pdf.text(`Page ${i + 1} of ${filteredRequisitions.length}`, 105, 290, { align: 'center' });
+        } else {
+          // เนื้อหาเกินหน้าเดียว - แบ่งเป็นหลายหน้า
+          let currentPage = 1;
+          let yOffset = 0;
+          
+          while (yOffset < imgHeight) {
+            if (currentPage > 1) {
+              pdf.addPage();
+            }
+            
+            // คำนวณความสูงของส่วนที่จะแสดงในหน้านี้
+            const remainingHeight = imgHeight - yOffset;
+            const _pageContentHeight = Math.min(pageHeight, remainingHeight);
+            
+            // เพิ่มรูปภาพเฉพาะส่วนที่ต้องการ
+            pdf.addImage(imgData, 'PNG', 0, -yOffset, imgWidth, imgHeight);
+            
+            // เพิ่มหมายเลขหน้า
+            pdf.setFontSize(10);
+            pdf.setTextColor(102, 102, 102);
+            pdf.text(`Page ${i + 1} of ${filteredRequisitions.length}`, 105, 290, { align: 'center' });
+            
+            yOffset += pageHeight;
+            currentPage++;
+          }
         }
       }
 
@@ -819,39 +862,41 @@ export default function ApprovalsPage() {
       tempDiv.style.padding = '20mm';
       tempDiv.style.backgroundColor = 'white';
       tempDiv.style.fontFamily = 'Arial, sans-serif';
-      tempDiv.style.fontSize = '12px';
-      tempDiv.style.lineHeight = '1.4';
+      tempDiv.style.fontSize = '11px';
+      tempDiv.style.lineHeight = '1.2';
 
       // สร้าง HTML content สำหรับ SUPPLY REQUEST ORDER
+      // ประมาณการความสูงของเนื้อหา
+      const estimatedContentHeight = 200 + (requisition.REQUISITION_ITEMS.length * 25);
+      const needsMultiplePages = estimatedContentHeight > 250;
+      
       tempDiv.innerHTML = `
-         <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
-           <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
-         </div>
-         
-                   <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px;">
-            <div style="text-align: left;">
-              <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold; text-transform: uppercase;">TO:</h3>
-              <p style="margin: 0 0 3px 0; font-size: 11px; font-weight: bold;">บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">TEL: (038) 623126 FAX: (038) 623433</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">เลขประจำตัวผู้เสียภาษี 0215542000264</p>
-            </div>
-           <div style="text-align: right;">
-             <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
-             <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
+         <div style="padding: 20px;">
+           <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
+             <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
            </div>
-         </div>
          
-                   <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-            <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
-            <p style="margin: 0 0 3px 0; font-size: 11px;">${editFormData.deliveryDate || '_________________________________'}</p>
-            <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
-            <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson}</p>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 11px;">
+            <div style="text-align: left;">
+              <h3 style="margin: 0 0 3px 0; font-size: 11px; font-weight: bold; text-transform: uppercase;">TO:</h3>
+              <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editFormData.companyName}</p>
+              <p style="margin: 0 0 2px 0; font-size: 10px;">${editFormData.companyAddress}</p>
+              <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
+              <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
+            </div>
+            <div style="text-align: right;">
+              <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
+              <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
+            </div>
+          </div>
+         
+                   <div style="margin-bottom: 15px; padding: 8px; border: 1px solid #ccc; background: #f9f9f9;">
+            <h3 style="margin: 0 0 3px 0; font-size: 11px; font-weight: bold;">Please Delivery on:</h3>
+            <p style="margin: 0 0 2px 0; font-size: 10px;">${editFormData.deliveryDate || '_________________________________'}</p>
+            <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
+            <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson}</p>
           </div>
           
-          <div style="margin-bottom: 20px; padding: 8px; background: #e8f4fd; border-left: 4px solid #2196f3;">
-            <h3 style="margin: 0; font-size: 12px; font-weight: bold; color: #1976d2;">หมวดหมู่: ${editFormData.category}</h3>
-          </div>
         
         <div style="margin-bottom: 25px;">
           <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
@@ -860,34 +905,52 @@ export default function ApprovalsPage() {
             <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisition.DEPARTMENT || 'N/A'}</div>
           </div>
           
-          <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; font-size: 10px; table-layout: fixed;">
-            <thead>
-              <tr>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 10%;">Itemnum</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: left; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 50%;">Description</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 12%;">Order</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 10%;">Unit</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 12%;">Cost</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 8%;">Sent</th>
-                <th style="background: #e3f2fd; color: #1976d2; padding: 6px 4px; text-align: center; font-weight: bold; font-size: 10px; border: 1px solid #ddd; width: 8%;">SRNum</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${requisition.REQUISITION_ITEMS.map(
-                (item, index) => `
-                <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'};">
-                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #1976d2;">SA${String(index + 1).padStart(3, '0')}</td>
-                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 9px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.2;" title="${item.PRODUCT_NAME || 'Unknown Product'}">${item.PRODUCT_NAME || 'Unknown Product'}</td>
-                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${Math.round(item.QUANTITY)}</td>
-                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ORDER_UNIT || 'EA'}</td>
-                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>
-                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center; color: #1976d2; font-weight: bold;">${Math.round(item.QUANTITY)}</td>
-                  <td style="padding: 6px 4px; border: 1px solid #ddd; font-size: 10px; text-align: center; font-weight: bold; color: #1976d2;">${requisition.REQUISITION_ID}</td>
-                </tr>
-              `
-              ).join('')}
-            </tbody>
-          </table>
+          ${(() => {
+            const groupedItems = requisition.REQUISITION_ITEMS.reduce((acc, item) => {
+              const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
+              if (!acc[category]) {
+                acc[category] = [];
+              }
+              acc[category].push(item);
+              return acc;
+            }, {} as Record<string, typeof requisition.REQUISITION_ITEMS>);
+
+            const sortedCategories = Object.keys(groupedItems).sort();
+            let itemCounter = 1;
+
+            return sortedCategories.map(category => {
+              const items = groupedItems[category];
+              return `
+                <div style="margin-bottom: 10px;">
+               <div style="background: #e3f2fd; padding: 6px 10px; border: 1px solid #2196f3; border-bottom: none; font-weight: bold; font-size: 11px; color: #1976d2;">
+                 ${category} (${items.length} รายการ)
+               </div>
+               <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; font-size: 9px; table-layout: fixed;">
+                 <thead>
+                   <tr>
+                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: left; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Itemnum</th>
+                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: left; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 55%;">Description</th>
+                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Order</th>
+                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Unit</th>
+                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Cost</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   ${items.map((item, index) => `
+                     <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'};">
+                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; font-weight: bold; color: #1976d2;">SA${String(itemCounter++).padStart(3, '0')}</td>
+                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 8px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.1;" title="${item.PRODUCT_NAME || 'Unknown Product'}">${item.PRODUCT_NAME || 'Unknown Product'}</td>
+                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${Math.round(item.QUANTITY)}</td>
+                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${item.ORDER_UNIT || 'EA'}</td>
+                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; text-align: right;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>
+                     </tr>
+                   `).join('')}
+                 </tbody>
+               </table>
+                </div>
+              `;
+            }).join('');
+          })()}
         </div>
         
         <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
@@ -898,11 +961,13 @@ export default function ApprovalsPage() {
           <p style="margin: 5px 0 0 0; color: #1976d2;">แผนก: ${requisition.DEPARTMENT || 'N/A'}</p>
         </div>
         
-        <div style="margin-top: 30px; text-align: center; color: #666; font-size: 10px; border-top: 1px solid #ddd; padding-top: 15px;">
-          <p style="margin: 0 0 5px 0;">เอกสารนี้ถูกสร้างโดยระบบ StationaryHub</p>
-          <p style="margin: 0 0 5px 0;">วันที่สร้าง: ${new Date().toLocaleDateString('th-TH')} เวลา: ${new Date().toLocaleTimeString('th-TH')}</p>
-          <p style="margin: 0;">Page 1 of 1</p>
+        ${needsMultiplePages ? '' : `
+        <div style="margin-top: 20px; text-align: center; color: #666; font-size: 9px; border-top: 1px solid #ddd; padding-top: 10px;">
+          <p style="margin: 0 0 3px 0;">เอกสารนี้ถูกสร้างโดยระบบ StationaryHub</p>
+          <p style="margin: 0;">วันที่สร้าง: ${new Date().toLocaleDateString('th-TH')} เวลา: ${new Date().toLocaleTimeString('th-TH')}</p>
         </div>
+        `}
+      </div>
       `;
 
       // เพิ่ม element ลงใน DOM
@@ -926,21 +991,52 @@ export default function ApprovalsPage() {
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
+      const pageHeight = 275; // A4 height in mm (ลดลงเพื่อให้มี margin)
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      // เพิ่มหน้าแรก
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // เพิ่มหน้าถัดไปถ้าจำเป็น
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+      
+      // ตรวจสอบว่าต้องแบ่งหน้าไหม
+      if (imgHeight <= pageHeight) {
+        // เนื้อหาไม่เกินหน้าเดียว
+        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        
+        // เพิ่มหมายเลขหน้า
+        pdf.setFontSize(10);
+        pdf.setTextColor(102, 102, 102);
+        pdf.text(`Page 1 of 1`, 105, 290, { align: 'center' });
+      } else {
+        // เนื้อหาเกินหน้าเดียว - แบ่งเป็นหลายหน้า
+        let currentPage = 1;
+        let yOffset = 0;
+        const totalPages = Math.ceil(imgHeight / pageHeight);
+        
+        while (yOffset < imgHeight) {
+          if (currentPage > 1) {
+            pdf.addPage();
+          }
+          
+          // คำนวณความสูงของส่วนที่จะแสดงในหน้านี้
+          const remainingHeight = imgHeight - yOffset;
+          const _pageContentHeight = Math.min(pageHeight, remainingHeight);
+          
+          // เพิ่มรูปภาพเฉพาะส่วนที่ต้องการ
+          pdf.addImage(imgData, 'PNG', 0, -yOffset, imgWidth, imgHeight);
+          
+          // เพิ่มหมายเลขหน้า
+          pdf.setFontSize(10);
+          pdf.setTextColor(102, 102, 102);
+          pdf.text(`Page ${currentPage} of ${totalPages}`, 105, 290, { align: 'center' });
+          
+          // เพิ่ม footer เฉพาะหน้าสุดท้าย
+          if (currentPage === totalPages) {
+            pdf.setFontSize(8);
+            pdf.setTextColor(102, 102, 102);
+            pdf.text('Document created by StationaryHub System', 105, 280, { align: 'center' });
+            pdf.text(`Created: ${new Date().toLocaleDateString('en-US')} ${new Date().toLocaleTimeString('en-US')}`, 105, 285, { align: 'center' });
+          }
+          
+          yOffset += pageHeight;
+          currentPage++;
+        }
       }
 
       // ดาวน์โหลด PDF
@@ -1052,12 +1148,19 @@ export default function ApprovalsPage() {
     }
 
     // กรองตามเดือนและปีที่เลือก
-    if (selectedMonth && selectedYear) {
+    if (selectedYear) {
       filtered = filtered.filter((r) => {
         const date = new Date(r.SUBMITTED_AT);
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const year = date.getFullYear().toString();
-        return month === selectedMonth && year === selectedYear;
+        
+        // ถ้าเลือกทั้งเดือนและปี
+        if (selectedMonth) {
+          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          return month === selectedMonth && year === selectedYear;
+        }
+        
+        // ถ้าเลือกแค่ปี
+        return year === selectedYear;
       });
     }
 
@@ -1103,6 +1206,25 @@ export default function ApprovalsPage() {
     return getBasePathUrl(`/api/image/${photoUrl}`);
   };
 
+  // ฟังก์ชันจัดกลุ่มสินค้าตามหมวดหมู่
+  const groupItemsByCategory = (items: RequisitionItem[]) => {
+    const grouped = items.reduce((acc, item) => {
+      const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(item);
+      return acc;
+    }, {} as Record<string, RequisitionItem[]>);
+
+    // เรียงลำดับหมวดหมู่
+    const sortedCategories = Object.keys(grouped).sort();
+    return sortedCategories.map(category => ({
+      category,
+      items: grouped[category]
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <motion.div
@@ -1140,8 +1262,8 @@ export default function ApprovalsPage() {
               transition={{ delay: 0.4 }}
               className="flex gap-3"
             >
-              {/* Download All PDFs Button - แสดงเฉพาะเมื่อมีข้อมูล */}
-              {filteredRequisitions.length > 0 && (
+              {/* Download All PDFs Button - แสดงเฉพาะเมื่อมีข้อมูลและเป็น ADMIN เท่านั้น */}
+              {filteredRequisitions.length > 0 && user?.ROLE === 'ADMIN' && (
                 <Button
                   onClick={handleEditAllData}
                   disabled={loading}
@@ -1309,23 +1431,18 @@ export default function ApprovalsPage() {
                   </div>
                   
                   <div className="flex gap-4">
-                    {/* Year Dropdown */}
+                    {/* Year Input */}
                     <div className="flex flex-col">
                       <label className="text-sm font-medium text-gray-600 mb-1">ปี</label>
-                      <select
+                      <input
+                        type="number"
                         value={selectedYear}
                         onChange={(e) => setSelectedYear(e.target.value)}
+                        min="2000"
+                        max="2100"
+                        placeholder="เช่น 2025"
                         className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        {Array.from({ length: 5 }, (_, i) => {
-                          const year = new Date().getFullYear() - 2 + i;
-                          return (
-                            <option key={year} value={year.toString()}>
-                              {year}
-                            </option>
-                          );
-                        })}
-                      </select>
+                      />
                     </div>
 
                     {/* Month Dropdown */}
@@ -2094,97 +2211,112 @@ export default function ApprovalsPage() {
 
                   {selectedRequisition?.REQUISITION_ITEMS &&
                   selectedRequisition.REQUISITION_ITEMS.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedRequisition.REQUISITION_ITEMS.map(
-                        (item, idx) => (
-                          <div
-                            key={item.ITEM_ID || idx}
-                            className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
-                          >
-                            <div className="flex-shrink-0">
-                              <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                                {item.PHOTO_URL ? (
-                                  <img
-                                    src={getImageUrl(item.PHOTO_URL)}
-                                    alt={item.PRODUCT_NAME}
-                                    className="w-full h-full object-cover rounded-lg"
-                                  />
-                                ) : (
-                                  <Category className="h-8 w-8 text-gray-400" />
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex-1 min-w-0">
+                    <div className="space-y-6">
+                      {groupItemsByCategory(selectedRequisition.REQUISITION_ITEMS).map(
+                        (categoryGroup, categoryIndex) => (
+                          <div key={categoryGroup.category} className="space-y-3">
+                            {/* หัวข้อหมวดหมู่ */}
+                            <div className="flex items-center gap-3 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
                               <Typography
-                                variant="subtitle1"
-                                className="font-semibold text-gray-800 truncate"
+                                variant="h6"
+                                className="font-bold text-blue-800"
                               >
-                                {item.PRODUCT_NAME || 'Unknown Product'}
+                                {categoryGroup.category}
                               </Typography>
-                              {item.CATEGORY_NAME && (
-                                <Typography
-                                  variant="body2"
-                                  className="text-gray-500"
-                                >
-                                  {item.CATEGORY_NAME}
-                                </Typography>
-                              )}
-                              {item.ORDER_UNIT && (
-                                <Typography
-                                  variant="body2"
-                                  className="text-gray-500"
-                                >
-                                  Unit: {item.ORDER_UNIT}
-                                </Typography>
-                              )}
+                              <Typography
+                                variant="body2"
+                                className="text-blue-600 bg-blue-100 px-2 py-1 rounded-full"
+                              >
+                                {categoryGroup.items.length} รายการ
+                              </Typography>
                             </div>
 
-                            <div className="flex items-center gap-4 text-right">
-                              <div>
-                                <Typography
-                                  variant="body2"
-                                  className="text-gray-500"
+                            {/* รายการสินค้าในหมวดหมู่ */}
+                            <div className="space-y-3 ml-4">
+                              {categoryGroup.items.map((item, idx) => (
+                                <div
+                                  key={item.ITEM_ID || idx}
+                                  className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
                                 >
-                                  Quantity
-                                </Typography>
-                                <Typography
-                                  variant="h6"
-                                  className="font-bold text-blue-600"
-                                >
-                                  {item.QUANTITY}
-                                </Typography>
-                              </div>
+                                  <div className="flex-shrink-0">
+                                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                                      {item.PHOTO_URL ? (
+                                        <img
+                                          src={getImageUrl(item.PHOTO_URL)}
+                                          alt={item.PRODUCT_NAME}
+                                          className="w-full h-full object-cover rounded-lg"
+                                        />
+                                      ) : (
+                                        <Category className="h-8 w-8 text-gray-400" />
+                                      )}
+                                    </div>
+                                  </div>
 
-                              <div>
-                                <Typography
-                                  variant="body2"
-                                  className="text-gray-500"
-                                >
-                                  Unit Price
-                                </Typography>
-                                <Typography
-                                  variant="h6"
-                                  className="font-bold text-green-600"
-                                >
-                                  ฿{Number(item.UNIT_PRICE || 0).toFixed(2)}
-                                </Typography>
-                              </div>
+                                  <div className="flex-1 min-w-0">
+                                    <Typography
+                                      variant="subtitle1"
+                                      className="font-semibold text-gray-800 truncate"
+                                    >
+                                      {item.PRODUCT_NAME || 'Unknown Product'}
+                                    </Typography>
+                                    {item.ORDER_UNIT && (
+                                      <Typography
+                                        variant="body2"
+                                        className="text-gray-500"
+                                      >
+                                        Unit: {item.ORDER_UNIT}
+                                      </Typography>
+                                    )}
+                                  </div>
 
-                              <div>
-                                <Typography
-                                  variant="body2"
-                                  className="text-gray-500"
-                                >
-                                  Total
-                                </Typography>
-                                <Typography
-                                  variant="h6"
-                                  className="font-bold text-purple-600"
-                                >
-                                  ฿{Number(item.TOTAL_PRICE || 0).toFixed(2)}
-                                </Typography>
-                              </div>
+                                  <div className="flex items-center gap-4 text-right">
+                                    <div>
+                                      <Typography
+                                        variant="body2"
+                                        className="text-gray-500"
+                                      >
+                                        Quantity
+                                      </Typography>
+                                      <Typography
+                                        variant="h6"
+                                        className="font-bold text-blue-600"
+                                      >
+                                        {item.QUANTITY}
+                                      </Typography>
+                                    </div>
+
+                                    <div>
+                                      <Typography
+                                        variant="body2"
+                                        className="text-gray-500"
+                                      >
+                                        Unit Price
+                                      </Typography>
+                                      <Typography
+                                        variant="h6"
+                                        className="font-bold text-green-600"
+                                      >
+                                        ฿{Number(item.UNIT_PRICE || 0).toFixed(2)}
+                                      </Typography>
+                                    </div>
+
+                                    <div>
+                                      <Typography
+                                        variant="body2"
+                                        className="text-gray-500"
+                                      >
+                                        Total
+                                      </Typography>
+                                      <Typography
+                                        variant="h6"
+                                        className="font-bold text-purple-600"
+                                      >
+                                        ฿{Number(item.TOTAL_PRICE || 0).toFixed(2)}
+                                      </Typography>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         )
@@ -2368,15 +2500,15 @@ export default function ApprovalsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      FAX
+                      ที่อยู่บริษัท
                     </label>
                     <input
                       type="text"
-                      value={editFormData.fax}
+                      value={editFormData.companyAddress}
                       onChange={(e) =>
                         setEditFormData({
                           ...editFormData,
-                          fax: e.target.value
+                          companyAddress: e.target.value
                         })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -2400,15 +2532,31 @@ export default function ApprovalsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ผู้ติดต่อ
+                      FAX
                     </label>
                     <input
                       type="text"
-                      value={editFormData.contactPerson}
+                      value={editFormData.fax}
                       onChange={(e) =>
                         setEditFormData({
                           ...editFormData,
-                          contactPerson: e.target.value
+                          fax: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      เลขประจำตัวผู้เสียภาษี
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.taxId}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          taxId: e.target.value
                         })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -2459,28 +2607,6 @@ export default function ApprovalsPage() {
                 </div>
               </div>
 
-              {/* หมวดหมู่ */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
-                  หมวดหมู่สินค้า
-                </h3>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    หมวดหมู่
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.category}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        category: e.target.value
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
 
               {/* ชื่อไฟล์ */}
               <div className="space-y-4">
@@ -2605,11 +2731,6 @@ export default function ApprovalsPage() {
                           <h4 className="font-semibold text-gray-800 truncate">
                             {item.PRODUCT_NAME || 'Unknown Product'}
                           </h4>
-                          {item.CATEGORY_NAME && (
-                            <p className="text-sm text-gray-500">
-                              {item.CATEGORY_NAME}
-                            </p>
-                          )}
                           <p className="text-sm text-gray-600">
                             ราคาต่อหน่วย: ฿{Number(item.UNIT_PRICE || 0).toFixed(2)}
                           </p>
@@ -2847,28 +2968,6 @@ export default function ApprovalsPage() {
                 </div>
               </div>
 
-              {/* หมวดหมู่ */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
-                  หมวดหมู่สินค้า
-                </h3>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    หมวดหมู่
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.category}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        category: e.target.value
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
 
               {/* ชื่อไฟล์ */}
               <div className="space-y-4">

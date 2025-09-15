@@ -163,7 +163,7 @@ export default function AdminCartPage() {
 
       alert('Admin requisition submitted successfully!');
       clearCart();
-      router.push(getBasePathUrl('/admin'));
+      router.push(getBasePathUrl('/admin/orders'));
     } catch (err: any) {
       console.error('Error submitting requisition:', err);
       alert('เกิดข้อผิดพลาดในการส่งใบเบิก กรุณาลองใหม่');

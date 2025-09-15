@@ -34,6 +34,7 @@ export default function HomePage() {
   // Create categories array from products
   const categories: (string | undefined)[] = Array.from(new Set((products || []).map((p: Product) => p.CATEGORY_NAME).filter(Boolean)));
   
+  
   console.log("Test User : ", user)
 
   useEffect(() => {
@@ -255,7 +256,7 @@ export default function HomePage() {
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  All
+                  All Categories
                 </button>
                 {categories.map((category: string | undefined) => (
                   <button
@@ -272,6 +273,7 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
+
           </div>
         </motion.div>
 
@@ -345,7 +347,7 @@ export default function HomePage() {
                   }}
                   className="px-6 py-2 border border-gray-300 rounded-full hover:bg-gray-100 transition-colors"
                 >
-                  Clear Search
+                  Clear All Filters
                 </button>
               </div>
             </div>
@@ -402,7 +404,10 @@ export default function HomePage() {
                   🔝 Back to Top
                 </button>
                 <button 
-                  onClick={() => setSearchTerm("")}
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedCategory("");
+                  }}
                   className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full hover:from-blue-600 hover:to-purple-700 transition-colors"
                 >
                   🔍 New Search
