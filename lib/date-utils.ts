@@ -4,14 +4,11 @@
 
 export class ThaiDateUtils {
   /**
-   * แปลงวันที่เป็น Date object ที่ตรงกับฐานข้อมูล
-   * ลบ 7 ชั่วโมงเพื่อแปลงจาก local time (UTC+7) กลับเป็น database time (UTC+0)
+   * แปลงวันที่เป็น Date object โดยตรง ไม่มีการแปลง timezone
+   * ฐานข้อมูลเก็บเวลาไทยแล้ว ไม่ต้องแปลงอะไรเพิ่ม
    */
-  private static toDatabaseTime(date: Date | string): Date {
-    const d = new Date(date)
-    // ลบ 7 ชั่วโมงเพื่อแปลงจาก local time (UTC+7) กลับเป็น database time (UTC+0)
-    d.setHours(d.getHours() - 7)
-    return d
+  private static parseDate(date: Date | string): Date {
+    return new Date(date)
   }
 
   /**
@@ -19,7 +16,7 @@ export class ThaiDateUtils {
    * ตัวอย่าง: "วันพุธที่ 15 มกราคม 2567 เวลา 14:30 น."
    */
   static formatFullThaiDate(date: Date | string): string {
-    const d = this.toDatabaseTime(date)
+    const d = this.parseDate(date)
     const thaiMonths = [
       'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
       'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
@@ -43,17 +40,25 @@ export class ThaiDateUtils {
    * ตัวอย่าง: "15 ม.ค. 2567 14:30"
    */
   static formatShortThaiDate(date: Date | string): string {
-    const d = this.toDatabaseTime(date)
+    // แปลงเป็น string ก่อนเพื่อรักษา timezone
+    const dateString = date.toString()
+    
+    // แยกข้อมูลจาก string โดยตรง
+    const dateObj = new Date(dateString)
+    
+    // ลบ 7 ชั่วโมงเพื่อแก้ไขปัญหา +7
+    const adjustedDate = new Date(dateObj.getTime() - (7 * 60 * 60 * 1000))
+    
     const thaiMonthsShort = [
       'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
       'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
     ]
     
-    const dateNum = d.getDate().toString().padStart(2, '0')
-    const month = thaiMonthsShort[d.getMonth()]
-    const year = (d.getFullYear() + 543).toString().slice(-4) // ปี พ.ศ. 4 หลัก
-    const hours = d.getHours().toString().padStart(2, '0')
-    const minutes = d.getMinutes().toString().padStart(2, '0')
+    const dateNum = adjustedDate.getDate().toString().padStart(2, '0')
+    const month = thaiMonthsShort[adjustedDate.getMonth()]
+    const year = (adjustedDate.getFullYear() + 543).toString().slice(-4) // ปี พ.ศ. 4 หลัก
+    const hours = adjustedDate.getHours().toString().padStart(2, '0')
+    const minutes = adjustedDate.getMinutes().toString().padStart(2, '0')
     
     return `${dateNum} ${month} ${year} ${hours}:${minutes}`
   }
@@ -63,7 +68,7 @@ export class ThaiDateUtils {
    * ตัวอย่าง: "15 มกราคม 2567 เวลา 14:30 น."
    */
   static formatMediumThaiDate(date: Date | string): string {
-    const d = this.toDatabaseTime(date)
+    const d = this.parseDate(date)
     const thaiMonths = [
       'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
       'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
@@ -83,7 +88,7 @@ export class ThaiDateUtils {
    * ตัวอย่าง: "15 มกราคม 2567"
    */
   static formatThaiDateOnly(date: Date | string): string {
-    const d = this.toDatabaseTime(date)
+    const d = this.parseDate(date)
     const thaiMonths = [
       'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
       'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
@@ -101,7 +106,7 @@ export class ThaiDateUtils {
    * ตัวอย่าง: "14:30 น."
    */
   static formatThaiTimeOnly(date: Date | string): string {
-    const d = this.toDatabaseTime(date)
+    const d = this.parseDate(date)
     const hours = d.getHours().toString().padStart(2, '0')
     const minutes = d.getMinutes().toString().padStart(2, '0')
     
@@ -113,10 +118,9 @@ export class ThaiDateUtils {
    * ตัวอย่าง: "2 ชั่วโมงที่แล้ว", "3 วันที่แล้ว"
    */
   static formatRelativeTime(date: Date | string): string {
-    const d = this.toDatabaseTime(date)
+    const d = this.parseDate(date)
     const now = new Date()
-    // ลบ 7 ชั่วโมงจากเวลาปัจจุบันเพื่อเปรียบเทียบกับ database time
-    now.setHours(now.getHours() - 7)
+    // เปรียบเทียบกับเวลาปัจจุบันโดยตรง
     const diffInMs = now.getTime() - d.getTime()
     
     const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
@@ -148,7 +152,7 @@ export class ThaiDateUtils {
    * ตัวอย่าง: "15/01/2567 14:30"
    */
   static formatThaiTableDate(date: Date | string): string {
-    const d = this.toDatabaseTime(date)
+    const d = this.parseDate(date)
     const day = d.getDate().toString().padStart(2, '0')
     const month = (d.getMonth() + 1).toString().padStart(2, '0')
     const year = (d.getFullYear() + 543).toString().slice(-4)
@@ -171,10 +175,9 @@ export class ThaiDateUtils {
    * ตัวอย่าง: "เมื่อ 2 ชั่วโมงที่แล้ว" หรือ "15 ม.ค. 2567"
    */
   static formatThaiNotificationDate(date: Date | string): string {
-    const d = this.toDatabaseTime(date)
+    const d = this.parseDate(date)
     const now = new Date()
-    // ลบ 7 ชั่วโมงจากเวลาปัจจุบันเพื่อเปรียบเทียบกับ database time
-    now.setHours(now.getHours() - 7)
+    // เปรียบเทียบกับเวลาปัจจุบันโดยตรง
     const diffInHours = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60))
     
     if (diffInHours < 24) {
@@ -189,7 +192,7 @@ export class ThaiDateUtils {
    * ตัวอย่าง: "วันที่ 15 มกราคม 2567"
    */
   static formatThaiReportDate(date: Date | string): string {
-    const d = this.toDatabaseTime(date)
+    const d = this.parseDate(date)
     const thaiMonths = [
       'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
       'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
@@ -215,7 +218,7 @@ export class ThaiDateUtils {
    * ตัวอย่าง: "15 ม.ค. 2567"
    */
   static formatThaiTableDateOnly(date: Date | string): string {
-    const d = this.toDatabaseTime(date)
+    const d = this.parseDate(date)
     const thaiMonthsShort = [
       'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
       'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'

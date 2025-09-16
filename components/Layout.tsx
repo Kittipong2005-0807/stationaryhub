@@ -35,8 +35,10 @@ import {
   Menu as MenuIcon,
   Close,
   Person,
-  Settings,
   Check,
+  Email,
+  ArrowDropDown,
+  AdminPanelSettings,
 } from "@mui/icons-material"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
@@ -79,55 +81,72 @@ export default function Layout({ children }: LayoutProps) {
   const [notificationAnchor, setNotificationAnchor] = React.useState<null | HTMLElement>(null)
   const [notifications, setNotifications] = React.useState<Notification[]>([])
   const [loadingNotifications, setLoadingNotifications] = React.useState(false)
+  const [_adminMenuAnchor, setAdminMenuAnchor] = React.useState<null | HTMLElement>(null)
+  const [adminDropdownOpen, setAdminDropdownOpen] = React.useState(false)
 
   const unreadCount = notifications.filter((n) => !n.isRead).length
 
   // ดึงข้อมูลแจ้งเตือนเมื่อ component โหลด
   React.useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!user?.AdLoginName) return
+
+      try {
+        setLoadingNotifications(true)
+        console.log('🔔 Fetching notifications for user:', user.AdLoginName)
+        
+        const data = await apiGet(`/api/notifications?userId=${user.AdLoginName}`)
+
+        console.log('🔔 API response:', data)
+
+        if (data.success) {
+          // แปลงข้อมูลจาก API ให้ตรงกับ interface
+          const formattedNotifications = (data.data.notifications || []).map((notification: any) => ({
+            id: notification.id || notification.EMAIL_ID,
+            userId: notification.userId || notification.TO_USER_ID,
+            subject: notification.subject || notification.SUBJECT,
+            body: notification.message || notification.BODY,
+            status: notification.status || notification.STATUS,
+            isRead: notification.isRead || notification.IS_READ || false,
+            sentAt: new Date(notification.sentAt || notification.SENT_AT),
+            type: notification.type,
+            requisitionId: notification.requisitionId,
+            actorId: notification.actorId,
+            priority: notification.priority || 'medium',
+            timestamp: notification.timestamp
+          }))
+          
+          setNotifications(formattedNotifications)
+          console.log('🔔 Set formatted notifications:', formattedNotifications)
+        } else {
+          console.error('Error fetching notifications:', data.error)
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error)
+      } finally {
+        setLoadingNotifications(false)
+      }
+    }
+
     if (user?.AdLoginName) {
       fetchNotifications()
     }
   }, [user?.AdLoginName])
 
-  const fetchNotifications = async () => {
-    if (!user?.AdLoginName) return
-
-    try {
-      setLoadingNotifications(true)
-      console.log('🔔 Fetching notifications for user:', user.AdLoginName)
-      
-      const data = await apiGet(`/api/notifications?userId=${user.AdLoginName}`)
-
-      console.log('🔔 API response:', data)
-
-      if (data.success) {
-        // แปลงข้อมูลจาก API ให้ตรงกับ interface
-        const formattedNotifications = (data.data.notifications || []).map((notification: any) => ({
-          id: notification.id || notification.EMAIL_ID,
-          userId: notification.userId || notification.TO_USER_ID,
-          subject: notification.subject || notification.SUBJECT,
-          body: notification.message || notification.BODY,
-          status: notification.status || notification.STATUS,
-          isRead: notification.isRead || notification.IS_READ || false,
-          sentAt: new Date(notification.sentAt || notification.SENT_AT),
-          type: notification.type,
-          requisitionId: notification.requisitionId,
-          actorId: notification.actorId,
-          priority: notification.priority || 'medium',
-          timestamp: notification.timestamp
-        }))
-        
-        setNotifications(formattedNotifications)
-        console.log('🔔 Set formatted notifications:', formattedNotifications)
-      } else {
-        console.error('Error fetching notifications:', data.error)
+  // Click outside handler for admin dropdown
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (adminDropdownOpen && !(event.target as Element).closest('[data-admin-dropdown]')) {
+        setAdminDropdownOpen(false)
+        setAdminMenuAnchor(null)
       }
-    } catch (error) {
-      console.error('Error fetching notifications:', error)
-    } finally {
-      setLoadingNotifications(false)
     }
-  }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [adminDropdownOpen])
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -137,13 +156,23 @@ export default function Layout({ children }: LayoutProps) {
     setAnchorEl(null)
   }
 
+  const handleAdminMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAdminMenuAnchor(event.currentTarget)
+    setAdminDropdownOpen(true)
+  }
+
+  const handleAdminMenuClose = () => {
+    setAdminMenuAnchor(null)
+    setAdminDropdownOpen(false)
+  }
+
   const handleLogout = () => {
     setIsNavigating(true)
     logout()
     handleClose()
   }
 
-  const handleNavigation = (path: string) => {
+  const _handleNavigation = (path: string) => {
     if (pathname !== path) {
       setIsNavigating(true)
       router.push(path)
@@ -248,7 +277,7 @@ export default function Layout({ children }: LayoutProps) {
     return "📋"
   }
 
-  const getNotificationStatus = (subject: string) => {
+  const _getNotificationStatus = (subject: string) => {
     if (subject.includes('approved')) return "approved"
     if (subject.includes('rejected')) return "rejected"
     return "pending"
@@ -283,18 +312,111 @@ export default function Layout({ children }: LayoutProps) {
     if (user?.ROLE === "ADMIN") {
       items.push(
         { label: "Dashboard", path: "/admin", icon: Dashboard },
-        { label: "Products", path: "/admin/products-order", icon: ShoppingCart },
-        { label: "Product Management", path: "/admin/products", icon: Inventory },
+        { label: "Products", path: "/admin/products-order", icon: Inventory },
         { label: "Cart", path: "/admin/cart", icon: ShoppingCart, badge: cartItemCount > 0 ? cartItemCount : undefined },
         { label: "Orders", path: "/admin/orders", icon: Assignment },
-        { label: "Approvals", path: "/approvals", icon: Assignment },
       )
     }
 
     return items
   }
 
+  const getAdminMenuItems = () => {
+    return [
+      { label: "Email Reminders", path: "/admin/email-reminders", icon: Email },
+      { label: "Product Management", path: "/admin/products", icon: Inventory },
+      { label: "Product Audit Log", path: "/admin/product-audit", icon: Assignment },
+      { label: "Approvals", path: "/approvals", icon: Assignment },
+    ]
+  }
+
   const navigationItems = getNavigationItems()
+  const adminMenuItems = getAdminMenuItems()
+
+  const AdminDropdownButton = () => {
+    const isAdminPageActive = adminMenuItems.some(item => pathname === item.path)
+    
+    return (
+      <Box sx={{ position: 'relative', display: 'inline-block' }} data-admin-dropdown>
+        <Button
+          id="admin-tools-button"
+          variant="contained"
+          startIcon={<AdminPanelSettings />}
+          endIcon={<ArrowDropDown />}
+          size="small"
+          onClick={handleAdminMenu}
+          sx={{ 
+            position: 'relative',
+            backgroundColor: '#1976d2',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: '#1565c0',
+            }
+          }}
+        >
+          Admin Tools
+        </Button>
+        
+        {adminDropdownOpen && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              mt: 1,
+              minWidth: '200px',
+              backgroundColor: 'white',
+              border: '1px solid #e0e0e0',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              zIndex: 1300,
+              overflow: 'hidden',
+            }}
+          >
+            {adminMenuItems.map((item) => (
+              <Box
+                key={item.path}
+                component={Link}
+                href={item.path}
+                onClick={handleAdminMenuClose}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  px: 2,
+                  py: 1.5,
+                  textDecoration: 'none',
+                  color: pathname === item.path ? '#1976d2' : '#333',
+                  backgroundColor: pathname === item.path ? '#f3f8ff' : 'transparent',
+                  fontWeight: pathname === item.path ? 600 : 400,
+                  '&:hover': {
+                    backgroundColor: '#f5f5f5',
+                  },
+                  '&:first-of-type': {
+                    borderTopLeftRadius: '8px',
+                    borderTopRightRadius: '8px',
+                  },
+                  '&:last-of-type': {
+                    borderBottomLeftRadius: '8px',
+                    borderBottomRightRadius: '8px',
+                  },
+                }}
+              >
+                <item.icon 
+                  sx={{ 
+                    mr: 1.5, 
+                    fontSize: '20px',
+                    color: pathname === item.path ? '#1976d2' : '#666',
+                  }} 
+                />
+                <span>{item.label}</span>
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Box>
+    )
+  }
 
   const NavigationButton = ({ item, mobile = false }: { item: any; mobile?: boolean }) => (
     <>
@@ -433,7 +555,7 @@ export default function Layout({ children }: LayoutProps) {
                 {navigationItems.map((item) => (
                   <NavigationButton key={item.path} item={item} />
                 ))}
-                
+                {user?.ROLE === "ADMIN" && <AdminDropdownButton />}
               </Box>
             )}
 
@@ -697,7 +819,18 @@ export default function Layout({ children }: LayoutProps) {
             {navigationItems.map((item) => (
               <NavigationButton key={item.path} item={item} mobile />
             ))}
-            
+            {user?.ROLE === "ADMIN" && (
+              <>
+                <ListItem className="px-4 py-2">
+                  <Typography variant="subtitle2" className="text-gray-500 font-semibold">
+                    Admin Tools
+                  </Typography>
+                </ListItem>
+                {adminMenuItems.map((item) => (
+                  <NavigationButton key={item.path} item={item} mobile />
+                ))}
+              </>
+            )}
           </List>
         </Box>
       </Drawer>

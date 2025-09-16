@@ -242,6 +242,15 @@ export default function ProductManagementPage() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingProduct(null);
+    // รีเซ็ตฟอร์ม
+    setFormData({
+      ITEM_ID: '',
+      PRODUCT_NAME: '',
+      CATEGORY_ID: 1,
+      UNIT_COST: 0,
+      ORDER_UNIT: '',
+      PHOTO_URL: ''
+    });
   };
 
   const handleImageUpload = async (
@@ -316,15 +325,26 @@ export default function ProductManagementPage() {
       });
 
       if (response.ok) {
-        const _result = await response.json();
+        const result = await response.json();
         // บันทึกหน่วยที่เลือกเป็น recent unit
         saveRecentUnit(formData.ORDER_UNIT);
+        
+        if (editingProduct) {
+          // อัปเดตสินค้าที่แก้ไข
+          setProducts(products.map(p => 
+            p.PRODUCT_ID === editingProduct.PRODUCT_ID 
+              ? { ...p, ...formData, PRODUCT_CATEGORIES: result.product.PRODUCT_CATEGORIES }
+              : p
+          ));
+        } else {
+          // เพิ่มสินค้าใหม่
+          setProducts([result.product, ...products]);
+        }
+        
         alert(
           `Product ${editingProduct ? 'updated' : 'created'} successfully!`
         );
         handleCloseDialog();
-        // รีเฟรชข้อมูล
-        window.location.reload();
       } else {
         const errorData = await response.json();
         alert(`Error: ${errorData.error || 'Failed to save data'}`);
@@ -351,9 +371,9 @@ export default function ProductManagementPage() {
       );
 
       if (response.ok) {
+        // ลบสินค้าออกจาก state
+        setProducts(products.filter(p => p.PRODUCT_ID !== productId));
         alert('Product deleted successfully!');
-        // รีเฟรชข้อมูล
-        window.location.reload();
       } else {
         const errorData = await response.json();
         alert(`Error: ${errorData.error || 'Failed to delete product'}`);

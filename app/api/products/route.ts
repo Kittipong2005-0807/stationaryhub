@@ -84,6 +84,12 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    // Get client IP and User Agent for audit log
+    const clientIP = request.headers.get('x-forwarded-for') || 
+                     request.headers.get('x-real-ip') || 
+                     'unknown'
+    const userAgent = request.headers.get('user-agent') || 'unknown'
+    
     // Add product to database using Prisma
     const newProduct = await prisma.pRODUCTS.create({
       data: {
@@ -98,6 +104,25 @@ export async function POST(request: NextRequest) {
         PRODUCT_CATEGORIES: true,
       },
     })
+    
+    // Create audit log for product creation using raw query
+    const newDataJson = JSON.stringify({
+      ITEM_ID: newProduct.ITEM_ID,
+      PRODUCT_NAME: newProduct.PRODUCT_NAME,
+      CATEGORY_ID: newProduct.CATEGORY_ID,
+      UNIT_COST: newProduct.UNIT_COST,
+      ORDER_UNIT: newProduct.ORDER_UNIT,
+      PHOTO_URL: newProduct.PHOTO_URL,
+      CREATED_AT: newProduct.CREATED_AT
+    })
+    
+    const auditLogQuery = `
+      INSERT INTO PRODUCT_AUDIT_LOG 
+      (PRODUCT_ID, ACTION_TYPE, OLD_DATA, NEW_DATA, CHANGED_BY, CHANGED_AT, IP_ADDRESS, USER_AGENT, NOTES)
+      VALUES (${newProduct.PRODUCT_ID}, 'CREATE', NULL, '${newDataJson.replace(/'/g, "''")}', '${user.USER_ID}', DATEADD(HOUR, -7, GETDATE()), '${clientIP}', '${userAgent}', 'Product created successfully')
+    `
+    
+    await prisma.$executeRawUnsafe(auditLogQuery)
     
     return NextResponse.json({ 
       success: true, 

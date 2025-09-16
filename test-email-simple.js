@@ -45,9 +45,7 @@ async function testEmail() {
 
     // ข้อมูลอีเมลทดสอบ - กรอกอีเมลของคุณที่นี่
     const testEmail = 'your-email@domain.com'; // ⚠️ กรุณาเปลี่ยนเป็นอีเมลจริงของคุณ
-    const currentTime = new Date().toLocaleString('th-TH', {
-      timeZone: 'Asia/Bangkok'
-    });
+    const currentTime = new Date().toLocaleString();
 
     console.log(`📤 กำลังส่งอีเมลทดสอบไปยัง: ${testEmail}`);
     

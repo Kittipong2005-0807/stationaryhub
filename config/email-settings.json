@@ -1,0 +1,27 @@
+{
+  "enabled": true,
+  "schedule": {
+    "hour": 10,
+    "minute": 0,
+    "timezone": "Asia/Bangkok",
+    "frequency": "daily"
+  },
+  "filters": {
+    "minDaysPending": 1,
+    "maxDaysPending": 30
+  },
+  "recipients": {
+    "managers": ["manager@company.com"],
+    "admins": ["admin@company.com"],
+    "customEmails": []
+  },
+  "template": {
+    "subject": "🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ",
+    "headerColor": "#dc2626",
+    "urgencyLevel": "medium",
+    "includeProductDetails": true,
+    "includeRequesterInfo": true,
+    "customMessage": ""
+  }
+}
+

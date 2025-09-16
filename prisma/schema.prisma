@@ -56,6 +56,21 @@ model PRICE_HISTORY {
   PRODUCTS          PRODUCTS @relation(fields: [PRODUCT_ID], references: [PRODUCT_ID], onUpdate: NoAction)
 }
 
+model PRODUCT_AUDIT_LOG {
+  AUDIT_ID        Int      @id @default(autoincrement())
+  PRODUCT_ID      Int?
+  ACTION_TYPE     String   @db.VarChar(20) // CREATE, UPDATE, DELETE
+  OLD_DATA        String?  @db.Text        // JSON string ของข้อมูลเก่า
+  NEW_DATA        String?  @db.Text        // JSON string ของข้อมูลใหม่
+  CHANGED_BY      String   @db.VarChar(50)
+  CHANGED_AT      DateTime @default(now())
+  IP_ADDRESS      String?  @db.VarChar(45)
+  USER_AGENT      String?  @db.VarChar(500)
+  NOTES           String?  @db.VarChar(1000)
+  PRODUCTS        PRODUCTS? @relation(fields: [PRODUCT_ID], references: [PRODUCT_ID], onUpdate: NoAction, onDelete: SetNull)
+  USERS           USERS    @relation(fields: [CHANGED_BY], references: [USER_ID], onUpdate: NoAction)
+}
+
 model PRODUCT_CATEGORIES {
   CATEGORY_ID   Int        @id(map: "PK__PRODUCT___E7DA297C64E80E18") @default(autoincrement())
   CATEGORY_NAME String     @db.VarChar(255)
@@ -74,6 +89,7 @@ model PRODUCTS {
   PRICE_HISTORY      PRICE_HISTORY[]
   PRODUCT_CATEGORIES PRODUCT_CATEGORIES  @relation(fields: [CATEGORY_ID], references: [CATEGORY_ID], onUpdate: NoAction, map: "FK__PRODUCTS__CATEGO__440B1D61")
   REQUISITION_ITEMS  REQUISITION_ITEMS[]
+  PRODUCT_AUDIT_LOG  PRODUCT_AUDIT_LOG[]
 }
 
 model REQUISITION_ITEMS {
@@ -115,19 +131,42 @@ model STATUS_HISTORY {
 }
 
 model USERS {
-  USER_ID        String           @id(map: "PK__USERS__F3BEEBFF17F9F5BC") @db.VarChar(50)
-  USERNAME       String           @db.VarChar(100)
-  PASSWORD       String           @db.VarChar(255)
-  EMAIL          String           @db.VarChar(255)
-  ROLE           String?          @db.VarChar(50)
-  DEPARTMENT     String?          @db.VarChar(100)
-  SITE_ID        String?          @db.VarChar(50)
-  CREATED_AT     DateTime?        @default(now(), map: "DF__USERS__CREATED_A__3F466844") @db.DateTime
-  APPROVALS      APPROVALS[]
-  EMAIL_LOGS     EMAIL_LOGS[]
-  EXPORT_LOGS    EXPORT_LOGS[]
-  REQUISITIONS   REQUISITIONS[]
-  STATUS_HISTORY STATUS_HISTORY[]
+  USER_ID           String              @id(map: "PK__USERS__F3BEEBFF17F9F5BC") @db.VarChar(50)
+  USERNAME          String              @db.VarChar(100)
+  PASSWORD          String              @db.VarChar(255)
+  EMAIL             String              @db.VarChar(255)
+  ROLE              String?             @db.VarChar(50)
+  DEPARTMENT        String?             @db.VarChar(100)
+  SITE_ID           String?             @db.VarChar(50)
+  CREATED_AT        DateTime?           @default(now(), map: "DF__USERS__CREATED_A__3F466844") @db.DateTime
+  APPROVALS         APPROVALS[]
+  EMAIL_LOGS        EMAIL_LOGS[]
+  EXPORT_LOGS       EXPORT_LOGS[]
+  REQUISITIONS      REQUISITIONS[]
+  STATUS_HISTORY    STATUS_HISTORY[]
+  PRODUCT_AUDIT_LOG PRODUCT_AUDIT_LOG[]
+}
+
+model EMAIL_SETTINGS {
+  ID                      Int      @id(map: "PK__EMAIL_SE__3214EC27A287C77C") @default(autoincrement())
+  ENABLED                 Boolean  @default(true, map: "DF__EMAIL_SET__ENABL__56B3DD81")
+  SCHEDULE_HOUR           Int      @default(10, map: "DF__EMAIL_SET__SCHED__57A801BA")
+  SCHEDULE_MINUTE         Int      @default(0, map: "DF__EMAIL_SET__SCHED__589C25F3")
+  TIMEZONE                String   @default("Asia/Bangkok", map: "DF__EMAIL_SET__TIMEZ__59904A2C") @db.NVarChar(50)
+  FREQUENCY               String   @default("daily", map: "DF__EMAIL_SET__FREQU__5A846E65") @db.NVarChar(20)
+  MIN_DAYS_PENDING        Int      @default(1, map: "DF__EMAIL_SET__MIN_D__5B78929E")
+  MAX_DAYS_PENDING        Int      @default(30, map: "DF__EMAIL_SET__MAX_D__5C6CB6D7")
+  MANAGER_EMAILS          String?  @db.NVarChar(Max)
+  ADMIN_EMAILS            String?  @db.NVarChar(Max)
+  CUSTOM_EMAILS           String?  @db.NVarChar(Max)
+  EMAIL_SUBJECT           String?  @db.NVarChar(255)
+  HEADER_COLOR            String?  @db.NVarChar(20)
+  URGENCY_LEVEL           String?  @db.NVarChar(20)
+  INCLUDE_PRODUCT_DETAILS Boolean  @default(true, map: "DF__EMAIL_SET__INCLU__5D60DB10")
+  INCLUDE_REQUESTER_INFO  Boolean  @default(true, map: "DF__EMAIL_SET__INCLU__5E54FF49")
+  CUSTOM_MESSAGE          String?  @db.NVarChar(Max)
+  CREATED_DATE            DateTime @default(now(), map: "DF__EMAIL_SET__CREAT__5F492382")
+  UPDATED_DATE            DateTime @default(now(), map: "DF__EMAIL_SET__UPDAT__603D47BB")
 }
 
 view UserWithRoles {

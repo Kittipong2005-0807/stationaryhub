@@ -765,7 +765,7 @@ export default function ApprovalsPage() {
           ${isLastRequisition ? `
           <div style="margin-top: 30px; text-align: center; color: #666; font-size: 10px; border-top: 1px solid #ddd; padding-top: 15px;">
             <p style="margin: 0 0 5px 0;">เอกสารนี้ถูกสร้างโดยระบบ StationaryHub</p>
-            <p style="margin: 0;">วันที่สร้าง: ${new Date().toLocaleDateString('th-TH')} เวลา: ${new Date().toLocaleTimeString('th-TH')}</p>
+            <p style="margin: 0;">วันที่สร้าง: ${new Date().toLocaleDateString()} เวลา: ${new Date().toLocaleTimeString()}</p>
           </div>
           ` : ''}
         </div>
@@ -964,7 +964,7 @@ export default function ApprovalsPage() {
         ${needsMultiplePages ? '' : `
         <div style="margin-top: 20px; text-align: center; color: #666; font-size: 9px; border-top: 1px solid #ddd; padding-top: 10px;">
           <p style="margin: 0 0 3px 0;">เอกสารนี้ถูกสร้างโดยระบบ StationaryHub</p>
-          <p style="margin: 0;">วันที่สร้าง: ${new Date().toLocaleDateString('th-TH')} เวลา: ${new Date().toLocaleTimeString('th-TH')}</p>
+          <p style="margin: 0;">วันที่สร้าง: ${new Date().toLocaleDateString()} เวลา: ${new Date().toLocaleTimeString()}</p>
         </div>
         `}
       </div>

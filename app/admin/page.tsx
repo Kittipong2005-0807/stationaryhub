@@ -460,7 +460,7 @@ export default function AdminDashboard() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("th-TH", {
+    return new Date(dateString).toLocaleString('th-TH', {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -492,6 +492,13 @@ export default function AdminDashboard() {
       icon: Inventory,
       color: "from-blue-500 to-purple-600",
       href: "/admin/products",
+    },
+    {
+      title: "Product Audit Log",
+      description: "View product change history",
+      icon: Assignment,
+      color: "from-indigo-500 to-blue-600",
+      href: "/admin/product-audit",
     },
     {
       title: "Order Products",
@@ -1166,7 +1173,7 @@ export default function AdminDashboard() {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" className="text-gray-600">
-                            {new Date(item.RECORDED_DATE).toLocaleDateString('th-TH')}
+                            {new Date(item.RECORDED_DATE).toLocaleDateString()}
                           </Typography>
                         </TableCell>
                         <TableCell>

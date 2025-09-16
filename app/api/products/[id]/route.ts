@@ -51,6 +51,12 @@ export async function PUT(
     const productId = parseInt(params.id)
     const updateData = await request.json()
 
+    // Get client IP and User Agent for audit log
+    const clientIP = request.headers.get('x-forwarded-for') || 
+                     request.headers.get('x-real-ip') || 
+                     'unknown'
+    const userAgent = request.headers.get('user-agent') || 'unknown'
+
     // Get current product data to compare prices
     const currentProduct = await prisma.pRODUCTS.findUnique({
       where: { PRODUCT_ID: productId },
@@ -83,6 +89,37 @@ export async function PUT(
         PRODUCT_CATEGORIES: true,
       },
     })
+
+    // Create audit log for product update using raw query
+    const oldDataJson = JSON.stringify({
+      ITEM_ID: currentProduct.ITEM_ID,
+      PRODUCT_NAME: currentProduct.PRODUCT_NAME,
+      CATEGORY_ID: currentProduct.CATEGORY_ID,
+      UNIT_COST: currentProduct.UNIT_COST,
+      ORDER_UNIT: currentProduct.ORDER_UNIT,
+      PHOTO_URL: currentProduct.PHOTO_URL,
+      CREATED_AT: currentProduct.CREATED_AT,
+      CATEGORY_NAME: currentProduct.PRODUCT_CATEGORIES?.CATEGORY_NAME
+    })
+    
+    const newDataJson = JSON.stringify({
+      ITEM_ID: updatedProduct.ITEM_ID,
+      PRODUCT_NAME: updatedProduct.PRODUCT_NAME,
+      CATEGORY_ID: updatedProduct.CATEGORY_ID,
+      UNIT_COST: updatedProduct.UNIT_COST,
+      ORDER_UNIT: updatedProduct.ORDER_UNIT,
+      PHOTO_URL: updatedProduct.PHOTO_URL,
+      CREATED_AT: updatedProduct.CREATED_AT,
+      CATEGORY_NAME: updatedProduct.PRODUCT_CATEGORIES?.CATEGORY_NAME
+    })
+    
+    const auditLogQuery = `
+      INSERT INTO PRODUCT_AUDIT_LOG 
+      (PRODUCT_ID, ACTION_TYPE, OLD_DATA, NEW_DATA, CHANGED_BY, CHANGED_AT, IP_ADDRESS, USER_AGENT, NOTES)
+      VALUES (${productId}, 'UPDATE', '${oldDataJson.replace(/'/g, "''")}', '${newDataJson.replace(/'/g, "''")}', '${user.USER_ID}', DATEADD(HOUR, -7, GETDATE()), '${clientIP}', '${userAgent}', 'Product updated - Price changed from ฿${oldPrice} to ฿${newPrice}')
+    `
+    
+    await prisma.$executeRawUnsafe(auditLogQuery)
 
     // Record price history if price has changed
     if (oldPrice !== newPrice) {
@@ -144,9 +181,18 @@ export async function DELETE(
 
     const productId = parseInt(params.id)
 
+    // Get client IP and User Agent for audit log
+    const clientIP = request.headers.get('x-forwarded-for') || 
+                     request.headers.get('x-real-ip') || 
+                     'unknown'
+    const userAgent = request.headers.get('user-agent') || 'unknown'
+
     // Check if product exists and get image info
     const existingProduct = await prisma.pRODUCTS.findUnique({
       where: { PRODUCT_ID: productId },
+      include: {
+        PRODUCT_CATEGORIES: true,
+      },
     })
 
     if (!existingProduct) {
@@ -156,15 +202,34 @@ export async function DELETE(
       )
     }
 
+    // Create audit log for product deletion BEFORE deleting the product using raw query
+    const oldDataJson = JSON.stringify({
+      ITEM_ID: existingProduct.ITEM_ID,
+      PRODUCT_NAME: existingProduct.PRODUCT_NAME,
+      CATEGORY_ID: existingProduct.CATEGORY_ID,
+      UNIT_COST: existingProduct.UNIT_COST,
+      ORDER_UNIT: existingProduct.ORDER_UNIT,
+      PHOTO_URL: existingProduct.PHOTO_URL,
+      CREATED_AT: existingProduct.CREATED_AT,
+      CATEGORY_NAME: existingProduct.PRODUCT_CATEGORIES?.CATEGORY_NAME
+    })
+    
+    const auditLogQuery = `
+      INSERT INTO PRODUCT_AUDIT_LOG 
+      (PRODUCT_ID, ACTION_TYPE, OLD_DATA, NEW_DATA, CHANGED_BY, CHANGED_AT, IP_ADDRESS, USER_AGENT, NOTES)
+      VALUES (${productId}, 'DELETE', '${oldDataJson.replace(/'/g, "''")}', NULL, '${user.USER_ID}', DATEADD(HOUR, -7, GETDATE()), '${clientIP}', '${userAgent}', 'Product "${existingProduct.PRODUCT_NAME}" deleted successfully')
+    `
+    
+    // Insert the audit log for deletion FIRST (while product still exists)
+    await prisma.$executeRawUnsafe(auditLogQuery)
+    
     // Delete associated image file if exists
     if (existingProduct.PHOTO_URL) {
       await deleteImageFile(existingProduct.PHOTO_URL);
     }
 
-    // Delete product
-    await prisma.pRODUCTS.delete({
-      where: { PRODUCT_ID: productId },
-    })
+    // Delete product (audit log will remain with the original PRODUCT_ID)
+    await prisma.$executeRawUnsafe(`DELETE FROM PRODUCTS WHERE PRODUCT_ID = ${productId}`)
 
     return NextResponse.json({ success: true, message: "Product deleted successfully" })
   } catch (error) {

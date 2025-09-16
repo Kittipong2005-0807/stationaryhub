@@ -770,30 +770,178 @@ export class NotificationService {
   private static createEmailTemplate(type: string, data: any): string {
     const baseTemplate = `
       <!DOCTYPE html>
-      <html>
+      <html lang="th">
       <head>
-        <meta charset="utf-8">
-        <title>Stationary Hub Notification</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>การแจ้งเตือน - StationaryHub</title>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-          .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
-          .button { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; }
-          .footer { margin-top: 20px; padding: 20px; background: #f5f5f5; border-radius: 8px; font-size: 12px; color: #666; }
+          body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.5; 
+            color: #333; 
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+          }
+          
+          .email-container { 
+            width: 100%; 
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+          }
+          
+          .header { 
+            background-color: #2c3e50; 
+            color: white; 
+            padding: 30px 40px; 
+            text-align: center;
+          }
+          
+          .header h1 { 
+            font-size: 24px; 
+            font-weight: bold; 
+            margin: 0;
+          }
+          
+          .header p { 
+            font-size: 16px; 
+            margin: 8px 0 0 0;
+          }
+          
+          .content { 
+            padding: 40px; 
+            background-color: #ffffff;
+          }
+          
+          .section { 
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            background-color: #fafafa;
+          }
+          
+          .section h3 { 
+            color: #2c3e50; 
+            font-size: 18px; 
+            font-weight: bold; 
+            margin: 0 0 15px 0;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 8px;
+          }
+          
+          .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+          }
+          
+          .info-table td {
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 15px;
+          }
+          
+          .info-table td:first-child {
+            font-weight: bold;
+            width: 200px;
+            color: #2c3e50;
+          }
+          
+          .button { 
+            display: inline-block; 
+            padding: 15px 30px; 
+            background-color: #2c3e50; 
+            color: #ffffff; 
+            text-decoration: none; 
+            border: none;
+            font-size: 16px;
+            text-align: center;
+            margin: 20px 0;
+          }
+          
+          .footer { 
+            margin-top: 30px; 
+            padding: 30px 40px; 
+            background-color: #f8f9fa; 
+            border-top: 1px solid #e0e0e0;
+            font-size: 14px; 
+            color: #666;
+            text-align: center;
+          }
+          
+          .footer p {
+            margin: 8px 0;
+          }
+          
+          /* Responsive Design */
+          @media only screen and (max-width: 767px) {
+            .email-container {
+              width: 100%;
+              margin: 0;
+            }
+            
+            .header {
+              padding: 20px 15px;
+            }
+            
+            .header h1 {
+              font-size: 20px;
+            }
+            
+            .header p {
+              font-size: 14px;
+            }
+            
+            .content {
+              padding: 25px 15px;
+            }
+            
+            .section {
+              padding: 15px;
+              margin-bottom: 20px;
+            }
+            
+            .section h3 {
+              font-size: 16px;
+            }
+            
+            .info-table td {
+              font-size: 14px;
+              padding: 6px 0;
+            }
+            
+            .info-table td:first-child {
+              width: 120px;
+              font-size: 13px;
+            }
+            
+            .button {
+              width: 100%;
+              display: block;
+              text-align: center;
+              padding: 12px 20px;
+              font-size: 15px;
+            }
+            
+            .footer {
+              padding: 20px 15px;
+            }
+          }
         </style>
       </head>
       <body>
-        <div class="container">
+        <div class="email-container">
           <div class="header">
-            <h1>Stationary Hub</h1>
+            <h1>การแจ้งเตือนระบบ</h1>
+            <p>StationaryHub - ระบบจัดการวัสดุสำนักงาน</p>
           </div>
           <div class="content">
             ${this.getEmailContent(type, data)}
           </div>
           <div class="footer">
-            <p>นี่เป็นอีเมลอัตโนมัติจากระบบ Stationary Hub</p>
-            <p>หากมีคำถาม กรุณาติดต่อฝ่าย IT</p>
+            <p>นี่เป็นอีเมลอัตโนมัติจากระบบ StationaryHub</p>
+            <p>หากมีคำถาม กรุณาติดต่อทีมสนับสนุน IT</p>
           </div>
         </div>
       </body>
@@ -810,46 +958,112 @@ export class NotificationService {
     switch (type) {
       case 'requisition_created':
         return `
-          <h2>✅ ยืนยันการส่งคำขอเบิก</h2>
+          <div class="section">
+            <h3>ยืนยันการส่งคำขอเบิก</h3>
           <p>คำขอเบิกของคุณได้รับการส่งเรียบร้อยแล้ว</p>
-          <p><strong>เลขที่คำขอ:</strong> ${data.requisitionId}</p>
-          <p><strong>จำนวนเงิน:</strong> ฿${data.totalAmount?.toFixed(2)}</p>
+            <table class="info-table">
+              <tr>
+                <td>เลขที่คำขอ:</td>
+                <td>${data.requisitionId}</td>
+              </tr>
+              <tr>
+                <td>จำนวนเงิน:</td>
+                <td>฿${data.totalAmount?.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td>สถานะ:</td>
+                <td>รอการอนุมัติ</td>
+              </tr>
+            </table>
           <p>ระบบจะแจ้งเตือนเมื่อคำขอของคุณได้รับการอนุมัติหรือปฏิเสธ</p>
+          </div>
         `
 
       case 'requisition_approved':
         return `
-          <h2>🎉 คำขอเบิกได้รับการอนุมัติ</h2>
+          <div class="section">
+            <h3>คำขอเบิกได้รับการอนุมัติ</h3>
           <p>คำขอเบิกของคุณได้รับการอนุมัติแล้ว</p>
-          <p><strong>เลขที่คำขอ:</strong> ${data.requisitionId}</p>
-          <p><strong>อนุมัติโดย:</strong> ${data.approvedBy}</p>
+            <table class="info-table">
+              <tr>
+                <td>เลขที่คำขอ:</td>
+                <td>${data.requisitionId}</td>
+              </tr>
+              <tr>
+                <td>อนุมัติโดย:</td>
+                <td>${data.approvedBy}</td>
+              </tr>
+              <tr>
+                <td>สถานะ:</td>
+                <td>อนุมัติแล้ว</td>
+              </tr>
+            </table>
           <p>คุณสามารถติดตามสถานะได้ในระบบ</p>
+          </div>
         `
 
       case 'requisition_rejected':
         return `
-          <h2>❌ คำขอเบิกถูกปฏิเสธ</h2>
+          <div class="section">
+            <h3>คำขอเบิกถูกปฏิเสธ</h3>
           <p>คำขอเบิกของคุณถูกปฏิเสธ</p>
-          <p><strong>เลขที่คำขอ:</strong> ${data.requisitionId}</p>
-          <p><strong>ปฏิเสธโดย:</strong> ${data.rejectedBy}</p>
-          ${data.reason ? `<p><strong>เหตุผล:</strong> ${data.reason}</p>` : ''}
+            <table class="info-table">
+              <tr>
+                <td>เลขที่คำขอ:</td>
+                <td>${data.requisitionId}</td>
+              </tr>
+              <tr>
+                <td>ปฏิเสธโดย:</td>
+                <td>${data.rejectedBy}</td>
+              </tr>
+              <tr>
+                <td>สถานะ:</td>
+                <td>ปฏิเสธ</td>
+              </tr>
+              ${data.reason ? `
+              <tr>
+                <td>เหตุผล:</td>
+                <td>${data.reason}</td>
+              </tr>
+              ` : ''}
+            </table>
           <p>หากมีคำถาม กรุณาติดต่อผู้จัดการ</p>
+          </div>
         `
 
       case 'requisition_pending':
         return `
-          <h2>📋 มีคำขอเบิกใหม่รอการอนุมัติ</h2>
+          <div class="section">
+            <h3>มีคำขอเบิกใหม่รอการอนุมัติ</h3>
           <p>มีคำขอเบิกใหม่ที่รอการอนุมัติจากคุณ</p>
-          <p><strong>เลขที่คำขอ:</strong> ${data.requisitionId}</p>
-          <p><strong>จากผู้ใช้:</strong> ${data.userId}</p>
+            <table class="info-table">
+              <tr>
+                <td>เลขที่คำขอ:</td>
+                <td>${data.requisitionId}</td>
+              </tr>
+              <tr>
+                <td>จากผู้ใช้:</td>
+                <td>${data.userId}</td>
+              </tr>
+              <tr>
+                <td>สถานะ:</td>
+                <td>รอการอนุมัติ</td>
+              </tr>
+            </table>
           <p>กรุณาเข้าสู่ระบบเพื่อตรวจสอบและดำเนินการ</p>
+            <div style="text-align: center;">
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/approvals" class="button">ดูคำขอเบิก</a>
+            </div>
+          </div>
         `
 
-
-
       default:
-        return '<p>การแจ้งเตือนจากระบบ Stationary Hub</p>'
+        return `
+          <div class="section">
+            <h3>การแจ้งเตือนจากระบบ</h3>
+            <p>การแจ้งเตือนจากระบบ StationaryHub</p>
+          </div>
+        `
     }
   }
 
@@ -906,66 +1120,231 @@ export class NotificationService {
   }): string {
     const baseTemplate = `
       <!DOCTYPE html>
-      <html>
+      <html lang="th">
       <head>
-        <meta charset="utf-8">
-        <title>สินค้ามาแล้ว - Stationary Hub</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>สินค้ามาแล้ว - StationaryHub</title>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-          .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
-          .button { display: inline-block; padding: 12px 24px; background: #10b981; color: white; text-decoration: none; border-radius: 4px; }
-          .footer { margin-top: 20px; padding: 20px; background: #f5f5f5; border-radius: 8px; font-size: 12px; color: #666; }
-          .info-box { background: #e0f2fe; border: 1px solid #0288d1; border-radius: 8px; padding: 15px; margin: 15px 0; }
-          .highlight { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin: 15px 0; }
+          body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.5; 
+            color: #333; 
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+          }
+          
+          .email-container { 
+            width: 100%; 
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+          }
+          
+          .header { 
+            background-color: #2c3e50; 
+            color: white; 
+            padding: 30px 40px; 
+            text-align: center;
+          }
+          
+          .header h1 { 
+            font-size: 24px; 
+            font-weight: bold; 
+            margin: 0;
+          }
+          
+          .header p { 
+            font-size: 16px; 
+            margin: 8px 0 0 0;
+          }
+          
+          .content { 
+            padding: 40px; 
+            background-color: #ffffff;
+          }
+          
+          .section { 
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            background-color: #fafafa;
+          }
+          
+          .section h3 { 
+            color: #2c3e50; 
+            font-size: 18px; 
+            font-weight: bold; 
+            margin: 0 0 15px 0;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 8px;
+          }
+          
+          .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+          }
+          
+          .info-table td {
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 15px;
+          }
+          
+          .info-table td:first-child {
+            font-weight: bold;
+            width: 200px;
+            color: #2c3e50;
+          }
+          
+          .message-box {
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin-top: 15px;
+            font-size: 15px;
+            line-height: 1.5;
+            white-space: pre-line;
+          }
+          
+          .button { 
+            display: inline-block; 
+            padding: 15px 30px; 
+            background-color: #2c3e50; 
+            color: #ffffff; 
+            text-decoration: none; 
+            border: none;
+            font-size: 16px;
+            text-align: center;
+            margin: 20px 0;
+          }
+          
+          .footer { 
+            margin-top: 30px; 
+            padding: 30px 40px; 
+            background-color: #f8f9fa; 
+            border-top: 1px solid #e0e0e0;
+            font-size: 14px; 
+            color: #666;
+            text-align: center;
+          }
+          
+          .footer p {
+            margin: 8px 0;
+          }
+          
+          /* Responsive Design */
+          @media only screen and (max-width: 767px) {
+            .email-container {
+              width: 100%;
+              margin: 0;
+            }
+            
+            .header {
+              padding: 20px 15px;
+            }
+            
+            .header h1 {
+              font-size: 20px;
+            }
+            
+            .header p {
+              font-size: 14px;
+            }
+            
+            .content {
+              padding: 25px 15px;
+            }
+            
+            .section {
+              padding: 15px;
+              margin-bottom: 20px;
+            }
+            
+            .section h3 {
+              font-size: 16px;
+            }
+            
+            .info-table td {
+              font-size: 14px;
+              padding: 6px 0;
+            }
+            
+            .info-table td:first-child {
+              width: 120px;
+              font-size: 13px;
+            }
+            
+            .message-box {
+              font-size: 14px;
+              padding: 15px;
+            }
+            
+            .button {
+              width: 100%;
+              display: block;
+              text-align: center;
+              padding: 12px 20px;
+              font-size: 15px;
+            }
+            
+            .footer {
+              padding: 20px 15px;
+            }
+          }
         </style>
       </head>
       <body>
-        <div class="container">
+        <div class="email-container">
           <div class="header">
-            <h1>📦 สินค้ามาแล้ว!</h1>
-            <p>Stationary Hub - การแจ้งเตือนสินค้ามาแล้ว</p>
+            <h1>สินค้ามาแล้ว</h1>
+            <p>StationaryHub - การแจ้งเตือนสินค้ามาแล้ว</p>
           </div>
           <div class="content">
-            <div class="info-box">
-              <h2>🎉 ขอแสดงความยินดี!</h2>
+            <div class="section">
+              <h3>สถานะสินค้า</h3>
               <p>สินค้าที่คุณขอเบิกได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า</p>
             </div>
             
-            <div class="highlight">
-              <h3>📋 รายละเอียดคำขอเบิก</h3>
-              <p><strong>เลขที่คำขอ:</strong> #${data.requisitionId}</p>
-              <p><strong>ผู้ขอเบิก:</strong> ${data.requesterName}</p>
-              <p><strong>จำนวนเงิน:</strong> ฿${data.totalAmount?.toFixed(2) || '0.00'}</p>
-              <p><strong>แจ้งเตือนโดย:</strong> ${data.adminName}</p>
-              <p><strong>วันที่แจ้งเตือน:</strong> ${new Date().toLocaleDateString('th-TH')} ${new Date().toLocaleTimeString('th-TH', { hour12: false })}</p>
+            <div class="section">
+              <h3>รายละเอียดคำขอเบิก</h3>
+              <table class="info-table">
+                <tr>
+                  <td>เลขที่คำขอ:</td>
+                  <td>#${data.requisitionId}</td>
+                </tr>
+                <tr>
+                  <td>ผู้ขอเบิก:</td>
+                  <td>${data.requesterName}</td>
+                </tr>
+                <tr>
+                  <td>จำนวนเงิน:</td>
+                  <td>฿${data.totalAmount?.toFixed(2) || '0.00'}</td>
+                </tr>
+                <tr>
+                  <td>แจ้งเตือนโดย:</td>
+                  <td>${data.adminName}</td>
+                </tr>
+                <tr>
+                  <td>วันที่แจ้งเตือน:</td>
+                  <td>${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</td>
+                </tr>
+              </table>
             </div>
             
-            <div class="info-box">
-              <h3>💬 ข้อความจาก Admin</h3>
-              <p>${data.message}</p>
+            <div class="section">
+              <h3>ข้อความจากผู้ดูแลระบบ</h3>
+              <div class="message-box">${data.message}</div>
             </div>
             
-            <div style="text-align: center; margin: 20px 0;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/orders" class="button">
-                ดูรายการคำขอเบิก
-              </a>
-            </div>
-            
-            <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 15px; margin: 15px 0;">
-              <h4>📞 ข้อมูลติดต่อ</h4>
-              <p>หากมีคำถาม กรุณาติดต่อ:</p>
-              <ul>
-                <li>แผนกจัดซื้อ: 02-XXX-XXXX</li>
-                <li>Email: purchasing@company.com</li>
-                <li>หรือติดต่อ Admin ที่แจ้งเตือน</li>
-              </ul>
+            <div style="text-align: center;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/orders" class="button">ดูรายการคำขอเบิก</a>
             </div>
           </div>
           <div class="footer">
-            <p>นี่เป็นอีเมลอัตโนมัติจากระบบ Stationary Hub</p>
-            <p>หากมีคำถาม กรุณาติดต่อฝ่าย IT</p>
+            <p>นี่เป็นอีเมลอัตโนมัติจากระบบ StationaryHub</p>
+            <p>หากมีคำถาม กรุณาติดต่อทีมสนับสนุน IT</p>
           </div>
         </div>
       </body>
@@ -1002,7 +1381,7 @@ export class NotificationService {
             <div class="content">
               <h2>${subject}</h2>
               <p>${message}</p>
-              <p><strong>เวลาส่ง:</strong> ${new Date().toLocaleString('th-TH')}</p>
+              <p><strong>เวลาส่ง:</strong> ${new Date().toLocaleString()}</p>
             </div>
             <div class="footer">
               <p>นี่เป็นอีเมลทดสอบจากระบบ Stationary Hub</p>
