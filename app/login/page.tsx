@@ -108,7 +108,7 @@ export default function LoginPage() {
                 Welcome Back
               </Typography>
               <Typography variant="body1" className="text-gray-600">
-                Sign in to your StationeryHub account
+                Sign in to your StationaryHub account
               </Typography>
             </motion.div>
 

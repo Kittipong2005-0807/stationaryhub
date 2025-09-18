@@ -11,7 +11,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { to, subject, message, emailType = 'test' } = await request.json();
-    console.log("📧 Test email request:", { to, subject, message, emailType });
+    // แสดง Log เฉพาะใน development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log("📧 Test email request:", { to, subject, message, emailType });
+    }
 
     if (!to || !subject) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -19,13 +22,96 @@ export async function POST(request: NextRequest) {
 
     // ตรวจสอบการตั้งค่า SMTP
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-      console.error('❌ SMTP credentials not configured!');
+      // แสดง Log เฉพาะใน development
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('❌ SMTP credentials not configured!');
+      }
+      
       return NextResponse.json({ 
         error: "SMTP not configured",
         message: "กรุณาตั้งค่า SMTP_USER และ SMTP_PASS ใน .env.local"
       }, { status: 500 });
     }
 
+    // สร้างเนื้อหาอีเมล HTML ตามประเภท
+    const currentDate = new Date().toLocaleDateString();
+    const currentTime = new Date().toLocaleTimeString();
+
+    // สร้าง HTML content ตาม emailType
+    let htmlContent = '';
+    
+    if (emailType === 'approval') {
+      htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+          <div style="background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0; font-size: 24px;">✅ คำขอเบิกได้รับการอนุมัติ</h1>
+          </div>
+          <div style="background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <p style="font-size: 16px; line-height: 1.6; color: #333;">สวัสดีครับ/ค่ะ</p>
+            <p style="font-size: 16px; line-height: 1.6; color: #333;">คำขอเบิกของคุณได้รับการอนุมัติแล้ว</p>
+            <div style="background-color: #f0f8ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <p style="margin: 0; font-weight: bold; color: #2c5aa0;">รายละเอียด:</p>
+              <p style="margin: 5px 0; color: #333;">${message}</p>
+            </div>
+            <p style="font-size: 14px; color: #666; margin-top: 30px;">ส่งเมื่อ: ${currentDate} เวลา ${currentTime}</p>
+            <p style="font-size: 14px; color: #666;">ระบบ Stationary Hub</p>
+          </div>
+        </div>
+      `;
+    } else if (emailType === 'rejection') {
+      htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+          <div style="background-color: #f44336; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0; font-size: 24px;">❌ คำขอเบิกถูกปฏิเสธ</h1>
+          </div>
+          <div style="background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <p style="font-size: 16px; line-height: 1.6; color: #333;">สวัสดีครับ/ค่ะ</p>
+            <p style="font-size: 16px; line-height: 1.6; color: #333;">ขออภัย คำขอเบิกของคุณถูกปฏิเสธ</p>
+            <div style="background-color: #fff3e0; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <p style="margin: 0; font-weight: bold; color: #e65100;">เหตุผล:</p>
+              <p style="margin: 5px 0; color: #333;">${message}</p>
+            </div>
+            <p style="font-size: 14px; color: #666; margin-top: 30px;">ส่งเมื่อ: ${currentDate} เวลา ${currentTime}</p>
+            <p style="font-size: 14px; color: #666;">ระบบ Stationary Hub</p>
+          </div>
+        </div>
+      `;
+    } else {
+      htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+          <div style="background-color: #2196F3; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0; font-size: 24px;">📧 ทดสอบระบบอีเมล</h1>
+          </div>
+          <div style="background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <p style="font-size: 16px; line-height: 1.6; color: #333;">สวัสดีครับ/ค่ะ</p>
+            <p style="font-size: 16px; line-height: 1.6; color: #333;">นี่คืออีเมลทดสอบจากระบบ Stationary Hub</p>
+            <div style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <p style="margin: 0; font-weight: bold; color: #1976d2;">ข้อความ:</p>
+              <p style="margin: 5px 0; color: #333;">${message}</p>
+            </div>
+            <p style="font-size: 14px; color: #666; margin-top: 30px;">ส่งเมื่อ: ${currentDate} เวลา ${currentTime}</p>
+            <p style="font-size: 14px; color: #666;">ระบบ Stationary Hub</p>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // 📧 EMAIL SENDING ENABLED - SEND REAL EMAILS
+    // ==========================================
+    // แสดง Log เฉพาะใน development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📧 ===== EMAIL SENDING ENABLED - SENDING REAL EMAILS =====')
+      console.log('📧 Sending test email with the following details:')
+      console.log('  - To:', to)
+      console.log('  - Subject:', subject)
+      console.log('  - Email Type:', emailType)
+      console.log('  - From:', process.env.SMTP_FROM || 'stationaryhub@ube.co.th')
+      console.log('  - HTML Length:', htmlContent.length, 'characters')
+      console.log('  - Timestamp:', new Date().toISOString())
+      console.log('📧 ===== EMAIL SENDING IN PROGRESS =====')
+    }
+    
     // สร้าง transporter
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -42,14 +128,12 @@ export async function POST(request: NextRequest) {
 
     // ทดสอบการเชื่อมต่อ
     await transporter.verify();
-
-    // สร้างเนื้อหาอีเมล HTML ตามประเภท
-    const currentDate = new Date().toLocaleDateString();
-    const currentTime = new Date().toLocaleTimeString();
-
-    // สร้าง HTML content ตาม emailType
-    let htmlContent = '';
     
+    // แสดง Log เฉพาะใน development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('✅ SMTP connection verified successfully');
+    }
+
     if (emailType === 'test') {
       htmlContent = `
       <!DOCTYPE html>
@@ -480,10 +564,13 @@ export async function POST(request: NextRequest) {
 
     const result = await transporter.sendMail(mailOptions);
     
-    console.log('✅ Test email sent successfully!');
-    console.log('  - Message ID:', result.messageId);
-    console.log('  - Response:', result.response);
-    console.log('  - To:', to);
+    // แสดง Log เฉพาะใน development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('✅ Test email sent successfully!');
+      console.log('  - Message ID:', result.messageId);
+      console.log('  - Response:', result.response);
+      console.log('  - To:', to);
+    }
 
     return NextResponse.json({
       success: true,
@@ -495,7 +582,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Error sending test email:', error);
+    // แสดง Log เฉพาะใน development
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('❌ Error sending test email:', error);
+    }
     
     return NextResponse.json({
       error: "Failed to send email",

@@ -499,7 +499,16 @@ export default function Layout({ children }: LayoutProps) {
   )
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-200/20 to-purple-200/20 rounded-full blur-3xl -translate-x-48 -translate-y-48"></div>
+        <div className="absolute top-1/2 right-0 w-80 h-80 bg-gradient-to-br from-indigo-200/20 to-pink-200/20 rounded-full blur-3xl translate-x-40 -translate-y-40"></div>
+        <div className="absolute bottom-0 left-1/3 w-72 h-72 bg-gradient-to-br from-purple-200/20 to-blue-200/20 rounded-full blur-3xl -translate-x-36 translate-y-36"></div>
+      </div>
+      
+      {/* Content */}
+      <div className="relative z-10">
 
       {/* Navigation Loading Overlay */}
       <AnimatePresence>
@@ -516,11 +525,20 @@ export default function Layout({ children }: LayoutProps) {
       </AnimatePresence>
 
         <AppBar
-          position="static"
-          elevation={1}
+          position="sticky"
+          elevation={0}
           sx={{
-            backgroundColor: "white",
-            borderBottom: "1px solid #e5e7eb",
+            backgroundColor: "rgba(255, 255, 255, 0.8)",
+            backdropFilter: "blur(20px)",
+            borderBottom: "1px solid rgba(99, 102, 241, 0.1)",
+            top: 0,
+            zIndex: 1100,
+            transition: "all 0.3s ease-in-out",
+            boxShadow: "0 8px 32px rgba(99, 102, 241, 0.1)",
+            "&:hover": {
+              backgroundColor: "rgba(255, 255, 255, 0.9)",
+              boxShadow: "0 12px 40px rgba(99, 102, 241, 0.15)",
+            }
           }}
         >
           <Toolbar className="px-6">
@@ -543,7 +561,7 @@ export default function Layout({ children }: LayoutProps) {
                  component="div" 
                  className="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
                >
-                 🛍️ StationeryHub
+                 🛍️ StationaryHub
                </Typography>
              </Link>
 
@@ -838,6 +856,7 @@ export default function Layout({ children }: LayoutProps) {
              <main className="w-full px-4 py-4">
          {children}
        </main>
+      </div>
     </div>
   )
 }

@@ -21,7 +21,7 @@ export async function GET(_request: NextRequest) {
     });
 
     // สร้างข้อมูลการแจ้งเตือนราคา
-    const priceAlerts = products.map(product => {
+    const priceAlerts = products.map((product: any) => {
       const currentPrice = product.UNIT_COST ? parseFloat(product.UNIT_COST.toString()) : 0;
       const previousPrice = currentPrice * 0.95; // ลดราคา 5%
       const priceChange = currentPrice - previousPrice;
@@ -51,10 +51,10 @@ export async function GET(_request: NextRequest) {
         ALERT_MESSAGE: alertMessage,
         ALERT_DATE: new Date().toISOString()
       };
-    }).filter(alert => alert.PERCENTAGE_CHANGE > 5); // กรองเฉพาะที่เพิ่มขึ้นมากกว่า 5%
+    }).filter((alert: any) => alert.PERCENTAGE_CHANGE > 5); // กรองเฉพาะที่เพิ่มขึ้นมากกว่า 5%
 
     // เรียงลำดับตาม PERCENTAGE_CHANGE จากมากไปน้อย
-    priceAlerts.sort((a, b) => b.PERCENTAGE_CHANGE - a.PERCENTAGE_CHANGE);
+    priceAlerts.sort((a: any, b: any) => b.PERCENTAGE_CHANGE - a.PERCENTAGE_CHANGE);
 
     console.log(`✅ Price alerts data fetched successfully: ${priceAlerts.length} alerts`);
 

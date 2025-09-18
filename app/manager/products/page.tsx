@@ -332,21 +332,19 @@ export default function ManagerProductsPage() {
                 ))}
               </div>
             ) : (
-              // Grid View Skeleton - แสดงเป็นตาราง 4 คอลัมน์
-              <Grid container spacing={3}>
+              // Grid View Skeleton - แสดงเป็นตาราง 5 คอลัมน์
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {[...Array(8)].map((_, index) => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
-                    <Card className="bg-white/95 backdrop-blur-md shadow-lg border border-white/20">
-                      <CardContent className="p-4">
-                        <Skeleton variant="rectangular" height={200} className="rounded-xl mb-3" />
-                        <Skeleton variant="text" width="80%" height={24} className="mb-2" />
-                        <Skeleton variant="text" width="60%" height={20} className="mb-3" />
-                        <Skeleton variant="rectangular" height={40} className="rounded-xl" />
-                      </CardContent>
-                    </Card>
-                  </Grid>
+                  <Card key={index} className="bg-white/95 backdrop-blur-md shadow-lg border border-white/20">
+                    <CardContent className="p-4">
+                      <Skeleton variant="rectangular" height={200} className="rounded-xl mb-3" />
+                      <Skeleton variant="text" width="80%" height={24} className="mb-2" />
+                      <Skeleton variant="text" width="60%" height={20} className="mb-3" />
+                      <Skeleton variant="rectangular" height={40} className="rounded-xl" />
+                    </CardContent>
+                  </Card>
                 ))}
-              </Grid>
+              </div>
             )
           ) : (
             viewMode === 'list' ? (
@@ -364,20 +362,19 @@ export default function ManagerProductsPage() {
                 ))}
               </div>
             ) : (
-              // Grid View - แสดงเป็นตาราง 4 คอลัมน์
-              <Grid container spacing={3}>
+              // Grid View - แสดงเป็นตาราง 5 คอลัมน์
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filteredProducts.map((product, index) => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={product.PRODUCT_ID}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
-                    >
-                      <ProductCart product={product} viewMode={viewMode} />
-                    </motion.div>
-                  </Grid>
+                  <motion.div
+                    key={product.PRODUCT_ID}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <ProductCart product={product} viewMode={viewMode} />
+                  </motion.div>
                 ))}
-              </Grid>
+              </div>
             )
           )}
 

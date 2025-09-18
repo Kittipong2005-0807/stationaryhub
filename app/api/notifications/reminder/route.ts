@@ -2,47 +2,46 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/notification-service";
 
-// ฟังก์ชันหา Manager อัตโนมัติสำหรับคำขอเบิก
+// ฟังก์ชันหา Manager อัตโนมัติสำหรับคำขอเบิก โดยใช้ CostCenter
 async function findManagersForRequisition(requisition: any): Promise<string[]> {
   try {
     console.log(`🔍 Finding managers for requisition ${requisition.REQUISITION_ID} from user ${requisition.USER_ID}`);
     
     // ดึงข้อมูล user ที่ส่งคำขอเบิก
-    const user = await prisma.$queryRaw<{ orgcode3: string, CurrentEmail: string }[]>`
-      SELECT orgcode3, CurrentEmail FROM UserWithRoles WHERE EmpCode = ${requisition.USER_ID}
+    const user = await prisma.$queryRaw<{ costcentercode: string, CurrentEmail: string }[]>`
+      SELECT costcentercode, CurrentEmail FROM UserWithRoles WHERE EmpCode = ${requisition.USER_ID}
     `;
 
-    if (!user || user.length === 0 || !user[0].orgcode3) {
-      console.log(`❌ User ${requisition.USER_ID} not found or no orgcode3`);
+    if (!user || user.length === 0 || !user[0].costcentercode) {
+      console.log(`❌ User ${requisition.USER_ID} not found or no costcentercode`);
       return [];
     }
 
-    const orgcode3 = user[0].orgcode3;
-    console.log(`🔔 User orgcode3: ${orgcode3}`);
+    const costCenter = user[0].costcentercode;
+    console.log(`🔔 User CostCenter: ${costCenter}`);
 
-    // หา managers ในแผนกเดียวกัน
+    // หา managers จาก VS_DivisionMgr โดยใช้ CostCenter
     const managers = await prisma.$queryRaw<{ CurrentEmail: string, FullNameEng: string, PostNameEng: string }[]>`
       SELECT CurrentEmail, FullNameEng, PostNameEng
-      FROM UserWithRoles 
-      WHERE orgcode3 = ${orgcode3} 
-      AND (PostNameEng LIKE '%Manager%' OR PostNameEng LIKE '%หัวหน้า%' OR PostNameEng LIKE '%หัวหน้าส่วน%')
+      FROM VS_DivisionMgr 
+      WHERE CostCenter = ${costCenter}
       AND CurrentEmail IS NOT NULL
       AND CurrentEmail != ''
     `;
 
-    console.log(`🔔 Found ${managers.length} managers in orgcode3 ${orgcode3}:`, managers.map(m => ({
+    console.log(`🔔 Found ${managers.length} managers for CostCenter ${costCenter}:`, managers.map((m: any) => ({
       Name: m.FullNameEng,
       Position: m.PostNameEng,
       Email: m.CurrentEmail
     })));
 
-    // ถ้าไม่มี Manager ในแผนกเดียวกัน ไม่ส่งอีเมล
+    // ถ้าไม่มี Manager ใน CostCenter เดียวกัน ไม่ส่งอีเมล
     if (managers.length === 0) {
-      console.log(`❌ No managers found in same department (orgcode3: ${orgcode3}), skipping email notification`);
+      console.log(`❌ No managers found for CostCenter ${costCenter}, skipping email notification`);
       return [];
     }
 
-    return managers.map(m => m.CurrentEmail).filter(email => email);
+    return managers.map((m: any) => m.CurrentEmail).filter((email: any) => email);
 
   } catch (error) {
     console.error('❌ Error finding managers for requisition:', error);
@@ -196,7 +195,7 @@ export async function POST(request: NextRequest) {
           totalAmount: Number(requisition.TOTAL_AMOUNT || 0),
           daysPending: daysPending,
           createdDate: submittedDate,
-          items: requisition.REQUISITION_ITEMS?.map(item => ({
+          items: requisition.REQUISITION_ITEMS?.map((item: any) => ({
             productName: item.PRODUCTS?.PRODUCT_NAME || 'Unknown Product',
             quantity: item.QUANTITY || 0,
             unitPrice: Number(item.UNIT_PRICE || 0)
@@ -214,9 +213,59 @@ export async function POST(request: NextRequest) {
 
         console.log(`📧 Sending reminders to ${recipients.length} managers:`, recipients);
 
+        // สร้าง Log รายละเอียดการส่งเมล (ปิดการแสดงในโปรดักชั่น)
+        const emailLogDetails = {
+          requisitionId: requisition.REQUISITION_ID,
+          requesterName: reminderData.requesterName,
+          requesterId: requisition.USER_ID,
+          costCenter: requisition.USERS?.DEPARTMENT,
+          totalRecipients: recipients.length,
+          recipients: recipients,
+          daysPending: daysPending,
+          totalAmount: reminderData.totalAmount,
+          timestamp: new Date().toISOString()
+        };
+
+        // แสดง Log เฉพาะใน development
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('📋 ===== EMAIL REMINDER LOG DETAILS =====');
+          console.log('📋 Requisition Details:', {
+            ID: emailLogDetails.requisitionId,
+            Requester: emailLogDetails.requesterName,
+            RequesterID: emailLogDetails.requesterId,
+            CostCenter: emailLogDetails.costCenter,
+            DaysPending: emailLogDetails.daysPending,
+            TotalAmount: emailLogDetails.totalAmount
+          });
+          console.log('📋 Recipients Details:', {
+            TotalManagers: emailLogDetails.totalRecipients,
+            ManagerEmails: emailLogDetails.recipients
+          });
+          console.log('📋 ===== END EMAIL REMINDER LOG =====');
+        }
+
         // ส่งอีเมลให้ Manager เท่านั้น
         for (const recipient of recipients) {
           try {
+            // ==========================================
+            // 📧 EMAIL SENDING ENABLED - SEND REAL EMAILS
+            // ==========================================
+            // แสดง Log เฉพาะใน development
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('📧 ===== EMAIL REMINDER ENABLED - SENDING REAL EMAILS =====')
+              console.log('📧 Sending reminder email with the following details:')
+              console.log('  - To:', recipient)
+              console.log('  - Subject:', `🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`)
+              console.log('  - Requisition ID:', requisition.REQUISITION_ID)
+              console.log('  - Requester:', reminderData.requesterName)
+              console.log('  - CostCenter:', requisition.USERS?.DEPARTMENT)
+              console.log('  - Days Pending:', daysPending)
+              console.log('  - Total Amount:', reminderData.totalAmount)
+              console.log('  - Timestamp:', new Date().toISOString())
+              console.log('📧 ===== EMAIL SENDING IN PROGRESS =====')
+            }
+            
+            // ส่งอีเมลจริง
             await NotificationService.sendTestEmail(
               recipient,
               `🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`,

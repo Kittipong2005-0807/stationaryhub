@@ -494,6 +494,13 @@ export default function AdminDashboard() {
       href: "/admin/products",
     },
     {
+      title: "Email Logs",
+      description: "View email sending history and logs",
+      icon: Analytics,
+      color: "from-green-500 to-teal-600",
+      href: "/admin/email-logs",
+    },
+    {
       title: "Product Audit Log",
       description: "View product change history",
       icon: Assignment,

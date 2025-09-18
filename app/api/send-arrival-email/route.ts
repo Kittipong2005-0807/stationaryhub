@@ -53,17 +53,17 @@ export async function POST(request: NextRequest) {
 
     // ส่งอีเมล
     try {
-      /* await NotificationService.sendEmail(
+      await NotificationService.sendTestEmail(
         userEmail,
         emailSubject,
         NotificationService.createArrivalEmailTemplate({
           requisitionId,
           message: emailMessage,
           adminName: adminName || 'Admin',
-          totalAmount: requisition.TOTAL_AMOUNT,
+          totalAmount: Number(requisition.TOTAL_AMOUNT || 0),
           requesterName: requisition.USERS?.USERNAME || userId
         })
-      ) */
+      )
 
       console.log(`✅ Arrival email sent successfully to ${userId} at ${userEmail}`)
 

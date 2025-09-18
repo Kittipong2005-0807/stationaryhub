@@ -16,11 +16,11 @@ export async function GET(request: NextRequest) {
     });
 
     // แยกสินค้าตามสถานะราคา
-    const productsWithPrice = allProducts.filter(p => p.UNIT_COST && parseFloat(p.UNIT_COST.toString()) > 0);
-    const productsWithoutPrice = allProducts.filter(p => !p.UNIT_COST || parseFloat(p.UNIT_COST.toString()) <= 0);
+    const productsWithPrice = allProducts.filter((p: any) => p.UNIT_COST && parseFloat(p.UNIT_COST.toString()) > 0);
+    const productsWithoutPrice = allProducts.filter((p: any) => !p.UNIT_COST || parseFloat(p.UNIT_COST.toString()) <= 0);
 
     // ตัวอย่างข้อมูลราคา
-    const samplePrices = productsWithPrice.slice(0, 5).map(p => ({
+    const samplePrices = productsWithPrice.slice(0, 5).map((p: any) => ({
       PRODUCT_ID: p.PRODUCT_ID,
       PRODUCT_NAME: p.PRODUCT_NAME,
       UNIT_COST: p.UNIT_COST,
@@ -42,13 +42,13 @@ export async function GET(request: NextRequest) {
         productsWithPrice: productsWithPrice.length,
         productsWithoutPrice: productsWithoutPrice.length,
         samplePrices: samplePrices,
-        productsWithPriceList: productsWithPrice.map(p => ({
+        productsWithPriceList: productsWithPrice.map((p: any) => ({
           PRODUCT_ID: p.PRODUCT_ID,
           PRODUCT_NAME: p.PRODUCT_NAME,
           UNIT_COST: p.UNIT_COST,
           CATEGORY: p.PRODUCT_CATEGORIES?.CATEGORY_NAME
         })),
-        productsWithoutPriceList: productsWithoutPrice.map(p => ({
+        productsWithoutPriceList: productsWithoutPrice.map((p: any) => ({
           PRODUCT_ID: p.PRODUCT_ID,
           PRODUCT_NAME: p.PRODUCT_NAME,
           UNIT_COST: p.UNIT_COST,

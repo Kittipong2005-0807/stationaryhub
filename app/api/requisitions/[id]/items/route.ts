@@ -94,7 +94,7 @@ export async function PUT(
     }
 
     // ใช้ transaction เพื่อให้การอัปเดตเป็น atomic
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // ลบรายการเก่าทั้งหมด
       await tx.rEQUISITION_ITEMS.deleteMany({
         where: { REQUISITION_ID: requisitionId }
@@ -176,7 +176,7 @@ export async function DELETE(
     }
 
     // ใช้ transaction
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // ลบรายการสินค้าทั้งหมด
       await tx.rEQUISITION_ITEMS.deleteMany({
         where: { REQUISITION_ID: requisitionId }

@@ -526,7 +526,7 @@ export class OrgCode3Service {
         usersWithSiteId: userStat.withSiteId,
         totalRequisitions: requisitionStat.total,
         requisitionsWithSiteId: requisitionStat.withSiteId,
-        siteIdList: siteIdList.map(item => item.siteId)
+        siteIdList: siteIdList.map((item: any) => item.siteId)
       }
     } catch (error) {
       console.error('Error fetching SITE_ID stats:', error)

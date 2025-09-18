@@ -138,25 +138,6 @@ export default function HomePage() {
             <h1 className="text-4xl font-bold mb-4 relative z-10">
               🛒 Welcome to StationaryHub
             </h1>
-            <p className="text-xl mb-6 opacity-90 relative z-10">
-              Discover high-quality stationery at affordable prices
-            </p>
-            
-            {/* Features */}
-            <div className="flex flex-wrap justify-center gap-6 mt-8 relative z-10">
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <span className="text-white">🚚</span>
-                <span className="text-white font-medium">Fast Delivery</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <span className="text-white">🛡️</span>
-                <span className="text-white font-medium">Quality Guaranteed</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <span className="text-white">⭐</span>
-                <span className="text-white font-medium">Featured Products</span>
-              </div>
-            </div>
           </div>
         </motion.div>
 
@@ -319,7 +300,7 @@ export default function HomePage() {
               </div>
             ) : (
               // Grid View Skeleton
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {[...Array(6)].map((_, index) => (
                   <div key={index} className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-lg">
                     <div className="w-full h-48 bg-gray-200 rounded-xl mb-3 animate-pulse"></div>
@@ -368,7 +349,7 @@ export default function HomePage() {
               </div>
             ) : (
               // Grid View - แสดงเป็นตาราง
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filteredProducts.map((product, index) => (
                   <motion.div
                     key={product.PRODUCT_ID}

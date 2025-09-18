@@ -21,11 +21,30 @@ export async function POST(request: NextRequest) {
         break
         
       case 'test_email':
+        // ==========================================
+        // 🚫 EMAIL SENDING DISABLED - LOG ONLY MODE
+        // ==========================================
+        console.log('🚫 ===== TEST EMAIL DISABLED - LOG ONLY MODE =====')
+        console.log('📧 Test email would have been sent with the following details:')
+        console.log('  - To: test@example.com')
+        console.log('  - Subject: Test Notification')
+        console.log('  - Message: นี่เป็นการทดสอบระบบการแจ้งเตือน')
+        console.log('  - Timestamp:', new Date().toISOString())
+        console.log('🚫 ===== EMAIL NOT ACTUALLY SENT =====')
+        
+        // Simulate successful email sending for logging purposes
+        console.log('✅ Test email logged successfully (not actually sent)')
+        
+        // ==========================================
+        // 🔧 ORIGINAL EMAIL SENDING CODE (COMMENTED OUT)
+        // ==========================================
+        /*
         await NotificationService.sendTestEmail(
           'test@example.com',
           'Test Notification',
           'นี่เป็นการทดสอบระบบการแจ้งเตือน'
         )
+        */
         break
         
       default:

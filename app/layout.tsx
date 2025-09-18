@@ -12,7 +12,7 @@ import { authOptions } from '@/lib/authOptions';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'StationeryHub - Modern Requisition System',
+  title: 'StationaryHub - Modern Requisition System',
   description:
     'Advanced stationery requisition and approval system with modern UI/UX',
   generator: 'v0.dev',

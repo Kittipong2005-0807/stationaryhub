@@ -360,7 +360,7 @@ export default function AdminProductsOrderPage() {
           className="w-full px-6 mb-8"
         >
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {[...Array(8)].map((_, index) => (
                 <Card key={index} className="animate-pulse">
                   <div className="w-full h-48 bg-gray-200 rounded-t-lg"></div>
@@ -398,7 +398,7 @@ export default function AdminProductsOrderPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className={viewMode === 'list' ? 'space-y-4' : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'}>
+            <div className={viewMode === 'list' ? 'space-y-4' : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4'}>
               {filteredProducts.map((product, index) => (
                 <motion.div
                   key={product.PRODUCT_ID}

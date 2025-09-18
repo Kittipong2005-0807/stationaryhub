@@ -303,11 +303,11 @@ export default function ProductCard({
         >
           <IconButton
             onClick={() => setIsFavorite(!isFavorite)}
-            className="glass-button rounded-full p-2"
+            className="glass-button rounded-full p-1"
             aria-label={
               isFavorite ? 'Remove from favorites' : 'Add to favorites'
             }
-            style={{ borderRadius: '50%', width: 40, height: 40 }}
+            style={{ borderRadius: '50%', width: 32, height: 32 }}
           >
             <AnimatePresence mode="wait">
               {isFavorite ? (
@@ -318,7 +318,7 @@ export default function ProductCard({
                   exit={{ scale: 0, rotate: 180 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <Favorite className="text-red-500" />
+                  <Favorite className="text-red-500" style={{ fontSize: 18 }} />
                 </motion.div>
               ) : (
                 <motion.div
@@ -328,7 +328,7 @@ export default function ProductCard({
                   exit={{ scale: 0, rotate: 180 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <FavoriteBorder className="text-gray-400" />
+                  <FavoriteBorder className="text-gray-400" style={{ fontSize: 18 }} />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -341,7 +341,7 @@ export default function ProductCard({
             width: '100%',
             aspectRatio: '1/1',
             borderBottom: '2px solid #e5e7eb',
-            paddingBottom: 8
+            paddingBottom: 6
           }}
         >
           {imageLoading && (
@@ -360,7 +360,7 @@ export default function ProductCard({
             src={getImageUrl(product.PHOTO_URL)}
             alt={product.PRODUCT_NAME}
             fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, (max-width: 1400px) 33vw, 20vw"
             style={{ objectFit: 'cover', borderRadius: 12 }}
             onLoad={() => setImageLoading(false)}
             onError={() => setImageLoading(false)}
@@ -368,7 +368,7 @@ export default function ProductCard({
         </Box>
         {/* Parts 2-4: Content */}
         <Box>
-          <CardContent>
+          <CardContent style={{ padding: '12px' }}>
             {/* Product Info */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -376,32 +376,32 @@ export default function ProductCard({
               transition={{ delay: 0.1 }}
             >
               <Typography
-                variant="h6"
+                variant="subtitle1"
                 component="div"
-                className="font-bold text-gray-800 mb-2 line-clamp-2"
+                className="font-bold text-gray-800 mb-2 line-clamp-2 text-sm"
                 title={product.PRODUCT_NAME}
               >
                 {product.PRODUCT_NAME}
               </Typography>
-              <Box className="flex items-center gap-2 mb-2">
+              <Box className="flex flex-col gap-1 mb-2">
                 <Chip
                   label={`📂 ${product.CATEGORY_NAME || 'Uncategorized'}`}
                   size="small"
-                  className="bg-blue-100 text-blue-800 font-medium hover-lift"
+                  className="bg-blue-100 text-blue-800 font-medium hover-lift text-xs"
                 />
                 <Chip
                   label={`📦 Unit: ${product.ORDER_UNIT || 'Piece'}`}
                   size="small"
-                  className="bg-green-100 text-green-800 font-medium hover-lift"
+                  className="bg-green-100 text-green-800 font-medium hover-lift text-xs"
                 />
               </Box>
-              <Typography variant="body2" className="text-gray-500 mb-1">
+              <Typography variant="body2" className="text-gray-500 mb-1 text-xs">
                 Unit Price:{' '}
                 <span className="font-semibold text-blue-700">
                   ฿{Number(product.UNIT_COST || 0).toFixed(2)}
                 </span>
               </Typography>
-              <Typography variant="caption" className="text-gray-400">
+              <Typography variant="caption" className="text-gray-400 text-xs">
                 Added: {ThaiDateUtils.formatShortThaiDate(product.CREATED_AT)}
               </Typography>
             </motion.div>
@@ -411,15 +411,15 @@ export default function ProductCard({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="mb-4"
+                className="mb-3"
               >
                 <Typography
                   variant="body2"
-                  className="text-gray-600 mb-2 font-medium"
+                  className="text-gray-600 mb-1 font-medium text-xs"
                 >
                   Quantity
                 </Typography>
-                <Box className="flex items-center justify-center gap-3 p-2 glass-button rounded-2xl">
+                <Box className="flex items-center justify-center gap-1 p-1 glass-button rounded-lg">
                   <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
@@ -430,8 +430,9 @@ export default function ProductCard({
                       size="small"
                       className="bg-gray-100 hover:bg-gray-200 rounded-full click-scale"
                       aria-label="Decrease quantity"
+                      style={{ width: 24, height: 24 }}
                     >
-                      <Remove />
+                      <Remove style={{ fontSize: 14 }} />
                     </IconButton>
                   </motion.div>
                   <TextField
@@ -439,16 +440,21 @@ export default function ProductCard({
                     value={quantity}
                     onChange={(e) => handleQuantityChange(e.target.value)}
                     size="small"
-                    className="w-16"
+                    className="w-14"
                     inputProps={{
                       min: 1,
-                      className: 'text-center font-semibold',
+                      className: 'text-center font-semibold text-xs',
                       'aria-label': 'Product quantity'
                     }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: '12px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)'
+                        borderRadius: '6px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        height: 24
+                      },
+                      '& .MuiInputBase-input': {
+                        padding: '2px 4px',
+                        textAlign: 'center'
                       }
                     }}
                   />
@@ -462,8 +468,9 @@ export default function ProductCard({
                       size="small"
                       className="bg-gray-100 hover:bg-gray-200 rounded-full click-scale"
                       aria-label="Increase quantity"
+                      style={{ width: 24, height: 24 }}
                     >
-                      <Add />
+                      <Add style={{ fontSize: 14 }} />
                     </IconButton>
                   </motion.div>
                 </Box>
@@ -472,6 +479,7 @@ export default function ProductCard({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="text-xs text-orange-600 mt-1 text-center font-medium"
+                    style={{ fontSize: '10px' }}
                   >
                     Maximum quantity selected
                   </motion.p>
@@ -490,13 +498,14 @@ export default function ProductCard({
                 <Button
                   variant="contained"
                   fullWidth
-                  startIcon={isAdding ? null : <ShoppingCart />}
+                  startIcon={isAdding ? null : <ShoppingCart style={{ fontSize: 16 }} />}
                   onClick={handleAddToCart}
                   disabled={isAdding || isOutOfStock}
-                  className={`btn-gradient-primary rounded-2xl py-3 font-bold text-white shadow-lg ${
+                  className={`btn-gradient-primary rounded-xl py-2 font-bold text-white shadow-lg text-xs ${
                     isAdding ? 'animate-pulse' : ''
                   }`}
                   aria-label={`Add ${product.PRODUCT_NAME} to cart`}
+                  size="small"
                 >
                   <AnimatePresence mode="wait">
                     {isAdding ? (
@@ -544,7 +553,7 @@ export default function ProductCard({
                 animate={{ opacity: 1, height: 'auto' }}
                 className="mt-3 text-center"
               >
-                <Typography variant="body2" className="text-gray-600">
+                <Typography variant="body2" className="text-gray-600 text-xs">
                   Total:{' '}
                   <span className="font-bold text-green-600">
                     ฿{(Number(product.UNIT_COST || 0) * quantity).toFixed(2)}
