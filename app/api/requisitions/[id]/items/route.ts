@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
 import { prisma } from "@/lib/prisma"
+import { PrismaTransaction } from "@/types"
 
 // GET - ดึงรายการสินค้าในคำขอเบิก
 export async function GET(
@@ -94,7 +95,7 @@ export async function PUT(
     }
 
     // ใช้ transaction เพื่อให้การอัปเดตเป็น atomic
-    const result = await prisma.$transaction(async (tx: any) => {
+    const result = await prisma.$transaction(async (tx: PrismaTransaction) => {
       // ลบรายการเก่าทั้งหมด
       await tx.rEQUISITION_ITEMS.deleteMany({
         where: { REQUISITION_ID: requisitionId }
@@ -176,7 +177,7 @@ export async function DELETE(
     }
 
     // ใช้ transaction
-    await prisma.$transaction(async (tx: any) => {
+    await prisma.$transaction(async (tx: PrismaTransaction) => {
       // ลบรายการสินค้าทั้งหมด
       await tx.rEQUISITION_ITEMS.deleteMany({
         where: { REQUISITION_ID: requisitionId }

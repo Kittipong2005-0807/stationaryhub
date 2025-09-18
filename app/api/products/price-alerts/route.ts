@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Product, PriceAlert } from '@/types';
 
 export async function GET(_request: NextRequest) {
   try {
@@ -21,7 +22,7 @@ export async function GET(_request: NextRequest) {
     });
 
     // สร้างข้อมูลการแจ้งเตือนราคา
-    const priceAlerts = products.map((product: any) => {
+    const priceAlerts = products.map((product: Product) => {
       const currentPrice = product.UNIT_COST ? parseFloat(product.UNIT_COST.toString()) : 0;
       const previousPrice = currentPrice * 0.95; // ลดราคา 5%
       const priceChange = currentPrice - previousPrice;
@@ -51,10 +52,10 @@ export async function GET(_request: NextRequest) {
         ALERT_MESSAGE: alertMessage,
         ALERT_DATE: new Date().toISOString()
       };
-    }).filter((alert: any) => alert.PERCENTAGE_CHANGE > 5); // กรองเฉพาะที่เพิ่มขึ้นมากกว่า 5%
+    }).filter((alert: PriceAlert) => alert.PERCENTAGE_CHANGE > 5); // กรองเฉพาะที่เพิ่มขึ้นมากกว่า 5%
 
     // เรียงลำดับตาม PERCENTAGE_CHANGE จากมากไปน้อย
-    priceAlerts.sort((a: any, b: any) => b.PERCENTAGE_CHANGE - a.PERCENTAGE_CHANGE);
+    priceAlerts.sort((a: PriceAlert, b: PriceAlert) => b.PERCENTAGE_CHANGE - a.PERCENTAGE_CHANGE);
 
     console.log(`✅ Price alerts data fetched successfully: ${priceAlerts.length} alerts`);
 

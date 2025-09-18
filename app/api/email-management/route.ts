@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
 import { NotificationService } from "@/lib/notification-service"
 import { prisma } from "@/lib/prisma"
+import { SessionUser } from "@/types"
 
 /**
  * GET /api/email-management
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     // ตรวจสอบสิทธิ์ admin หรือ manager
     const user = await prisma.uSERS.findUnique({
-      where: { USER_ID: (session.user as any).id },
+      where: { USER_ID: (session.user as SessionUser).id },
       select: { ROLE: true }
     })
 
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     // ตรวจสอบสิทธิ์ admin หรือ manager
     const user = await prisma.uSERS.findUnique({
-      where: { USER_ID: (session.user as any).id },
+      where: { USER_ID: (session.user as SessionUser).id },
       select: { ROLE: true }
     })
 
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
     const { action, maxRetries = 3 } = await request.json()
 
     if (action === 'retry_failed') {
-      console.log(`🔄 Starting email retry process by ${(session.user as any).id}`)
+      console.log(`🔄 Starting email retry process by ${(session.user as SessionUser).id}`)
       const result = await NotificationService.retryFailedEmails(maxRetries)
       
       return NextResponse.json({

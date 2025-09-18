@@ -1,5 +1,6 @@
 import { prisma } from "./prisma"
 import { NotificationService } from "./notification-service"
+import { User } from "@/types"
 
 export interface SiteIdUser {
   USER_ID: string
@@ -526,7 +527,7 @@ export class OrgCode3Service {
         usersWithSiteId: userStat.withSiteId,
         totalRequisitions: requisitionStat.total,
         requisitionsWithSiteId: requisitionStat.withSiteId,
-        siteIdList: siteIdList.map((item: any) => item.siteId)
+        siteIdList: siteIdList.map((item: { siteId: string }) => item.siteId)
       }
     } catch (error) {
       console.error('Error fetching SITE_ID stats:', error)

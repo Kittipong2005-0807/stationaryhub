@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Product } from '@/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,11 +17,11 @@ export async function GET(request: NextRequest) {
     });
 
     // แยกสินค้าตามสถานะราคา
-    const productsWithPrice = allProducts.filter((p: any) => p.UNIT_COST && parseFloat(p.UNIT_COST.toString()) > 0);
-    const productsWithoutPrice = allProducts.filter((p: any) => !p.UNIT_COST || parseFloat(p.UNIT_COST.toString()) <= 0);
+    const productsWithPrice = allProducts.filter((p: Product) => p.UNIT_COST && parseFloat(p.UNIT_COST.toString()) > 0);
+    const productsWithoutPrice = allProducts.filter((p: Product) => !p.UNIT_COST || parseFloat(p.UNIT_COST.toString()) <= 0);
 
     // ตัวอย่างข้อมูลราคา
-    const samplePrices = productsWithPrice.slice(0, 5).map((p: any) => ({
+    const samplePrices = productsWithPrice.slice(0, 5).map((p: Product) => ({
       PRODUCT_ID: p.PRODUCT_ID,
       PRODUCT_NAME: p.PRODUCT_NAME,
       UNIT_COST: p.UNIT_COST,
@@ -42,13 +43,13 @@ export async function GET(request: NextRequest) {
         productsWithPrice: productsWithPrice.length,
         productsWithoutPrice: productsWithoutPrice.length,
         samplePrices: samplePrices,
-        productsWithPriceList: productsWithPrice.map((p: any) => ({
+        productsWithPriceList: productsWithPrice.map((p: Product) => ({
           PRODUCT_ID: p.PRODUCT_ID,
           PRODUCT_NAME: p.PRODUCT_NAME,
           UNIT_COST: p.UNIT_COST,
           CATEGORY: p.PRODUCT_CATEGORIES?.CATEGORY_NAME
         })),
-        productsWithoutPriceList: productsWithoutPrice.map((p: any) => ({
+        productsWithoutPriceList: productsWithoutPrice.map((p: Product) => ({
           PRODUCT_ID: p.PRODUCT_ID,
           PRODUCT_NAME: p.PRODUCT_NAME,
           UNIT_COST: p.UNIT_COST,

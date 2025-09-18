@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
 import { prisma } from "@/lib/prisma"
+import { Requisition } from "@/types"
 
 export async function GET(_request: NextRequest) {
   try {
@@ -44,7 +45,7 @@ export async function GET(_request: NextRequest) {
     })
 
     console.log(`✅ Found ${requisitions.length} orders for user ${currentUserId}`)
-    console.log("🔍 Orders:", requisitions.map((r: any) => ({ id: r.REQUISITION_ID, status: r.STATUS, amount: r.TOTAL_AMOUNT })))
+    console.log("🔍 Orders:", requisitions.map((r: Requisition) => ({ id: r.REQUISITION_ID, status: r.STATUS, amount: r.TOTAL_AMOUNT })))
 
     return NextResponse.json(requisitions)
   } catch (error) {

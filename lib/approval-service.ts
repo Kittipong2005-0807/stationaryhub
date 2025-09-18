@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { NotificationService } from "./notification-service"
+import { PrismaTransaction } from "@/types"
 
 export interface ApprovalData {
   REQUISITION_ID: number
@@ -238,7 +239,7 @@ export class ApprovalService {
       console.log(`🔔 Creating approval for requisition ${approvalData.REQUISITION_ID} with status ${approvalData.STATUS}`)
       
       // ใช้ transaction เพื่อให้แน่ใจว่าข้อมูลถูกบันทึกทั้งสามตาราง
-      const result = await prisma.$transaction(async (tx: any) => {
+      const result = await prisma.$transaction(async (tx: PrismaTransaction) => {
         // อัพเดทสถานะในตาราง REQUISITIONS
         await tx.rEQUISITIONS.update({
           where: { REQUISITION_ID: approvalData.REQUISITION_ID },

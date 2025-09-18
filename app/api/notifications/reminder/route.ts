@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/notification-service";
+import { Manager, Requisition } from "@/types";
 
 // ฟังก์ชันหา Manager อัตโนมัติสำหรับคำขอเบิก โดยใช้ CostCenter
-async function findManagersForRequisition(requisition: any): Promise<string[]> {
+async function findManagersForRequisition(requisition: Requisition): Promise<string[]> {
   try {
     console.log(`🔍 Finding managers for requisition ${requisition.REQUISITION_ID} from user ${requisition.USER_ID}`);
     
@@ -41,7 +42,7 @@ async function findManagersForRequisition(requisition: any): Promise<string[]> {
       return [];
     }
 
-    return managers.map((m: any) => m.CurrentEmail).filter((email: any) => email);
+    return managers.map((m: any) => m.CurrentEmail).filter((email: string) => email);
 
   } catch (error) {
     console.error('❌ Error finding managers for requisition:', error);

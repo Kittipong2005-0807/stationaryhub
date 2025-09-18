@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Product, PriceComparison } from '@/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
     console.log(`📊 Found ${products.length} products with valid prices`);
 
     // สร้างข้อมูลราคาเปรียบเทียบจำลอง
-    const priceComparisonData = products.map((product: any) => {
+    const priceComparisonData = products.map((product: Product) => {
       // Debug: แสดงข้อมูลราคา
       console.log(`🔍 Product ${product.PRODUCT_NAME}: UNIT_COST = ${product.UNIT_COST}, Type = ${typeof product.UNIT_COST}`);
       
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
         ORDER_UNIT: product.ORDER_UNIT,
         PHOTO_URL: product.PHOTO_URL
       };
-    }).filter((item: any) => item.CURRENT_PRICE > 0); // กรองเฉพาะสินค้าที่มีราคามากกว่า 0
+    }).filter((item: PriceComparison) => item.CURRENT_PRICE > 0); // กรองเฉพาะสินค้าที่มีราคามากกว่า 0
 
     console.log(`✅ Price comparison data fetched successfully: ${priceComparisonData.length} products with valid prices`);
 

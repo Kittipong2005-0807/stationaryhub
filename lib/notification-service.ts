@@ -1,5 +1,6 @@
 import { prisma } from './prisma'
 import nodemailer from 'nodemailer'
+import { Manager, User, Notification, Requisition } from '@/types'
 
 export interface NotificationData {
   type: 'requisition_created' | 'requisition_approved' | 'requisition_rejected' | 'requisition_pending' | 'no_manager_found'
@@ -282,7 +283,7 @@ export class NotificationService {
       `
 
       console.log(`🔔 Found ${managers.length} managers in VS_DivisionMgr:`, managers)
-      console.log(`🔍 Manager details:`, managers.map((m: any) => ({
+      console.log(`🔍 Manager details:`, managers.map((m: Manager) => ({
         L2: m.L2,
         Email: m.CurrentEmail,
         Name: m.FullNameEng,
@@ -296,7 +297,7 @@ export class NotificationService {
         requesterId: userId,
         costCenter: userCostCenter,
         totalManagers: managers.length,
-        managers: managers.map((m: any) => ({
+        managers: managers.map((m: Manager) => ({
           L2: m.L2,
           Email: m.CurrentEmail,
           Name: m.FullNameEng,
@@ -392,7 +393,7 @@ export class NotificationService {
           costCenter: userCostCenter,
           reason: 'No Manager Found',
           totalAdmins: admins.length,
-          admins: admins.map((a: any) => ({
+          admins: admins.map((a: User) => ({
             USER_ID: a.USER_ID,
             EMAIL: a.EMAIL,
             USERNAME: a.USERNAME,
@@ -526,7 +527,7 @@ export class NotificationService {
         totalAmount: requisition.TOTAL_AMOUNT,
         isSelfApproval: isSelfApproval,
         totalAdmins: admins.length,
-        admins: admins.map((a: any) => ({
+        admins: admins.map((a: User) => ({
           USER_ID: a.USER_ID,
           EMAIL: a.EMAIL,
           USERNAME: a.USERNAME,
@@ -878,7 +879,7 @@ export class NotificationService {
       return {
         totalEmails,
         recentEmails,
-        statusBreakdown: stats.reduce((acc: any, stat: any) => {
+        statusBreakdown: stats.reduce((acc: Record<string, number>, stat: any) => {
           acc[stat.STATUS || 'unknown'] = stat._count.EMAIL_ID
           return acc
         }, {} as Record<string, number>)
