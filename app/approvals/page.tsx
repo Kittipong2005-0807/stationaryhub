@@ -145,7 +145,7 @@ export default function ApprovalsPage() {
 
     // แยก API call ตาม Role
     if (user?.ROLE === 'ADMIN') {
-      // Admin เห็นแค่ requisitions ที่ Manager approve แล้ว
+      // Admin เห็น requisitions ทั้งหมดเพื่อแสดงจำนวนครบถ้วน
       console.log('Admin user data:', {
         EmpCode: user?.EmpCode,
         USER_ID: user?.USER_ID,
@@ -153,7 +153,7 @@ export default function ApprovalsPage() {
         ROLE: user?.ROLE
       });
 
-      fetch(getApiUrl(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`))
+      fetch(getApiUrl(`/api/orgcode3?action=getAllRequisitionsForDepartment&userId=${user?.USER_ID}`))
         .then((res) => {
           console.log('Admin API response status:', res.status);
           if (!res.ok) {
@@ -251,7 +251,7 @@ export default function ApprovalsPage() {
         if (user?.ROLE === 'ADMIN') {
           // Admin refresh ข้อมูล
           const refreshResponse = await fetch(
-            getApiUrl(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
+            getApiUrl(`/api/orgcode3?action=getAllRequisitionsForDepartment&userId=${user?.USER_ID}`)
           );
           if (refreshResponse.ok) {
             const data = await refreshResponse.json();
@@ -298,7 +298,7 @@ export default function ApprovalsPage() {
     try {
       if (user?.ROLE === 'ADMIN') {
         const response = await fetch(
-          getApiUrl(`/api/orgcode3?action=getApprovedRequisitionsForAdmin`)
+          getApiUrl(`/api/orgcode3?action=getAllRequisitionsForDepartment&userId=${user?.USER_ID}`)
         );
         if (response.ok) {
           const data = await response.json();
