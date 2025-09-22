@@ -1355,52 +1355,11 @@ export default function ApprovalsPage() {
           </Card>
         </motion.div>
 
-        {/* Summary Stats - Similar to Manager Orders */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="mb-8"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="glass-card text-center">
-              <CardContent className="p-6">
-                <div className="text-4xl font-bold text-yellow-600 mb-2">
-                  {pendingCount}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Pending Orders
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="glass-card text-center">
-              <CardContent className="p-6">
-                <div className="text-4xl font-bold text-green-600 mb-2">
-                  {approvedCount}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Approved Orders
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="glass-card text-center">
-              <CardContent className="p-6">
-                <div className="text-4xl font-bold text-red-600 mb-2">
-                  {rejectedCount}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Rejected Orders
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </motion.div>
-
         {/* Filter Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.4 }}
           className="mb-6"
         >
           <Card className="bg-white shadow-lg border-0 rounded-2xl overflow-hidden">
