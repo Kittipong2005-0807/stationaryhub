@@ -220,6 +220,13 @@ export default function ApprovalsPage() {
 
   const handleSubmitAction = async () => {
     if (!selectedRequisition) return;
+    
+    // Check if rejection note is required for reject action
+    if (actionType === 'reject' && (!note || note.trim() === '')) {
+      alert('กรุณากรอกเหตุผลในการปฏิเสธ (Rejection Note)');
+      return;
+    }
+    
     setSubmitting(true);
     // console.log("selectedRequisition", selectedRequisition);
     try {
@@ -1348,11 +1355,52 @@ export default function ApprovalsPage() {
           </Card>
         </motion.div>
 
+        {/* Summary Stats - Similar to Manager Orders */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mb-8"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="glass-card text-center">
+              <CardContent className="p-6">
+                <div className="text-4xl font-bold text-yellow-600 mb-2">
+                  {pendingCount}
+                </div>
+                <div className="text-sm text-gray-600">
+                  Pending Orders
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="glass-card text-center">
+              <CardContent className="p-6">
+                <div className="text-4xl font-bold text-green-600 mb-2">
+                  {approvedCount}
+                </div>
+                <div className="text-sm text-gray-600">
+                  Approved Orders
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="glass-card text-center">
+              <CardContent className="p-6">
+                <div className="text-4xl font-bold text-red-600 mb-2">
+                  {rejectedCount}
+                </div>
+                <div className="text-sm text-gray-600">
+                  Rejected Orders
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </motion.div>
+
         {/* Filter Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.5 }}
           className="mb-6"
         >
           <Card className="bg-white shadow-lg border-0 rounded-2xl overflow-hidden">
@@ -1567,7 +1615,7 @@ export default function ApprovalsPage() {
                 {activeFilter === 'all' && (
                   <ClipboardList className="h-6 w-6 text-gray-600" />
                 )}
-                {activeFilter === 'all' && 'All Requisitions'}
+                {activeFilter === 'all' && `All Requisitions (${requisitions.length})`}
                 {activeFilter === 'pending' &&
                   `Pending Requisitions (${pendingCount})`}
                 {activeFilter === 'approved' &&
@@ -1913,7 +1961,7 @@ export default function ApprovalsPage() {
                                         </Button>
                                       </>
                                     )}
-                                  {user?.ROLE === 'ADMIN' && (
+                                  {user?.ROLE === 'ADMIN' && requisition.STATUS === 'APPROVED' && (
                                     <>
                                       <Button
                                         size="sm"
@@ -2032,14 +2080,26 @@ export default function ApprovalsPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
                   {actionType === 'approve' ? 'Approval' : 'Rejection'} Note
-                  (Optional)
+                  {actionType === 'reject' ? (
+                    <span className="text-red-500 ml-1">* (Required)</span>
+                  ) : (
+                    <span className="text-gray-500 ml-1">(Optional)</span>
+                  )}
                 </label>
                 <Textarea
-                  placeholder={`Add a note about this ${actionType}...`}
+                  placeholder={
+                    actionType === 'reject' 
+                      ? 'กรุณากรอกเหตุผลในการปฏิเสธ...' 
+                      : `Add a note about this ${actionType}...`
+                  }
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
-                  className="resize-none"
+                  className={`resize-none ${
+                    actionType === 'reject' && (!note || note.trim() === '') 
+                      ? 'border-red-300 focus:border-red-500' 
+                      : ''
+                  }`}
                 />
               </div>
             </div>
@@ -2054,7 +2114,7 @@ export default function ApprovalsPage() {
               </Button>
               <Button
                 onClick={handleSubmitAction}
-                disabled={submitting}
+                disabled={submitting || (actionType === 'reject' && (!note || note.trim() === ''))}
                 className={`flex-1 ${
                   actionType === 'approve'
                     ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700'
