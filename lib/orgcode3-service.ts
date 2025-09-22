@@ -543,9 +543,11 @@ export class OrgCode3Service {
 
   static async getApprovedRequisitionsForAdmin(): Promise<unknown[]> {
     try {
-      console.log("🔍 getApprovedRequisitionsForAdmin called")
+      if (process.env.NODE_ENV === 'development') {
+        console.log("🔍 getApprovedRequisitionsForAdmin called")
+      }
       
-      // ดึง requisitions ที่มี STATUS = 'APPROVED' (Manager approve แล้ว)
+      // ดึง requisitions ที่มี STATUS = 'APPROVED' พร้อมจำกัดจำนวนเพื่อประหยัด memory
       const requisitions = await prisma.$queryRaw`
         SELECT
           r.REQUISITION_ID, 
@@ -562,66 +564,103 @@ export class OrgCode3Service {
         JOIN USERS u ON r.USER_ID = u.USER_ID
         WHERE r.STATUS = 'APPROVED'
         ORDER BY r.SUBMITTED_AT DESC
+        OFFSET 0 ROWS
+        FETCH NEXT 50 ROWS ONLY
       `
       
-      console.log("🔍 Found approved requisitions:", requisitions)
+      if (process.env.NODE_ENV === 'development') {
+        console.log("🔍 Found approved requisitions:", Array.isArray(requisitions) ? requisitions.length : 0)
+      }
       
-      // ดึงข้อมูล requisition items สำหรับแต่ละ requisition
+      // ใช้ batch processing แทน Promise.all เพื่อประหยัด memory
       if (Array.isArray(requisitions)) {
-        const enrichedRequisitions = await Promise.all(
-          requisitions.map(async (req: any) => {
-            try {
-              // ดึง requisition items
-              const items = await prisma.$queryRaw`
-                SELECT 
-                  ri.ITEM_ID,
-                  ri.REQUISITION_ID,
-                  ri.PRODUCT_ID,
-                  p.PRODUCT_NAME,
-                  p.ORDER_UNIT,
-                  p.PHOTO_URL,
-                  pc.CATEGORY_NAME,
-                  ri.QUANTITY,
-                  ri.UNIT_PRICE,
-                  ri.TOTAL_PRICE
-                FROM REQUISITION_ITEMS ri
-                JOIN PRODUCTS p ON ri.PRODUCT_ID = p.PRODUCT_ID
-                LEFT JOIN PRODUCT_CATEGORIES pc ON p.CATEGORY_ID = pc.CATEGORY_ID
-                WHERE ri.REQUISITION_ID = ${req.REQUISITION_ID}
-              `
-              
-              // ดึงข้อมูล approval history
-              const approvals = await prisma.$queryRaw`
-                SELECT 
-                  a.APPROVAL_ID,
-                  a.APPROVED_BY,
-                  a.STATUS,
-                  a.APPROVED_AT,
-                  a.NOTE,
-                  u.USERNAME as APPROVER_NAME
-                FROM APPROVALS a
-                JOIN USERS u ON a.APPROVED_BY = u.USER_ID
-                WHERE a.REQUISITION_ID = ${req.REQUISITION_ID}
-                ORDER BY a.APPROVED_AT DESC
-              `
-              
-              return {
-                ...req,
-                REQUISITION_ITEMS: Array.isArray(items) ? items : [],
-                APPROVALS: Array.isArray(approvals) ? approvals : []
-              }
-            } catch (itemError) {
-              console.error(`Error fetching items for requisition ${req.REQUISITION_ID}:`, itemError)
-              return {
-                ...req,
-                REQUISITION_ITEMS: [],
-                APPROVALS: []
-              }
-            }
-          })
-        )
+        const enrichedRequisitions = []
         
-        console.log("🔍 Enriched requisitions with items and approvals:", enrichedRequisitions)
+        // ประมวลผลทีละ 10 รายการเพื่อประหยัด memory
+        const batchSize = 10
+        for (let i = 0; i < requisitions.length; i += batchSize) {
+          const batch = requisitions.slice(i, i + batchSize)
+          
+          const batchResults = await Promise.all(
+            batch.map(async (req: any) => {
+              try {
+                // ดึง requisition items พร้อมจำกัดจำนวน
+                const items = await prisma.$queryRaw`
+                  SELECT 
+                    ri.ITEM_ID,
+                    ri.REQUISITION_ID,
+                    ri.PRODUCT_ID,
+                    p.PRODUCT_NAME,
+                    p.ORDER_UNIT,
+                    p.PHOTO_URL,
+                    pc.CATEGORY_NAME,
+                    ri.QUANTITY,
+                    ri.UNIT_PRICE,
+                    ri.TOTAL_PRICE
+                  FROM REQUISITION_ITEMS ri
+                  JOIN PRODUCTS p ON ri.PRODUCT_ID = p.PRODUCT_ID
+                  LEFT JOIN PRODUCT_CATEGORIES pc ON p.CATEGORY_ID = pc.CATEGORY_ID
+                  WHERE ri.REQUISITION_ID = ${req.REQUISITION_ID}
+                  ORDER BY ri.ITEM_ID
+                  OFFSET 0 ROWS
+                  FETCH NEXT 20 ROWS ONLY
+                `
+                
+                // ดึงข้อมูล approval history พร้อมจำกัดจำนวน
+                const approvals = await prisma.$queryRaw`
+                  SELECT 
+                    a.APPROVAL_ID,
+                    a.APPROVED_BY,
+                    a.STATUS,
+                    a.APPROVED_AT,
+                    a.NOTE,
+                    u.USERNAME as APPROVER_NAME
+                  FROM APPROVALS a
+                  JOIN USERS u ON a.APPROVED_BY = u.USER_ID
+                  WHERE a.REQUISITION_ID = ${req.REQUISITION_ID}
+                  ORDER BY a.APPROVED_AT DESC
+                  OFFSET 0 ROWS
+                  FETCH NEXT 10 ROWS ONLY
+                `
+                
+                return {
+                  ...req,
+                  REQUISITION_ITEMS: Array.isArray(items) ? items : [],
+                  APPROVALS: Array.isArray(approvals) ? approvals : []
+                }
+              } catch (itemError) {
+                console.error(`Error fetching items for requisition ${req.REQUISITION_ID}:`, itemError)
+                return {
+                  ...req,
+                  REQUISITION_ITEMS: [],
+                  APPROVALS: []
+                }
+              }
+            })
+          )
+          
+          enrichedRequisitions.push(...batchResults)
+          
+          // ทำความสะอาด memory หลังจากแต่ละ batch
+          if (global.gc) {
+            global.gc()
+          }
+          
+          // หน่วงเวลาเล็กน้อยเพื่อให้ระบบจัดการ memory
+          if (i + batchSize < requisitions.length) {
+            await new Promise(resolve => setTimeout(resolve, 10))
+          }
+        }
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log("🔍 Enriched requisitions with items and approvals:", enrichedRequisitions.length)
+        }
+        
+        // ทำความสะอาด memory สุดท้าย
+        if (global.gc) {
+          global.gc()
+        }
+        
         return enrichedRequisitions
       }
       
@@ -631,6 +670,12 @@ export class OrgCode3Service {
       if (error instanceof Error) { 
         console.error('Error details:', { message: error.message, stack: error.stack }) 
       }
+      
+      // ทำความสะอาด memory แม้เกิด error
+      if (global.gc) {
+        global.gc()
+      }
+      
       return []
     }
   }

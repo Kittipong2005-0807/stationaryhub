@@ -1,8 +1,6 @@
 import type React from 'react';
 import type { Metadata } from 'next';
-import { AuthProvider } from '@/src/contexts/AuthContext';
-import { CartProvider } from '@/src/contexts/CartContext';
-import dynamic from 'next/dynamic';
+import ClientProviders from '@/components/ClientProviders';
 import Layout from '@/components/Layout';
 import ThemeProviderClient from '@/components/ThemeProviderClient';
 import { getServerSession } from 'next-auth/next';
@@ -27,27 +25,14 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const ToastProvider = dynamic(
-    () =>
-      import('@/components/ui/ToastContainer').then((mod) => mod.ToastProvider),
-    {
-      ssr: false,
-      // เพิ่มการตั้งค่าเพื่อลด preload warning
-      loading: () => null
-    }
-  );
   const session = await getServerSession(authOptions);
   return (
     <html lang="en">
       <body className="font-sans">
         <ThemeProviderClient session={session}>
-          <AuthProvider>
-            <CartProvider>
-              <ToastProvider>
-                <Layout>{children}</Layout>
-              </ToastProvider>
-            </CartProvider>
-          </AuthProvider>
+          <ClientProviders session={session}>
+            <Layout>{children}</Layout>
+          </ClientProviders>
         </ThemeProviderClient>
       </body>
     </html>

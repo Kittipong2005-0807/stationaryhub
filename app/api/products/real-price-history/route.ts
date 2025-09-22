@@ -45,10 +45,19 @@ export async function GET(request: NextRequest) {
       query += ` OFFSET 0 ROWS FETCH NEXT ${parseInt(limit)} ROWS ONLY`;
     }
 
-    console.log(`📊 Executing query:`, query);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 Executing query:`, query);
+    }
     const result = await prisma.$queryRawUnsafe(query);
 
-    console.log(`✅ Real price history data fetched successfully:`, result);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ Real price history data fetched successfully:`, result);
+    }
+
+    // ทำความสะอาด memory
+    if (global.gc) {
+      global.gc()
+    }
 
     return NextResponse.json({ 
       success: true, 
@@ -59,6 +68,12 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('❌ Error fetching real price history:', error);
+    
+    // ทำความสะอาด memory แม้เกิด error
+    if (global.gc) {
+      global.gc()
+    }
+    
     return NextResponse.json(
       { 
         success: false, 

@@ -28,11 +28,16 @@ export async function GET(request: NextRequest) {
     const products = await prisma.pRODUCTS.findMany({
       where: whereCondition,
       include: {
-        PRODUCT_CATEGORIES: true
+        PRODUCT_CATEGORIES: {
+          select: {
+            CATEGORY_NAME: true
+          }
+        }
       },
       orderBy: {
         PRODUCT_NAME: 'asc'
-      }
+      },
+      take: 100 // จำกัดจำนวนสินค้าเพื่อประหยัด memory
     });
 
     console.log(`📊 Found ${products.length} products with valid prices`);
@@ -80,11 +85,18 @@ export async function GET(request: NextRequest) {
       };
     }).filter((item: PriceComparison) => item.CURRENT_PRICE > 0); // กรองเฉพาะสินค้าที่มีราคามากกว่า 0
 
-    console.log(`✅ Price comparison data fetched successfully: ${priceComparisonData.length} products with valid prices`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ Price comparison data fetched successfully: ${priceComparisonData.length} products with valid prices`);
 
-    // Debug: แสดงตัวอย่างข้อมูล
-    if (priceComparisonData.length > 0) {
-      console.log(`📋 Sample data:`, priceComparisonData[0]);
+      // Debug: แสดงตัวอย่างข้อมูล
+      if (priceComparisonData.length > 0) {
+        console.log(`📋 Sample data:`, priceComparisonData[0]);
+      }
+    }
+
+    // ทำความสะอาด memory
+    if (global.gc) {
+      global.gc()
     }
 
     return NextResponse.json({ 
@@ -100,6 +112,12 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('❌ Error fetching price comparison:', error);
+    
+    // ทำความสะอาด memory แม้เกิด error
+    if (global.gc) {
+      global.gc()
+    }
+    
     return NextResponse.json(
       { 
         success: false, 

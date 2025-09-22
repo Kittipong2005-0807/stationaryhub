@@ -28,7 +28,8 @@
       "@/components/*": ["./components/*"],
       "@/lib/*": ["./lib/*"],
       "@/types/*": ["./types/*"],
-      "@/app/*": ["./app/*"]
+      "@/app/*": ["./app/*"],
+      "@/src/*": ["./src/*"]
     },
     "plugins": [
       {
