@@ -640,8 +640,24 @@ export default function ApprovalsPage() {
 
   // เพิ่มฟังก์ชันสร้าง PDF ทั้งหมดทุกรายการ
   const generateAllPDFs = async () => {
+    console.log('Starting bulk PDF generation...', {
+      filteredRequisitionsCount: filteredRequisitions.length,
+      selectedYear,
+      selectedMonth,
+      activeFilter,
+      requisitionsCount: requisitions.length,
+      filteredRequisitions: filteredRequisitions.map(r => ({
+        id: r.REQUISITION_ID,
+        status: r.STATUS,
+        submittedAt: r.SUBMITTED_AT,
+        itemsCount: r.REQUISITION_ITEMS?.length || 0,
+        hasItems: !!(r.REQUISITION_ITEMS && r.REQUISITION_ITEMS.length > 0),
+        totalAmount: r.TOTAL_AMOUNT
+      }))
+    });
+
     if (filteredRequisitions.length === 0) {
-      alert('ไม่มีข้อมูลให้สร้าง PDF');
+      alert(`ไม่มีข้อมูลให้สร้าง PDF\n- จำนวน requisitions ทั้งหมด: ${requisitions.length}\n- จำนวนที่ผ่าน filter: ${filteredRequisitions.length}\n- ปีที่เลือก: ${selectedYear}\n- เดือนที่เลือก: ${selectedMonth || 'ไม่เลือก'}\n- Filter: ${activeFilter}`);
       return;
     }
 
@@ -649,12 +665,49 @@ export default function ApprovalsPage() {
       // สร้าง PDF หลัก
       const pdf = new jsPDF('p', 'mm', 'a4');
       let isFirstPage = true;
+      let processedCount = 0;
+
+      // ทดสอบสร้าง PDF ง่ายๆ ก่อน
+      console.log('Testing simple PDF creation...');
+      pdf.setFontSize(20);
+      pdf.text('TEST PDF', 105, 50, { align: 'center' });
+      pdf.setFontSize(12);
+      pdf.text(`Total Requisitions: ${filteredRequisitions.length}`, 20, 80);
+      pdf.text(`Processed: 0`, 20, 90);
+      pdf.text(`Date: ${new Date().toLocaleString()}`, 20, 100);
 
       for (let i = 0; i < filteredRequisitions.length; i++) {
         const requisition = filteredRequisitions[i];
         
+        console.log(`Processing requisition ${i + 1}/${filteredRequisitions.length}:`, {
+          id: requisition.REQUISITION_ID,
+          itemsCount: requisition.REQUISITION_ITEMS?.length || 0,
+          hasItems: !!(requisition.REQUISITION_ITEMS && requisition.REQUISITION_ITEMS.length > 0)
+        });
+        
         if (!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0) {
-          continue; // ข้ามรายการที่ไม่มี items
+          console.log(`Skipping requisition ${requisition.REQUISITION_ID} - no items, trying to fetch...`);
+          
+          // ลองดึงข้อมูล items ใหม่
+          try {
+            const response = await fetch(getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`));
+            if (response.ok) {
+              const items = await response.json();
+              if (items && items.length > 0) {
+                requisition.REQUISITION_ITEMS = items;
+                console.log(`Fetched ${items.length} items for requisition ${requisition.REQUISITION_ID}`);
+              } else {
+                console.log(`Still no items for requisition ${requisition.REQUISITION_ID} after fetch`);
+                continue;
+              }
+            } else {
+              console.log(`Failed to fetch items for requisition ${requisition.REQUISITION_ID}`);
+              continue;
+            }
+          } catch (error) {
+            console.error(`Error fetching items for requisition ${requisition.REQUISITION_ID}:`, error);
+            continue;
+          }
         }
 
         // เพิ่มหน้าใหม่ (ยกเว้นหน้าแรก)
@@ -687,6 +740,12 @@ export default function ApprovalsPage() {
             const data = await response.json();
             userOrgCode4 = data.orgCode4 || requisition.SITE_ID;
             userOrgTDesc3 = data.orgTDesc3 || 'UCHA';
+            console.log(`OrgCode data for requisition ${requisition.REQUISITION_ID}:`, {
+              userId: requisition.USER_ID,
+              orgCode4: userOrgCode4,
+              orgTDesc3: userOrgTDesc3,
+              siteId: requisition.SITE_ID
+            });
           }
         } catch (error) {
           console.error('Error fetching user OrgCode4:', error);
@@ -730,7 +789,7 @@ export default function ApprovalsPage() {
           `;
         }).join('');
 
-        tempDiv.innerHTML = `
+        const htmlContent = `
           <div style="padding: 20px;">
             <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
               <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
@@ -790,6 +849,17 @@ export default function ApprovalsPage() {
           </div>
         `;
 
+        console.log(`HTML content for requisition ${requisition.REQUISITION_ID}:`, {
+          htmlLength: htmlContent.length,
+          hasContent: htmlContent.length > 1000,
+          userOrgCode4,
+          userOrgTDesc3,
+          itemsCount: requisition.REQUISITION_ITEMS.length,
+          htmlPreview: htmlContent.substring(0, 200) + '...'
+        });
+
+        tempDiv.innerHTML = htmlContent;
+
         // เพิ่ม element ลงใน DOM
         document.body.appendChild(tempDiv);
 
@@ -807,7 +877,9 @@ export default function ApprovalsPage() {
         console.log(`Canvas ${i + 1} generated:`, { 
           width: canvas.width, 
           height: canvas.height,
-          hasContent: canvas.width > 0 && canvas.height > 0
+          hasContent: canvas.width > 0 && canvas.height > 0,
+          requisitionId: requisition.REQUISITION_ID,
+          itemsCount: requisition.REQUISITION_ITEMS.length
         });
 
         // ลบ element ชั่วคราว
@@ -819,11 +891,15 @@ export default function ApprovalsPage() {
           continue;
         }
 
+        processedCount++;
+
         // เพิ่มรูปภาพลงใน PDF
         const imgData = canvas.toDataURL('image/png');
         console.log(`Image data ${i + 1} generated:`, { 
           dataLength: imgData.length,
-          hasData: imgData.length > 100
+          hasData: imgData.length > 100,
+          requisitionId: requisition.REQUISITION_ID,
+          dataPreview: imgData.substring(0, 100) + '...'
         });
         const imgWidth = 210; // A4 width in mm
         const pageHeight = 275; // A4 height in mm (ลดลงเพื่อให้มี margin)
@@ -867,11 +943,32 @@ export default function ApprovalsPage() {
       }
 
       // ตรวจสอบ PDF ก่อนดาวน์โหลด
+      console.log('Final PDF check:', {
+        processedCount,
+        totalRequisitions: filteredRequisitions.length,
+        hasProcessedAny: processedCount > 0
+      });
+
+      // ทดสอบ PDF ก่อนดาวน์โหลด
+      const testPdfOutput = pdf.output('datauristring');
+      console.log('Test PDF output:', {
+        length: testPdfOutput.length,
+        hasContent: testPdfOutput.length > 100,
+        preview: testPdfOutput.substring(0, 100) + '...'
+      });
+
+      if (processedCount === 0) {
+        console.log('No requisitions processed, but PDF should still have test content');
+        // ไม่ return เพราะเรามี test content อยู่แล้ว
+      }
+
       const pdfOutput = pdf.output('datauristring');
       console.log('Bulk PDF generated:', { 
         pdfLength: pdfOutput.length,
         hasContent: pdfOutput.length > 1000,
-        requisitionCount: filteredRequisitions.length
+        processedCount,
+        totalRequisitions: filteredRequisitions.length,
+        pdfPreview: pdfOutput.substring(0, 200) + '...'
       });
 
       if (pdfOutput.length < 1000) {
