@@ -35,7 +35,7 @@ export default function OrgCode3InfoPage() {
       setLoading(true)
       setError("")
 
-      // ดึง SITE_ID ของ user
+      // ดึง SITE_ID ของ user (จาก OrgCode4)
       const siteIdResponse = await fetch(`/stationaryhub/api/orgcode3?action=getUserSiteId&userId=${user?.AdLoginName}`)
       const siteIdData = await siteIdResponse.json()
       
@@ -47,7 +47,7 @@ export default function OrgCode3InfoPage() {
         const managersData = await managersResponse.json()
         setAvailableManagers(managersData.managers || [])
       } else {
-        setError("ไม่พบข้อมูล SITE_ID สำหรับผู้ใช้นี้")
+        setError("ไม่พบข้อมูล SITE_ID (OrgCode4) สำหรับผู้ใช้นี้")
       }
     } catch (error) {
       setError("เกิดข้อผิดพลาดในการดึงข้อมูล")
@@ -117,10 +117,10 @@ export default function OrgCode3InfoPage() {
             </div>
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                ข้อมูลแผนก (SITE_ID)
+                ข้อมูลแผนก (SITE_ID - OrgCode4)
               </h1>
               <p className="text-gray-600 mt-2">
-                ข้อมูลแผนกและ Manager ที่เกี่ยวข้อง
+                ข้อมูลแผนกและ Manager ที่เกี่ยวข้อง (ดึงจาก OrgCode4)
               </p>
             </div>
           </motion.div>
@@ -167,7 +167,7 @@ export default function OrgCode3InfoPage() {
                   <Badge variant="outline">{user && (user as any).CostCenterEng ? (user as any).CostCenterEng : "ไม่ระบุ"}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">SITE_ID:</span>
+                  <span className="text-gray-600">SITE_ID (OrgCode4):</span>
                   <div className="flex items-center gap-2">
                     {userSiteId ? (
                       <>

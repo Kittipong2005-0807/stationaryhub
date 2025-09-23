@@ -10,8 +10,8 @@ SELECT
   CAST(OrgCode3 AS VARCHAR(100)) AS OrgCode3,
   supereng,
   superempcode,
-  OrgCode4,
-  OrgTDesc4,
+  CAST(OrgCode4 AS VARCHAR(100)) AS OrgCode4,
+  CAST(OrgTDesc4 AS VARCHAR(100)) AS OrgTDesc4,
   costcentercode
 FROM
   THRYGSD002.ICTPortal_PRD.dbo.vwHR_SC_Employee AS u;

@@ -205,8 +205,8 @@ view UserWithRoles {
   OrgCode3       String? @db.VarChar(100)
   supereng       String? @db.NVarChar(Max)
   superempcode   String? @db.NVarChar(Max)
-  OrgCode4       String? @db.NVarChar(Max)
-  OrgTDesc4      String? @db.NVarChar(Max)
+  OrgCode4       String? @db.VarChar(100)
+  OrgTDesc4      String? @db.VarChar(100)
   costcentercode String? @db.NVarChar(Max)
 }
 
