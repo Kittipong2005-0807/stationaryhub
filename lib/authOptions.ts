@@ -359,13 +359,13 @@ export const authOptions: AuthOptions = {
                 token.FullNameThai = userData.FullNameThai;
                 token.PostNameEng = userData.PostNameEng;
                 token.CostCenterEng = userData.CostCenterEng;
-                token.orgcode4 = userData.orgcode4;
+                token.OrgCode4 = userData.OrgCode4;
 
-                // Update SITE_ID from orgcode4
-                if (userData.orgcode4) {
-                  token.SITE_ID = userData.orgcode4.toString();
+                // Update SITE_ID from OrgCode4
+                if (userData.OrgCode4) {
+                  token.SITE_ID = userData.OrgCode4.toString();
                   console.log(
-                    '✅ Updated SITE_ID from orgcode4:',
+                    '✅ Updated SITE_ID from OrgCode4:',
                     token.SITE_ID
                   );
                 }
@@ -473,7 +473,7 @@ export const authOptions: AuthOptions = {
           FullNameThai: token.FullNameThai,
           PostNameEng: token.PostNameEng,
           CostCenterEng: token.CostCenterEng,
-          orgcode4: token.orgcode4
+          OrgCode4: token.OrgCode4
         }
       };
 

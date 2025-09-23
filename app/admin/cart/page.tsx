@@ -107,7 +107,7 @@ export default function AdminCartPage() {
       userId: user?.EmpCode || user?.USER_ID || user?.AdLoginName, // ใช้ EmpCode เป็นหลัก
       totalAmount: getTotalAmount(),
       issueNote: 'Admin requisition submitted from cart',
-      siteId: user?.SITE_ID || user?.orgcode4 || null, // ใช้ SITE_ID หรือ orgcode4 จาก session
+      siteId: user?.SITE_ID || user?.OrgCode4 || null, // ใช้ SITE_ID หรือ OrgCode4 จาก session
       REQUISITION_ITEMS: items.map((item) => ({
         PRODUCT_ID: item.PRODUCT_ID,
         QUANTITY: item.quantity,
@@ -130,7 +130,7 @@ export default function AdminCartPage() {
       ROLE: user?.ROLE,
       EMAIL: user?.EMAIL,
       USERNAME: user?.USERNAME,
-      orgcode4: user?.orgcode4
+      OrgCode4: user?.OrgCode4
     });
 
     // แสดงข้อมูล session ทั้งหมด
