@@ -45,8 +45,8 @@ export class OrgCode3Service {
       
       // Search by EmpCode only (according to authOptions that uses empCode as USER_ID)
       console.log("Querying userWithRoles view with EmpCode:", userId)
-      const userData = await prisma.$queryRaw<{ OrgCode4: string }[]>`
-        SELECT OrgCode4 
+      const userData = await prisma.$queryRaw<{ orgcode3: string }[]>`
+        SELECT orgcode3 
         FROM userWithRoles 
         WHERE EmpCode = ${userId}
       `
@@ -72,9 +72,9 @@ export class OrgCode3Service {
         return 'HQ'
       }
       
-      const orgcode4 = userData[0].OrgCode4
-      console.log("Found OrgCode4:", orgcode4)
-      return orgcode4 || 'HQ' // Fallback to 'HQ' if OrgCode4 is null
+      const orgcode3 = userData[0].orgcode3
+      console.log("Found orgcode3:", orgcode3)
+      return orgcode3 || 'HQ' // Fallback to 'HQ' if orgcode3 is null
     } catch (error: unknown) {
       console.error('Error fetching user SITE_ID:', error)
       if (error instanceof Error) {

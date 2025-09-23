@@ -779,6 +779,18 @@ export default function ApprovalsPage() {
       alert('ไม่มีรายการสินค้าให้สร้าง PDF');
       return;
     }
+
+    // ดึง OrgCode4 ของ user สำหรับแสดงใน Cost Center
+    let userOrgCode4 = requisition.SITE_ID; // fallback to SITE_ID
+    try {
+      const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`));
+      if (response.ok) {
+        const data = await response.json();
+        userOrgCode4 = data.orgCode4 || requisition.SITE_ID;
+      }
+    } catch (error) {
+      console.error('Error fetching user OrgCode4:', error);
+    }
     
     // สร้าง requisition object ที่มี items ที่ถูกต้อง
     const requisitionWithItems = {
@@ -870,8 +882,8 @@ export default function ApprovalsPage() {
             
             <div style="margin-bottom: 25px;">
               <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
-                <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${requisition.SITE_ID}</div>
-                <div style="font-size: 11px; color: #666; margin-top: 2px;">UCHA ${requisition.SITE_ID} - ${requisition.USER_ID}</div>
+                <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${userOrgCode4}</div>
+                <div style="font-size: 11px; color: #666; margin-top: 2px;">UCHA ${userOrgCode4} - ${requisition.USER_ID}</div>
                 <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisition.DEPARTMENT || 'N/A'}</div>
               </div>
               

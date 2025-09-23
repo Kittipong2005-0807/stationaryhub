@@ -95,6 +95,23 @@ export async function GET(request: NextRequest) {
         const stats = await OrgCode3Service.getSiteIdStats()
         return NextResponse.json(stats)
 
+      case "getUserOrgCode4":
+        if (!userId) {
+          return NextResponse.json({ error: "User ID is required" }, { status: 400 })
+        }
+        try {
+          const userData = await prisma.$queryRaw<{ OrgCode4: string }[]>`
+            SELECT OrgCode4 
+            FROM userWithRoles 
+            WHERE EmpCode = ${userId}
+          `
+          const orgCode4 = userData && userData.length > 0 ? userData[0].OrgCode4 : null
+          return NextResponse.json({ orgCode4 })
+        } catch (error) {
+          console.error("Error fetching user OrgCode4:", error)
+          return NextResponse.json({ error: "Failed to fetch OrgCode4" }, { status: 500 })
+        }
+
       default:
         return NextResponse.json({ error: "Invalid action" }, { status: 400 })
     }
