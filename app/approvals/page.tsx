@@ -1664,8 +1664,8 @@ export default function ApprovalsPage() {
           </Card>
         </motion.div>
 
-        {/* Month/Year Filter - แสดงเฉพาะเมื่อ activeFilter เป็น 'all' */}
-        {activeFilter === 'all' && (
+        {/* Month/Year Filter - แสดงสำหรับ Admin และ Manager */}
+        {(user?.ROLE === 'ADMIN' || user?.ROLE === 'MANAGER') && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1750,6 +1750,36 @@ export default function ApprovalsPage() {
                         'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
                       ][parseInt(selectedMonth) - 1]}` : ' ทุกเดือน'} 
                       {selectedYear} ({filteredRequisitions.length} รายการ)
+                    </p>
+                  </div>
+                )}
+
+                {/* Admin Filter Info */}
+                {user?.ROLE === 'ADMIN' && (
+                  <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                    <p className="text-sm text-green-800">
+                      <span className="font-medium">Admin View:</span> 
+                      แสดงข้อมูลทั้งหมด {requisitions.length} รายการ
+                      {filteredRequisitions.length !== requisitions.length && (
+                        <span className="ml-2 text-green-600">
+                          (กรองแล้ว {filteredRequisitions.length} รายการ)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                {/* Manager Filter Info */}
+                {user?.ROLE === 'MANAGER' && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <span className="font-medium">Manager View:</span> 
+                      แสดงข้อมูลใน SITE_ID เดียวกัน {requisitions.length} รายการ
+                      {filteredRequisitions.length !== requisitions.length && (
+                        <span className="ml-2 text-blue-600">
+                          (กรองแล้ว {filteredRequisitions.length} รายการ)
+                        </span>
+                      )}
                     </p>
                   </div>
                 )}
