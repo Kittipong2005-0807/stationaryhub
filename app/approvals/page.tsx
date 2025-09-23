@@ -678,7 +678,117 @@ export default function ApprovalsPage() {
         // ตรวจสอบว่าเป็นคำสั่งซื้อสุดท้ายหรือไม่
         const isLastRequisition = i === filteredRequisitions.length - 1;
 
+        // ดึง OrgCode4 และ OrgTDesc3 ของ user สำหรับแสดงใน Cost Center
+        let userOrgCode4 = requisition.SITE_ID; // fallback to SITE_ID
+        let userOrgTDesc3 = 'UCHA'; // fallback to UCHA
+        try {
+          const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`));
+          if (response.ok) {
+            const data = await response.json();
+            userOrgCode4 = data.orgCode4 || requisition.SITE_ID;
+            userOrgTDesc3 = data.orgTDesc3 || 'UCHA';
+          }
+        } catch (error) {
+          console.error('Error fetching user OrgCode4:', error);
+        }
 
+        // ตรวจสอบข้อมูลที่จำเป็น
+        if (!userOrgCode4) {
+          userOrgCode4 = requisition.SITE_ID || 'N/A';
+        }
+        if (!userOrgTDesc3) {
+          userOrgTDesc3 = 'UCHA';
+        }
+
+        // สร้าง HTML content
+        const groupedItems = requisition.REQUISITION_ITEMS.reduce((acc, item) => {
+          const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
+          if (!acc[category]) {
+            acc[category] = [];
+          }
+          acc[category].push(item);
+          return acc;
+        }, {} as Record<string, RequisitionItem[]>);
+
+        const categoryHTML = Object.entries(groupedItems).map(([category, items]) => {
+          const categoryRows = items.map((item, index) => `
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${index + 1}</td>
+              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px;">${item.PRODUCT_NAME}</td>
+              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.QUANTITY}</td>
+              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ORDER_UNIT || 'ชิ้น'}</td>
+              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${Number(item.UNIT_PRICE).toFixed(2)}</td>
+              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${Number(item.TOTAL_PRICE).toFixed(2)}</td>
+            </tr>
+          `).join('');
+
+          return `
+            <tr style="background: #f8f9fa;">
+              <td colspan="6" style="padding: 6px 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #495057;">${category}</td>
+            </tr>
+            ${categoryRows}
+          `;
+        }).join('');
+
+        tempDiv.innerHTML = `
+          <div style="padding: 20px;">
+            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+              <div style="text-align: left;">
+                <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editFormData.companyName}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">${editFormData.companyAddress}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
+              </div>
+              <div style="text-align: right;">
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(requisition.SUBMITTED_AT)}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+              <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">${editFormData.deliveryDate || '_________________________________'}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson || 'N/A'}</p>
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+              <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
+                <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${userOrgCode4}</div>
+                <div style="font-size: 11px; color: #666; margin-top: 2px;">${userOrgTDesc3} ${requisition.SITE_ID} - ${requisition.USER_ID}</div>
+                <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisition.DEPARTMENT || 'N/A'}</div>
+              </div>
+              
+              <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
+                <thead>
+                  <tr style="background: #e9ecef;">
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">No.</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Description</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Qty</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit Price</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${categoryHTML}
+                </tbody>
+              </table>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
+              <h3 style="margin: 0 0 5px 0; color: #1976d2; font-size: 12px;">สรุปยอดรวม</h3>
+              <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${Number(requisition.TOTAL_AMOUNT).toFixed(2)}</div>
+              <p style="margin: 5px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนรายการ: ${requisition.REQUISITION_ITEMS.length} รายการ</p>
+              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">สถานะ: ${requisition.STATUS}</p>
+              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">แผนก: ${requisition.DEPARTMENT || 'N/A'}</p>
+            </div>
+          </div>
+        `;
 
         // เพิ่ม element ลงใน DOM
         document.body.appendChild(tempDiv);
@@ -694,11 +804,27 @@ export default function ApprovalsPage() {
           backgroundColor: '#ffffff'
         });
 
+        console.log(`Canvas ${i + 1} generated:`, { 
+          width: canvas.width, 
+          height: canvas.height,
+          hasContent: canvas.width > 0 && canvas.height > 0
+        });
+
         // ลบ element ชั่วคราว
         document.body.removeChild(tempDiv);
 
+        // ตรวจสอบ canvas ก่อนสร้าง PDF
+        if (canvas.width === 0 || canvas.height === 0) {
+          console.error(`Canvas ${i + 1} is empty, skipping...`);
+          continue;
+        }
+
         // เพิ่มรูปภาพลงใน PDF
         const imgData = canvas.toDataURL('image/png');
+        console.log(`Image data ${i + 1} generated:`, { 
+          dataLength: imgData.length,
+          hasData: imgData.length > 100
+        });
         const imgWidth = 210; // A4 width in mm
         const pageHeight = 275; // A4 height in mm (ลดลงเพื่อให้มี margin)
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
@@ -738,6 +864,19 @@ export default function ApprovalsPage() {
             currentPage++;
           }
         }
+      }
+
+      // ตรวจสอบ PDF ก่อนดาวน์โหลด
+      const pdfOutput = pdf.output('datauristring');
+      console.log('Bulk PDF generated:', { 
+        pdfLength: pdfOutput.length,
+        hasContent: pdfOutput.length > 1000,
+        requisitionCount: filteredRequisitions.length
+      });
+
+      if (pdfOutput.length < 1000) {
+        alert('เกิดข้อผิดพลาดในการสร้าง PDF: ไฟล์ PDF ไม่มีเนื้อหา');
+        return;
       }
 
       // ดาวน์โหลด PDF
@@ -789,9 +928,18 @@ export default function ApprovalsPage() {
         const data = await response.json();
         userOrgCode4 = data.orgCode4 || requisition.SITE_ID;
         userOrgTDesc3 = data.orgTDesc3 || 'UCHA';
+        console.log('PDF Data:', { userOrgCode4, userOrgTDesc3, requisition: requisition.REQUISITION_ID });
       }
     } catch (error) {
       console.error('Error fetching user OrgCode4:', error);
+    }
+
+    // ตรวจสอบข้อมูลที่จำเป็น
+    if (!userOrgCode4) {
+      userOrgCode4 = requisition.SITE_ID || 'N/A';
+    }
+    if (!userOrgTDesc3) {
+      userOrgTDesc3 = 'UCHA';
     }
     
     // สร้าง requisition object ที่มี items ที่ถูกต้อง
@@ -820,6 +968,13 @@ export default function ApprovalsPage() {
       
       // สร้าง HTML content โดยใช้ฟังก์ชัน
       const generateHTMLContent = () => {
+        console.log('Generating HTML with data:', { 
+          userOrgCode4, 
+          userOrgTDesc3, 
+          requisition: requisition.REQUISITION_ID,
+          itemsCount: itemsToUse.length 
+        });
+        
         const groupedItems = itemsToUse.reduce((acc, item) => {
           const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
           if (!acc[category]) {
@@ -933,11 +1088,27 @@ export default function ApprovalsPage() {
         backgroundColor: '#ffffff'
       });
 
+      console.log('Canvas generated:', { 
+        width: canvas.width, 
+        height: canvas.height,
+        hasContent: canvas.width > 0 && canvas.height > 0
+      });
+
       // ลบ element ชั่วคราว
       document.body.removeChild(tempDiv);
 
+      // ตรวจสอบ canvas ก่อนสร้าง PDF
+      if (canvas.width === 0 || canvas.height === 0) {
+        alert('เกิดข้อผิดพลาดในการสร้าง PDF: ไม่สามารถสร้างภาพได้');
+        return;
+      }
+
       // สร้าง PDF
       const imgData = canvas.toDataURL('image/png');
+      console.log('Image data generated:', { 
+        dataLength: imgData.length,
+        hasData: imgData.length > 100
+      });
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgWidth = 210; // A4 width in mm
       const pageHeight = 275; // A4 height in mm (ลดลงเพื่อให้มี margin)
@@ -986,6 +1157,18 @@ export default function ApprovalsPage() {
           yOffset += pageHeight;
           currentPage++;
         }
+      }
+
+      // ตรวจสอบ PDF ก่อนดาวน์โหลด
+      const pdfOutput = pdf.output('datauristring');
+      console.log('PDF generated:', { 
+        pdfLength: pdfOutput.length,
+        hasContent: pdfOutput.length > 1000
+      });
+
+      if (pdfOutput.length < 1000) {
+        alert('เกิดข้อผิดพลาดในการสร้าง PDF: ไฟล์ PDF ไม่มีเนื้อหา');
+        return;
       }
 
       // ดาวน์โหลด PDF
