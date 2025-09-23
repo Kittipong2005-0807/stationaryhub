@@ -961,14 +961,16 @@ export class NotificationService {
             )
             
             if (emailResult.success) {
-              // อัปเดตสถานะเป็น SENT และบันทึก MESSAGE_ID
+              // อัปเดตสถานะเป็น SENT และบันทึก MESSAGE_ID พร้อมเวลาส่งจริง
               await prisma.eMAIL_LOGS.update({
                 where: { EMAIL_ID: emailLog.EMAIL_ID },
                 data: {
                   STATUS: 'SENT',
                   MESSAGE_ID: emailResult.messageId,
                   DELIVERY_STATUS: 'sent',
-                  EMAIL_SIZE: BigInt(emailResult.emailSize || 0)
+                  EMAIL_SIZE: BigInt(emailResult.emailSize || 0),
+                  SENT_AT: new Date(), // อัปเดตเวลาส่งจริง
+                  UPDATED_AT: new Date() // อัปเดตเวลาอัปเดต
                 }
               })
               console.log(`📧 Email sent to ${data.email} with Message ID: ${emailResult.messageId}`)
@@ -980,7 +982,8 @@ export class NotificationService {
                   STATUS: 'FAILED',
                   DELIVERY_STATUS: 'failed',
                   ERROR_MESSAGE: emailResult.error,
-                  RETRY_COUNT: 1
+                  RETRY_COUNT: 1,
+                  UPDATED_AT: new Date() // อัปเดตเวลาอัปเดต
                 }
               })
               console.error(`❌ Failed to send email to ${data.email}: ${emailResult.error}`)
@@ -993,7 +996,8 @@ export class NotificationService {
                 STATUS: 'FAILED',
                 DELIVERY_STATUS: 'failed',
                 ERROR_MESSAGE: error instanceof Error ? error.message : String(error),
-                RETRY_COUNT: 1
+                RETRY_COUNT: 1,
+                UPDATED_AT: new Date() // อัปเดตเวลาอัปเดต
               }
             })
             console.error(`❌ Error sending email to ${data.email}:`, error)
@@ -1072,7 +1076,9 @@ export class NotificationService {
                 MESSAGE_ID: emailResult.messageId,
                 DELIVERY_STATUS: 'sent',
                 EMAIL_SIZE: BigInt(emailResult.emailSize || 0),
-                ERROR_MESSAGE: null // ลบ error message
+                ERROR_MESSAGE: null, // ลบ error message
+                SENT_AT: new Date(), // อัปเดตเวลาส่งจริง
+                UPDATED_AT: new Date() // อัปเดตเวลาอัปเดต
               }
             })
             console.log(`✅ Email ID ${emailLog.EMAIL_ID} sent successfully on retry`)
@@ -1084,7 +1090,8 @@ export class NotificationService {
               data: {
                 STATUS: 'FAILED',
                 DELIVERY_STATUS: 'failed',
-                ERROR_MESSAGE: emailResult.error
+                ERROR_MESSAGE: emailResult.error,
+                UPDATED_AT: new Date() // อัปเดตเวลาอัปเดต
               }
             })
             console.log(`❌ Email ID ${emailLog.EMAIL_ID} failed on retry: ${emailResult.error}`)

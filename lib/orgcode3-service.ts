@@ -208,8 +208,8 @@ export class OrgCode3Service {
       
       try {
         const result = await prisma.$executeRaw`
-          INSERT INTO REQUISITIONS (USER_ID, STATUS, TOTAL_AMOUNT, ISSUE_NOTE, SITE_ID)
-          VALUES (${userId}, 'PENDING', ${totalAmount}, ${issueNote || ''}, ${userSiteId || siteId || 'HQ'})
+          INSERT INTO REQUISITIONS (USER_ID, STATUS, SUBMITTED_AT, TOTAL_AMOUNT, ISSUE_NOTE, SITE_ID)
+          VALUES (${userId}, 'PENDING', GETDATE(), ${totalAmount}, ${issueNote || ''}, ${userSiteId || siteId || 'HQ'})
         `
         console.log("✅ INSERT result:", result)
       } catch (insertError) {

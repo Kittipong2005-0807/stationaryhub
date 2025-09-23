@@ -266,7 +266,7 @@ export default function AdminOrdersPage() {
                 </Typography>
                 {lastUpdated && (
                   <Typography variant="body2" className="text-gray-500">
-                    Last updated: {lastUpdated.toLocaleTimeString()}
+                    Last updated: {lastUpdated && ThaiDateUtils.formatThaiTimeOnly(lastUpdated.toISOString())}
                   </Typography>
                 )}
               </div>
@@ -368,7 +368,7 @@ export default function AdminOrdersPage() {
                             {ThaiDateUtils.formatShortThaiDate(order.SUBMITTED_AT)}
                           </Typography>
                           <Typography variant="caption" className="text-gray-500">
-                            {new Date(order.SUBMITTED_AT).toLocaleTimeString()}
+                            {ThaiDateUtils.formatThaiTimeOnly(order.SUBMITTED_AT)}
                           </Typography>
                         </TableCell>
                         <TableCell>
