@@ -416,8 +416,8 @@ export default function ApprovalsPage() {
   // เพิ่มฟังก์ชันดาวน์โหลดเฉพาะรายการ
   const _handleDownloadSingle = (requisition: Requisition) => {
     if (
-      !requisitionWithItems.REQUISITION_ITEMS ||
-      requisitionWithItems.REQUISITION_ITEMS.length === 0
+      !requisition.REQUISITION_ITEMS ||
+      requisition.REQUISITION_ITEMS.length === 0
     ) {
       alert('ไม่มีรายการสินค้าให้ดาวน์โหลด');
       return;
@@ -442,15 +442,15 @@ export default function ApprovalsPage() {
     // สร้างข้อมูลรายการสินค้าสำหรับ requisition เดียว
     const csvData: (string | number)[][] = [];
 
-    requisitionWithItems.REQUISITION_ITEMS.forEach((item, index) => {
+    requisition.REQUISITION_ITEMS.forEach((item, index) => {
       csvData.push([
-        `ใบเบิกสินค้า #${requisitionWithItems.REQUISITION_ID}`, // ชื่อเอกสาร
-        requisitionWithItems.REQUISITION_ID, // Requisition ID
-        formatDate(requisitionWithItems.SUBMITTED_AT), // วันที่ขอเบิก
-        requisitionWithItems.USER_ID, // ผู้ขอเบิก
-        requisitionWithItems.SITE_ID, // Site ID
-        requisitionWithItems.ISSUE_NOTE || '', // หมายเหตุ
-        requisitionWithItems.STATUS, // สถานะ
+        `ใบเบิกสินค้า #${requisition.REQUISITION_ID}`, // ชื่อเอกสาร
+        requisition.REQUISITION_ID, // Requisition ID
+        formatDate(requisition.SUBMITTED_AT), // วันที่ขอเบิก
+        requisition.USER_ID, // ผู้ขอเบิก
+        requisition.SITE_ID, // Site ID
+        requisition.ISSUE_NOTE || '', // หมายเหตุ
+        requisition.STATUS, // สถานะ
         item.PRODUCT_NAME || 'Unknown Product', // รายการสินค้า
         item.QUANTITY, // จำนวน
         'ชิ้น', // หน่วย (default)
@@ -471,7 +471,7 @@ export default function ApprovalsPage() {
     link.setAttribute('href', url);
     link.setAttribute(
       'download',
-      `ใบเบิกสินค้า_${requisitionWithItems.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}.csv`
+      `ใบเบิกสินค้า_${requisition.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}.csv`
     );
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
@@ -485,7 +485,7 @@ export default function ApprovalsPage() {
   const handleNotifyArrival = (requisition: Requisition) => {
     setSelectedRequisition(requisition);
     setNotifyMessage(
-      `สินค้าที่คุณขอเบิก (Requisition #${requisitionWithItems.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`
+      `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`
     );
     setNotifyDialogOpen(true);
   };
@@ -537,7 +537,7 @@ export default function ApprovalsPage() {
     try {
       setSavingItems(true);
       const response = await fetch(
-        getApiUrl(`/api/requisitions/${requisitionWithItems.REQUISITION_ID}/items`)
+        getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`)
       );
       
       if (response.ok) {
@@ -653,7 +653,7 @@ export default function ApprovalsPage() {
       for (let i = 0; i < filteredRequisitions.length; i++) {
         const requisition = filteredRequisitions[i];
         
-        if (!requisitionWithItems.REQUISITION_ITEMS || requisitionWithItems.REQUISITION_ITEMS.length === 0) {
+        if (!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0) {
           continue; // ข้ามรายการที่ไม่มี items
         }
 
@@ -678,105 +678,7 @@ export default function ApprovalsPage() {
         // ตรวจสอบว่าเป็นคำสั่งซื้อสุดท้ายหรือไม่
         const isLastRequisition = i === filteredRequisitions.length - 1;
 
-        tempDiv.innerHTML = `
-          <div style="padding: 20px;">
-            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px;">
-              <h1 style="margin: 0; font-size: 22px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
-            </div>
-          
-          <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 11px;">
-            <div style="text-align: left;">
-              <h3 style="margin: 0 0 3px 0; font-size: 11px; font-weight: bold; text-transform: uppercase;">TO:</h3>
-              <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editFormData.companyName}</p>
-              <p style="margin: 0 0 2px 0; font-size: 10px;">${editFormData.companyAddress}</p>
-              <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
-              <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
-            </div>
-            <div style="text-align: right;">
-              <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${formatDate(requisitionWithItems.SUBMITTED_AT)}</p>
-              <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #${requisitionWithItems.REQUISITION_ID}</p>
-            </div>
-          </div>
-          
-          <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-            <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
-            <p style="margin: 0 0 3px 0; font-size: 11px;">${editFormData.deliveryDate || '_________________________________'}</p>
-            <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ${requisitionWithItems.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
-            <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson || 'N/A'}</p>
-          </div>
-          
-        
-          <div style="margin-bottom: 25px;">
-            <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
-              <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${requisitionWithItems.SITE_ID}</div>
-              <div style="font-size: 11px; color: #666; margin-top: 2px;">UCHA ${requisitionWithItems.SITE_ID} - ${requisitionWithItems.USER_ID}</div>
-              <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisitionWithItems.DEPARTMENT || 'N/A'}</div>
-            </div>
-            
-            ${(() => {
-              const groupedItems = requisitionWithItems.REQUISITION_ITEMS.reduce((acc, item) => {
-                const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
-                if (!acc[category]) {
-                  acc[category] = [];
-                }
-                acc[category].push(item);
-                return acc;
-              }, {} as Record<string, typeof requisitionWithItems.REQUISITION_ITEMS>);
 
-              const sortedCategories = Object.keys(groupedItems).sort();
-              let itemCounter = 1;
-
-              return sortedCategories.map(category => {
-                const items = groupedItems[category];
-                return `
-                  <div style="margin-bottom: 10px;">
-               <div style="background: #e3f2fd; padding: 6px 10px; border: 1px solid #2196f3; border-bottom: none; font-weight: bold; font-size: 11px; color: #1976d2;">
-                 ${category} (${items.length} รายการ)
-               </div>
-               <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; font-size: 9px; table-layout: fixed;">
-                 <thead>
-                   <tr>
-                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: left; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Itemnum</th>
-                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: left; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 55%;">Description</th>
-                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Order</th>
-                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Unit</th>
-                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Cost</th>
-                   </tr>
-                 </thead>
-                 <tbody>
-                   ${items.map((item, index) => `
-                     <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'};">
-                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; font-weight: bold; color: #1976d2;">SA${String(itemCounter++).padStart(3, '0')}</td>
-                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 8px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.1;" title="${item.PRODUCT_NAME || 'Unknown Product'}">${item.PRODUCT_NAME || 'Unknown Product'}</td>
-                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${Math.round(item.QUANTITY)}</td>
-                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${item.ORDER_UNIT || 'EA'}</td>
-                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; text-align: right;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>
-                     </tr>
-                   `).join('')}
-                 </tbody>
-               </table>
-                  </div>
-                `;
-              }).join('');
-            })()}
-          </div>
-          
-          <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
-            <h3 style="margin: 0 0 5px 0; color: #1976d2; font-size: 12px;">สรุปยอดรวม</h3>
-            <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${Number(requisitionWithItems.TOTAL_AMOUNT).toFixed(2)}</div>
-            <p style="margin: 5px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนรายการ: ${requisitionWithItems.REQUISITION_ITEMS.length} รายการ</p>
-            <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">สถานะ: ${requisitionWithItems.STATUS}</p>
-            <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">แผนก: ${requisitionWithItems.DEPARTMENT || 'N/A'}</p>
-          </div>
-          
-          ${isLastRequisition ? `
-          <div style="margin-top: 30px; text-align: center; color: #666; font-size: 10px; border-top: 1px solid #ddd; padding-top: 15px;">
-            <p style="margin: 0 0 5px 0;">เอกสารนี้ถูกสร้างโดยระบบ StationaryHub</p>
-            <p style="margin: 0;">วันที่สร้าง: ${new Date().toLocaleDateString()} เวลา: ${new Date().toLocaleTimeString()}</p>
-          </div>
-          ` : ''}
-        </div>
-        `;
 
         // เพิ่ม element ลงใน DOM
         document.body.appendChild(tempDiv);
@@ -852,12 +754,12 @@ export default function ApprovalsPage() {
   // เพิ่มฟังก์ชันสร้าง PDF สำหรับใบเบิกสินค้า
   const generatePDF = async (requisition: Requisition) => {
     // ตรวจสอบและโหลดข้อมูล items หากจำเป็น
-    let itemsToUse = requisitionWithItems.REQUISITION_ITEMS;
+    let itemsToUse = requisition.REQUISITION_ITEMS;
     
     if (!itemsToUse || itemsToUse.length === 0) {
       try {
         const response = await fetch(
-          getApiUrl(`/api/requisitions/${requisitionWithItems.REQUISITION_ID}/items`)
+          getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`)
         );
         
         if (response.ok) {
@@ -899,108 +801,109 @@ export default function ApprovalsPage() {
 
       // สร้าง HTML content สำหรับ SUPPLY REQUEST ORDER
       // ประมาณการความสูงของเนื้อหา
-      const estimatedContentHeight = 200 + (requisitionWithItems.REQUISITION_ITEMS.length * 25);
+      const estimatedContentHeight = 200 + (itemsToUse.length * 25);
       const needsMultiplePages = estimatedContentHeight > 250;
       
-      tempDiv.innerHTML = `
-         <div style="padding: 20px;">
-           <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
-             <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
-           </div>
-         
-          <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 11px;">
-            <div style="text-align: left;">
-              <h3 style="margin: 0 0 3px 0; font-size: 11px; font-weight: bold; text-transform: uppercase;">TO:</h3>
-              <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editFormData.companyName}</p>
-              <p style="margin: 0 0 2px 0; font-size: 10px;">${editFormData.companyAddress}</p>
-              <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
-              <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
-            </div>
-            <div style="text-align: right;">
-              <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${formatDate(requisitionWithItems.SUBMITTED_AT)}</p>
-              <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #${requisitionWithItems.REQUISITION_ID}</p>
-            </div>
-          </div>
-         
-                   <div style="margin-bottom: 15px; padding: 8px; border: 1px solid #ccc; background: #f9f9f9;">
-            <h3 style="margin: 0 0 3px 0; font-size: 11px; font-weight: bold;">Please Delivery on:</h3>
-            <p style="margin: 0 0 2px 0; font-size: 10px;">${editFormData.deliveryDate || '_________________________________'}</p>
-            <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>หมายเหตุ:</strong> ${requisitionWithItems.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
-            <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson}</p>
-          </div>
-          
-        
-        <div style="margin-bottom: 25px;">
-          <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
-            <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${requisitionWithItems.SITE_ID}</div>
-            <div style="font-size: 11px; color: #666; margin-top: 2px;">UCHA ${requisitionWithItems.SITE_ID} - ${requisitionWithItems.USER_ID}</div>
-            <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisitionWithItems.DEPARTMENT || 'N/A'}</div>
-          </div>
-          
-          ${(() => {
-            const groupedItems = requisitionWithItems.REQUISITION_ITEMS.reduce((acc, item) => {
-              const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
-              if (!acc[category]) {
-                acc[category] = [];
-              }
-              acc[category].push(item);
-              return acc;
-            }, {} as Record<string, typeof requisitionWithItems.REQUISITION_ITEMS>);
+      // สร้าง HTML content โดยใช้ฟังก์ชัน
+      const generateHTMLContent = () => {
+        const groupedItems = itemsToUse.reduce((acc, item) => {
+          const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
+          if (!acc[category]) {
+            acc[category] = [];
+          }
+          acc[category].push(item);
+          return acc;
+        }, {} as Record<string, typeof itemsToUse>);
 
-            const sortedCategories = Object.keys(groupedItems).sort();
-            let itemCounter = 1;
+        const sortedCategories = Object.keys(groupedItems).sort();
+        let itemCounter = 1;
 
-            return sortedCategories.map(category => {
-              const items = groupedItems[category];
-              return `
-                <div style="margin-bottom: 10px;">
-               <div style="background: #e3f2fd; padding: 6px 10px; border: 1px solid #2196f3; border-bottom: none; font-weight: bold; font-size: 11px; color: #1976d2;">
-                 ${category} (${items.length} รายการ)
-               </div>
-               <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; font-size: 9px; table-layout: fixed;">
-                 <thead>
-                   <tr>
-                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: left; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Itemnum</th>
-                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: left; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 55%;">Description</th>
-                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Order</th>
-                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Unit</th>
-                     <th style="background: #e3f2fd; color: #1976d2; padding: 4px 3px; text-align: center; font-weight: bold; font-size: 9px; border: 1px solid #ddd; width: 15%;">Cost</th>
-                   </tr>
-                 </thead>
-                 <tbody>
-                   ${items.map((item, index) => `
-                     <tr style="background: ${index % 2 === 0 ? '#fafafa' : 'white'};">
-                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; font-weight: bold; color: #1976d2;">SA${String(itemCounter++).padStart(3, '0')}</td>
-                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 8px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.1;" title="${item.PRODUCT_NAME || 'Unknown Product'}">${item.PRODUCT_NAME || 'Unknown Product'}</td>
-                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${Math.round(item.QUANTITY)}</td>
-                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${item.ORDER_UNIT || 'EA'}</td>
-                       <td style="padding: 4px 3px; border: 1px solid #ddd; font-size: 9px; text-align: right;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>
-                     </tr>
-                   `).join('')}
-                 </tbody>
-               </table>
-                </div>
-              `;
-            }).join('');
-          })()}
-        </div>
-        
-        <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
-          <h3 style="margin: 0 0 10px 0; color: #1976d2;">สรุปยอดรวม</h3>
-          <div style="font-size: 18px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${Number(requisitionWithItems.TOTAL_AMOUNT).toFixed(2)}</div>
-          <p style="margin: 10px 0 0 0; color: #1976d2;">จำนวนรายการ: ${requisitionWithItems.REQUISITION_ITEMS.length} รายการ</p>
-          <p style="margin: 5px 0 0 0; color: #1976d2;">สถานะ: ${requisitionWithItems.STATUS}</p>
-          <p style="margin: 5px 0 0 0; color: #1976d2;">แผนก: ${requisitionWithItems.DEPARTMENT || 'N/A'}</p>
-        </div>
-        
-        ${needsMultiplePages ? '' : `
-        <div style="margin-top: 20px; text-align: center; color: #666; font-size: 9px; border-top: 1px solid #ddd; padding-top: 10px;">
-          <p style="margin: 0 0 3px 0;">เอกสารนี้ถูกสร้างโดยระบบ StationaryHub</p>
-          <p style="margin: 0;">วันที่สร้าง: ${new Date().toLocaleDateString()} เวลา: ${new Date().toLocaleTimeString()}</p>
-        </div>
-        `}
-      </div>
-      `;
+        const categoryHTML = sortedCategories.map(category => {
+          const items = groupedItems[category];
+          const categoryItemsHTML = items.map(item => {
+            const itemHTML = `
+              <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 8px; text-align: center; font-size: 10px;">${itemCounter++}</td>
+                <td style="padding: 8px; font-size: 10px;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
+                <td style="padding: 8px; text-align: center; font-size: 10px;">${item.QUANTITY}</td>
+                <td style="padding: 8px; text-align: center; font-size: 10px;">ชิ้น</td>
+                <td style="padding: 8px; text-align: right; font-size: 10px;">฿${Number(item.UNIT_PRICE).toFixed(2)}</td>
+                <td style="padding: 8px; text-align: right; font-size: 10px; font-weight: bold;">฿${Number(item.TOTAL_PRICE).toFixed(2)}</td>
+              </tr>
+            `;
+            return itemHTML;
+          }).join('');
+
+          return `
+            <tr style="background: #f8f9fa;">
+              <td colspan="6" style="padding: 8px; font-weight: bold; font-size: 11px; color: #333;">${category}</td>
+            </tr>
+            ${categoryItemsHTML}
+          `;
+        }).join('');
+
+        return `
+          <div style="padding: 20px;">
+            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+              <div style="text-align: left;">
+                <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editFormData.companyName}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">${editFormData.companyAddress}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
+              </div>
+              <div style="text-align: right;">
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+              <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">${editFormData.deliveryDate || '_________________________________'}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson || 'N/A'}</p>
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+              <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
+                <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${requisition.SITE_ID}</div>
+                <div style="font-size: 11px; color: #666; margin-top: 2px;">UCHA ${requisition.SITE_ID} - ${requisition.USER_ID}</div>
+                <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisition.DEPARTMENT || 'N/A'}</div>
+              </div>
+              
+              <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
+                <thead>
+                  <tr style="background: #e9ecef;">
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">No.</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Description</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Qty</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit Price</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${categoryHTML}
+                </tbody>
+              </table>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
+              <h3 style="margin: 0 0 5px 0; color: #1976d2; font-size: 12px;">สรุปยอดรวม</h3>
+              <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${Number(requisition.TOTAL_AMOUNT).toFixed(2)}</div>
+              <p style="margin: 5px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนรายการ: ${itemsToUse.length} รายการ</p>
+              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">สถานะ: ${requisition.STATUS}</p>
+              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">แผนก: ${requisition.DEPARTMENT || 'N/A'}</p>
+            </div>
+          </div>
+        `;
+      };
+      
+      tempDiv.innerHTML = generateHTMLContent();
 
       // เพิ่ม element ลงใน DOM
       document.body.appendChild(tempDiv);
@@ -1072,7 +975,7 @@ export default function ApprovalsPage() {
       }
 
       // ดาวน์โหลด PDF
-      const fileName = editFormData.fileName || `SUPPLY_REQUEST_ORDER_${requisitionWithItems.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}`;
+      const fileName = editFormData.fileName || `SUPPLY_REQUEST_ORDER_${requisition.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}`;
       pdf.save(`${fileName}.pdf`);
 
       alert('ไฟล์ SUPPLY REQUEST ORDER PDF ถูกสร้างและดาวน์โหลดแล้ว!');
@@ -1089,7 +992,7 @@ export default function ApprovalsPage() {
       
       // โหลดข้อมูล requisition items ใหม่
       const response = await fetch(
-        getApiUrl(`/api/requisitions/${requisitionWithItems.REQUISITION_ID}/items`)
+        getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`)
       );
       
       if (response.ok) {
@@ -1111,7 +1014,7 @@ export default function ApprovalsPage() {
         fax: '(038) 623433',
         phone: '(038) 623126',
         taxId: '0215542000264',
-        fileName: `SUPPLY_REQUEST_ORDER_${requisitionWithItems.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}`
+        fileName: `SUPPLY_REQUEST_ORDER_${requisition.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}`
       });
       setEditDialogOpen(true);
     } catch (error) {
@@ -1122,12 +1025,12 @@ export default function ApprovalsPage() {
 
   const handleView = async (requisition: Requisition) => {
     console.log('Viewing requisition:', requisition);
-    console.log('Requisition items:', requisitionWithItems.REQUISITION_ITEMS);
+    console.log('Requisition items:', requisition.REQUISITION_ITEMS);
 
     try {
       // ดึงข้อมูล requisition ใหม่พร้อม items
       const response = await fetch(
-        getApiUrl(`/api/requisitions/${requisitionWithItems.REQUISITION_ID}`)
+        getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}`)
       );
       if (response.ok) {
         const detailedRequisition = await response.json();
@@ -1842,7 +1745,7 @@ export default function ApprovalsPage() {
                         <AnimatePresence>
                           {filteredRequisitions.map((requisition, _index) => (
                             <motion.tr
-                              key={requisitionWithItems.REQUISITION_ID}
+                              key={requisition.REQUISITION_ID}
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -20 }}
@@ -1867,16 +1770,16 @@ export default function ApprovalsPage() {
                                           ? 'bg-gradient-to-r from-green-500 to-emerald-600'
                                           : activeFilter === 'rejected'
                                             ? 'bg-gradient-to-r from-red-500 to-pink-600'
-                                            : requisitionWithItems.STATUS === 'APPROVED'
+                                            : requisition.STATUS === 'APPROVED'
                                               ? 'bg-gradient-to-r from-green-500 to-emerald-600'
-                                              : requisitionWithItems.STATUS ===
+                                              : requisition.STATUS ===
                                                   'REJECTED'
                                                 ? 'bg-gradient-to-r from-red-500 to-pink-600'
                                                 : 'bg-gradient-to-r from-gray-500 to-gray-600'
                                     }`}
                                   >
                                     <span className="text-white text-sm font-bold">
-                                      #{requisitionWithItems.REQUISITION_ID}
+                                      #{requisition.REQUISITION_ID}
                                     </span>
                                   </div>
                                 </div>
@@ -1885,10 +1788,10 @@ export default function ApprovalsPage() {
                                 <div className="space-y-1">
                                   <p className="font-medium text-gray-900">
                                     {requisition.USERNAME ||
-                                      requisitionWithItems.USER_ID}
+                                      requisition.USER_ID}
                                   </p>
                                   <p className="text-sm text-gray-500 line-clamp-2">
-                                    {requisitionWithItems.ISSUE_NOTE ||
+                                    {requisition.ISSUE_NOTE ||
                                       'No note provided'}
                                   </p>
                                 </div>
@@ -1896,10 +1799,10 @@ export default function ApprovalsPage() {
                               <TableCell>
                                 <div className="space-y-1">
                                   <p className="text-sm font-medium text-gray-700">
-                                    {requisitionWithItems.DEPARTMENT || 'N/A'}
+                                    {requisition.DEPARTMENT || 'N/A'}
                                   </p>
                                   <p className="text-xs text-gray-500">
-                                    {requisitionWithItems.SITE_ID || 'N/A'}
+                                    {requisition.SITE_ID || 'N/A'}
                                   </p>
                                 </div>
                               </TableCell>
@@ -1907,7 +1810,7 @@ export default function ApprovalsPage() {
                                 <div className="flex items-center gap-2">
                                   <Clock className="h-4 w-4 text-gray-400" />
                                   <span className="text-sm text-gray-600">
-                                    {formatDate(requisitionWithItems.SUBMITTED_AT)}
+                                    {formatDate(requisition.SUBMITTED_AT)}
                                   </span>
                                 </div>
                               </TableCell>
@@ -1915,7 +1818,7 @@ export default function ApprovalsPage() {
                                 <div className="flex items-center gap-2">
                                   <span className="font-bold text-lg text-green-600">
                                     ฿
-                                    {Number(requisitionWithItems.TOTAL_AMOUNT).toFixed(
+                                    {Number(requisition.TOTAL_AMOUNT).toFixed(
                                       2
                                     )}
                                   </span>
@@ -1923,10 +1826,10 @@ export default function ApprovalsPage() {
                               </TableCell>
                               <TableCell>
                                 <Badge
-                                  className={`${getStatusColor(requisitionWithItems.STATUS)} border px-3 py-1 rounded-full flex items-center gap-1 w-fit`}
+                                  className={`${getStatusColor(requisition.STATUS)} border px-3 py-1 rounded-full flex items-center gap-1 w-fit`}
                                 >
-                                  {getStatusIcon(requisitionWithItems.STATUS)}
-                                  {requisitionWithItems.STATUS}
+                                  {getStatusIcon(requisition.STATUS)}
+                                  {requisition.STATUS}
                                 </Badge>
                               </TableCell>
                               <TableCell>
@@ -1940,7 +1843,7 @@ export default function ApprovalsPage() {
                                     <Eye className="h-4 w-4 mr-2" />
                                     View
                                   </Button>
-                                  {requisitionWithItems.STATUS === 'PENDING' &&
+                                  {requisition.STATUS === 'PENDING' &&
                                     user?.ROLE === 'MANAGER' && (
                                       <>
                                         <Button
@@ -1966,7 +1869,7 @@ export default function ApprovalsPage() {
                                         </Button>
                                       </>
                                     )}
-                                  {user?.ROLE === 'ADMIN' && requisitionWithItems.STATUS === 'APPROVED' && (
+                                  {user?.ROLE === 'ADMIN' && requisition.STATUS === 'APPROVED' && (
                                     <>
                                       <Button
                                         size="sm"
@@ -2005,7 +1908,7 @@ export default function ApprovalsPage() {
                                           handleNotifyArrival(requisition)
                                         }
                                         disabled={
-                                          requisitionWithItems.STATUS !== 'APPROVED'
+                                          requisition.STATUS !== 'APPROVED'
                                         }
                                         className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
                                       >
