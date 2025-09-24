@@ -246,7 +246,7 @@ export default function ProductCard({
                   variant="h5"
                   style={{ color: '#FF5722', fontWeight: 700 }}
                 >
-                  ฿{Number(product.UNIT_COST || 0).toFixed(2)}
+                  ฿{Number(product.UNIT_COST || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
               </Box>
               {/* Right side - Buttons */}
@@ -398,7 +398,7 @@ export default function ProductCard({
               <Typography variant="body2" className="text-gray-500 mb-1 text-xs">
                 Unit Price:{' '}
                 <span className="font-semibold text-blue-700">
-                  ฿{Number(product.UNIT_COST || 0).toFixed(2)}
+                  ฿{Number(product.UNIT_COST || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </Typography>
               <Typography variant="caption" className="text-gray-400 text-xs">
@@ -556,7 +556,7 @@ export default function ProductCard({
                 <Typography variant="body2" className="text-gray-600 text-xs">
                   Total:{' '}
                   <span className="font-bold text-green-600">
-                    ฿{(Number(product.UNIT_COST || 0) * quantity).toFixed(2)}
+                    ฿{(Number(product.UNIT_COST || 0) * quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </Typography>
               </motion.div>

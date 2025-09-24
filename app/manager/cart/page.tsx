@@ -262,7 +262,7 @@ export default function ManagerCartPage() {
                     </TableCell>
                     <TableCell>
                       <Typography className="font-semibold text-green-600">
-                        ฿{Number(item.UNIT_COST || 0).toFixed(2)}
+                        ฿{Number(item.UNIT_COST || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -300,7 +300,7 @@ export default function ManagerCartPage() {
                     <TableCell>
                       <Typography className="font-bold">
                         ฿
-                        {Number(item.UNIT_COST * item.quantity || 0).toFixed(2)}
+                        {Number(item.UNIT_COST * item.quantity || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -329,7 +329,7 @@ export default function ManagerCartPage() {
                 className="font-bold text-green-600"
                 style={{ lineHeight: 1, marginRight: 12 }}
               >
-                ฿{getTotalAmount().toFixed(2)}
+                ฿{getTotalAmount().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Typography>
             </Box>
             <Box className="flex gap-2 md:gap-4 justify-end">

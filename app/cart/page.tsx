@@ -325,7 +325,7 @@ export default function CartPage() {
                     </TableCell>
                     <TableCell>
                       <Typography className="font-semibold text-green-600">
-                        ฿{Number(item.UNIT_COST || 0).toFixed(2)}
+                        ฿{Number(item.UNIT_COST || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -363,7 +363,7 @@ export default function CartPage() {
                     <TableCell>
                       <Typography className="font-bold">
                         ฿
-                        {Number(item.UNIT_COST * item.quantity || 0).toFixed(2)}
+                        {Number(item.UNIT_COST * item.quantity || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -409,7 +409,7 @@ export default function CartPage() {
               </div>
               <div className="text-center">
                 <Typography variant="h4" className="font-bold text-purple-600">
-                  ฿{getTotalAmount().toFixed(2)}
+                  ฿{getTotalAmount().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
                 <Typography variant="body2" className="text-gray-600">
                   จำนวนเงินรวม

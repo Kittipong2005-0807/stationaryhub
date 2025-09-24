@@ -999,12 +999,12 @@ export default function AdminDashboard() {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" className="font-semibold text-green-600">
-                            ฿{parseFloat(item.CURRENT_PRICE?.toString() || '0').toFixed(2)}
+                            ฿{parseFloat(item.CURRENT_PRICE?.toString() || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" className="text-gray-600">
-                            ฿{parseFloat(item.PREVIOUS_PRICE?.toString() || '0').toFixed(2)}
+                            ฿{parseFloat(item.PREVIOUS_PRICE?.toString() || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -1015,7 +1015,7 @@ export default function AdminDashboard() {
                             }`}
                           >
                             {parseFloat(item.PRICE_CHANGE?.toString() || '0') >= 0 ? '+' : ''}
-                            ฿{parseFloat(item.PRICE_CHANGE?.toString() || '0').toFixed(2)}
+                            ฿{parseFloat(item.PRICE_CHANGE?.toString() || '0').toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </Typography>
                         </TableCell>
                         <TableCell>

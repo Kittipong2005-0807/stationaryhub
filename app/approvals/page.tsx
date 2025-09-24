@@ -86,17 +86,25 @@ interface Requisition {
   category?: string;
 }
 
+// ฟังก์ชันจัดรูปแบบตัวเลขให้มีเครื่องหมายจุลภาค
+const formatNumberWithCommas = (num: number) => {
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
+
 // ฟังก์ชันคำนวณ TOTAL_PRICE อย่างปลอดภัย
 const calculateSafeTotalPrice = (item: any) => {
   if (item.TOTAL_PRICE) {
-    return Number(item.TOTAL_PRICE).toFixed(2);
+    return formatNumberWithCommas(Number(item.TOTAL_PRICE));
   }
   const qty = Number(item.QUANTITY || 0);
   const price = Number(item.UNIT_PRICE || 0);
   if (isNaN(qty) || isNaN(price)) {
     return '0.00';
   }
-  return (qty * price).toFixed(2);
+  return formatNumberWithCommas(qty * price);
 };
 
 export default function ApprovalsPage() {
@@ -793,7 +801,7 @@ export default function ApprovalsPage() {
               <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px;">${item.PRODUCT_NAME}</td>
               <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.QUANTITY}</td>
               <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ORDER_UNIT || 'ชิ้น'}</td>
-              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${Number(item.UNIT_PRICE).toFixed(2)}</td>
+              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}</td>
               <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${calculateSafeTotalPrice(item)}</td>
             </tr>
           `).join('');
@@ -858,7 +866,7 @@ export default function ApprovalsPage() {
             
             <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
               <h3 style="margin: 0 0 5px 0; color: #1976d2; font-size: 12px;">สรุปยอดรวม</h3>
-              <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${Number(requisition.TOTAL_AMOUNT).toFixed(2)}</div>
+              <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${formatNumberWithCommas(Number(requisition.TOTAL_AMOUNT))}</div>
               <p style="margin: 5px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนรายการ: ${requisition.REQUISITION_ITEMS.length} รายการ</p>
               <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">สถานะ: ${requisition.STATUS}</p>
               <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">แผนก: ${requisition.DEPARTMENT || 'N/A'}</p>
@@ -1114,7 +1122,7 @@ export default function ApprovalsPage() {
                 <td style="padding: 8px; font-size: 10px;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
                 <td style="padding: 8px; text-align: center; font-size: 10px;">${item.QUANTITY}</td>
                 <td style="padding: 8px; text-align: center; font-size: 10px;">ชิ้น</td>
-                <td style="padding: 8px; text-align: right; font-size: 10px;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>
+                <td style="padding: 8px; text-align: right; font-size: 10px;">฿${formatNumberWithCommas(Number(item.UNIT_PRICE || 0))}</td>
                 <td style="padding: 8px; text-align: right; font-size: 10px; font-weight: bold;">฿${calculateSafeTotalPrice(item)}</td>
               </tr>
             `;
@@ -1181,7 +1189,7 @@ export default function ApprovalsPage() {
             
             <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
               <h3 style="margin: 0 0 5px 0; color: #1976d2; font-size: 12px;">สรุปยอดรวม</h3>
-              <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${Number(requisition.TOTAL_AMOUNT).toFixed(2)}</div>
+              <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${formatNumberWithCommas(Number(requisition.TOTAL_AMOUNT))}</div>
               <p style="margin: 5px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนรายการ: ${itemsToUse.length} รายการ</p>
               <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">สถานะ: ${requisition.STATUS}</p>
               <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">แผนก: ${requisition.DEPARTMENT || 'N/A'}</p>
@@ -2163,9 +2171,7 @@ export default function ApprovalsPage() {
                                 <div className="flex items-center gap-2">
                                   <span className="font-bold text-lg text-green-600">
                                     ฿
-                                    {Number(requisition.TOTAL_AMOUNT).toFixed(
-                                      2
-                                    )}
+                                    {formatNumberWithCommas(Number(requisition.TOTAL_AMOUNT))}
                                   </span>
                                 </div>
                               </TableCell>
@@ -2312,7 +2318,7 @@ export default function ApprovalsPage() {
                   </p>
                   <p>
                     <span className="font-medium">Amount:</span> ฿
-                    {Number(selectedRequisition?.TOTAL_AMOUNT || 0).toFixed(2)}
+                    {formatNumberWithCommas(Number(selectedRequisition?.TOTAL_AMOUNT || 0))}
                   </p>
                   <p>
                     <span className="font-medium">Submitted:</span>{' '}
