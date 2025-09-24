@@ -3,7 +3,6 @@
 import React from "react"
 import { useAuth } from "@/src/contexts/AuthContext"
 import { useCart } from "@/src/contexts/CartContext"
-import { Bell } from "lucide-react"
 
 import {
   AppBar,
@@ -631,7 +630,7 @@ export default function Layout({ children }: LayoutProps) {
                   </Box>
                 ) : notifications.length === 0 ? (
                   <Box className="text-center py-8">
-                    <Bell className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                    <NotificationsNone className="h-12 w-12 text-gray-300 mx-auto mb-2" />
                     <Typography variant="body2" className="text-gray-500">
                       ไม่พบการแจ้งเตือน
                     </Typography>
@@ -750,18 +749,6 @@ export default function Layout({ children }: LayoutProps) {
                     className="h-4 text-xs"
                   />
                 </Box>
-              )}
-              <Link href="/notifications" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <IconButton color="inherit" sx={{ ml: 1 }}>
-                  <Bell />
-                </IconButton>
-              </Link>
-              {user?.ROLE === 'DEV' && (
-                <Link href="/test-notifications" style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <IconButton color="inherit" sx={{ ml: 1 }}>
-                    <Bell className="text-orange-600" />
-                  </IconButton>
-                </Link>
               )}
             </Box>
 

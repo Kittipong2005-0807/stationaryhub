@@ -970,8 +970,7 @@ export class NotificationService {
                   MESSAGE_ID: emailResult.messageId,
                   DELIVERY_STATUS: 'sent',
                   EMAIL_SIZE: BigInt(emailResult.emailSize || 0),
-                  SENT_AT: ThaiTimeUtils.getCurrentThaiTime(), // อัปเดตเวลาส่งจริง
-                  UPDATED_AT: ThaiTimeUtils.getCurrentThaiTime() // อัปเดตเวลาอัปเดต
+                  // ไม่ต้องส่ง SENT_AT และ UPDATED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
                 }
               })
               console.log(`📧 Email sent to ${data.email} with Message ID: ${emailResult.messageId}`)
@@ -984,7 +983,7 @@ export class NotificationService {
                   DELIVERY_STATUS: 'failed',
                   ERROR_MESSAGE: emailResult.error,
                   RETRY_COUNT: 1,
-                  UPDATED_AT: ThaiTimeUtils.getCurrentThaiTime() // อัปเดตเวลาอัปเดต
+                  // ไม่ต้องส่ง UPDATED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
                 }
               })
               console.error(`❌ Failed to send email to ${data.email}: ${emailResult.error}`)
@@ -998,7 +997,7 @@ export class NotificationService {
                 DELIVERY_STATUS: 'failed',
                 ERROR_MESSAGE: error instanceof Error ? error.message : String(error),
                 RETRY_COUNT: 1,
-                UPDATED_AT: ThaiTimeUtils.getCurrentThaiTime() // อัปเดตเวลาอัปเดต
+                // ไม่ต้องส่ง UPDATED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
               }
             })
             console.error(`❌ Error sending email to ${data.email}:`, error)
@@ -1078,8 +1077,8 @@ export class NotificationService {
                 DELIVERY_STATUS: 'sent',
                 EMAIL_SIZE: BigInt(emailResult.emailSize || 0),
                 ERROR_MESSAGE: null, // ลบ error message
-                SENT_AT: new Date(), // อัปเดตเวลาส่งจริง
-                UPDATED_AT: ThaiTimeUtils.getCurrentThaiTime() // อัปเดตเวลาอัปเดต
+                // ไม่ต้องส่ง SENT_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
+                // ไม่ต้องส่ง UPDATED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
               }
             })
             console.log(`✅ Email ID ${emailLog.EMAIL_ID} sent successfully on retry`)
@@ -1092,7 +1091,7 @@ export class NotificationService {
                 STATUS: 'FAILED',
                 DELIVERY_STATUS: 'failed',
                 ERROR_MESSAGE: emailResult.error,
-                UPDATED_AT: ThaiTimeUtils.getCurrentThaiTime() // อัปเดตเวลาอัปเดต
+                // ไม่ต้องส่ง UPDATED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
               }
             })
             console.log(`❌ Email ID ${emailLog.EMAIL_ID} failed on retry: ${emailResult.error}`)

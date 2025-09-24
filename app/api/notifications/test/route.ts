@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { NotificationService } from "@/lib/notification-service"
+import { ThaiTimeUtils } from "@/lib/thai-time-utils"
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
         console.log('  - To: test@example.com')
         console.log('  - Subject: Test Notification')
         console.log('  - Message: นี่เป็นการทดสอบระบบการแจ้งเตือน')
-        console.log('  - Timestamp:', new Date().toISOString())
+        console.log('  - Timestamp:', ThaiTimeUtils.getCurrentThaiTimeISO())
         console.log('🚫 ===== EMAIL NOT ACTUALLY SENT =====')
         
         // Simulate successful email sending for logging purposes

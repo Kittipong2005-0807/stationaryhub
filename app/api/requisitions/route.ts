@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
           USERNAME: requisition.USERS?.USERNAME || requisition.USER_ID,
           DEPARTMENT: requisition.USERS?.DEPARTMENT,
           USER_ROLE: requisition.USERS?.ROLE,
-          SUBMITTED_AT: requisition.SUBMITTED_AT?.toISOString() || ThaiTimeUtils.getCurrentThaiTimeISO(),
+          SUBMITTED_AT: requisition.SUBMITTED_AT || null,
           STATUS: latestStatus || requisition.STATUS || "PENDING",
           TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
           ISSUE_NOTE: requisition.ISSUE_NOTE,
@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
         USERNAME: requisition.USERS?.USERNAME || requisition.USER_ID,
         DEPARTMENT: requisition.USERS?.DEPARTMENT,
         USER_ROLE: requisition.USERS?.ROLE,
-        SUBMITTED_AT: requisition.SUBMITTED_AT?.toISOString() || ThaiTimeUtils.getCurrentThaiTimeISO(),
+        SUBMITTED_AT: requisition.SUBMITTED_AT || null,
         STATUS: requisition.STATUS || "PENDING",
         TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
         ISSUE_NOTE: requisition.ISSUE_NOTE,
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
     const requisition = await prisma.rEQUISITIONS.create({
       data: {
         USER_ID: empCode,
-        SUBMITTED_AT: ThaiTimeUtils.getCurrentThaiTime(),
+        // ไม่ต้องส่ง SUBMITTED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
         STATUS: "PENDING",
         TOTAL_AMOUNT: data.TOTAL_AMOUNT || 0,
         ISSUE_NOTE: data.ISSUE_NOTE || null,

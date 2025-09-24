@@ -39,7 +39,7 @@ export async function GET(_request: NextRequest) {
           UNIT_COST: 15.00,
           STOCK_QUANTITY: 100,
           PHOTO_URL: "/placeholder.jpg",
-          CREATED_AT: new Date().toISOString()
+          // ไม่ต้องส่ง CREATED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
         }
       ]
       
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     const auditLogQuery = `
       INSERT INTO PRODUCT_AUDIT_LOG 
       (PRODUCT_ID, ACTION_TYPE, OLD_DATA, NEW_DATA, CHANGED_BY, CHANGED_AT, IP_ADDRESS, USER_AGENT, NOTES)
-      VALUES (${newProduct.PRODUCT_ID}, 'CREATE', NULL, '${newDataJson.replace(/'/g, "''")}', '${user.USER_ID}', DATEADD(HOUR, -7, GETDATE()), '${clientIP}', '${userAgent}', 'Product created successfully')
+      VALUES (${newProduct.PRODUCT_ID}, 'CREATE', NULL, '${newDataJson.replace(/'/g, "''")}', '${user.USER_ID}', GETDATE(), '${clientIP}', '${userAgent}', 'Product created successfully')
     `
     
     await prisma.$executeRawUnsafe(auditLogQuery)

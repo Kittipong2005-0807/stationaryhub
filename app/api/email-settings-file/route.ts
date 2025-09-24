@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from 'fs';
 import path from 'path';
+import { ThaiTimeUtils } from "@/lib/thai-time-utils";
 
 // ตั้งค่า path ของไฟล์ config
 const CONFIG_FILE_PATH = path.join(process.cwd(), 'config', 'email-settings.json');
@@ -88,7 +89,7 @@ async function saveEmailSettingsToFile(settings: any) {
     // เพิ่ม timestamp
     const settingsWithTimestamp = {
       ...settings,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: ThaiTimeUtils.getCurrentThaiTimeISO()
     };
 
     // บันทึกลงไฟล์

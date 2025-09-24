@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ThaiTimeUtils } from '@/lib/thai-time-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
       year: currentYear,
       priceChange: parseFloat(newPrice) - (oldPrice || 0),
       percentageChange: oldPrice ? ((parseFloat(newPrice) - oldPrice) / oldPrice) * 100 : 0,
-      updatedAt: new Date().toISOString(),
+      updatedAt: ThaiTimeUtils.getCurrentThaiTimeISO(),
       notes: notes || 'Price updated via API'
     };
 

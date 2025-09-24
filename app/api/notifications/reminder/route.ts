@@ -281,7 +281,7 @@ export async function POST(request: NextRequest) {
                 SUBJECT: `🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`,
                 BODY: htmlContent,
                 STATUS: 'sent',
-                SENT_AT: ThaiTimeUtils.getCurrentThaiTime()
+                // ไม่ต้องส่ง SENT_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
               }
             });
 
@@ -295,7 +295,7 @@ export async function POST(request: NextRequest) {
                   SUBJECT: `🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`,
                   BODY: htmlContent,
                   STATUS: 'failed',
-                  SENT_AT: ThaiTimeUtils.getCurrentThaiTime()
+                  // ไม่ต้องส่ง SENT_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
                 }
               });
           }

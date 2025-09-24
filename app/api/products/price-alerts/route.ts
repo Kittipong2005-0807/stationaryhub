@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Product, PriceAlert } from '@/types';
+import { ThaiTimeUtils } from '@/lib/thai-time-utils';
 
 export async function GET(_request: NextRequest) {
   try {
@@ -50,7 +51,7 @@ export async function GET(_request: NextRequest) {
         PERCENTAGE_CHANGE: Math.round(percentageChange * 100) / 100,
         ALERT_LEVEL: alertLevel,
         ALERT_MESSAGE: alertMessage,
-        ALERT_DATE: new Date().toISOString()
+        // ไม่ต้องส่ง ALERT_DATE ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
       };
     }).filter((alert: PriceAlert) => alert.PERCENTAGE_CHANGE > 5); // กรองเฉพาะที่เพิ่มขึ้นมากกว่า 5%
 
@@ -62,7 +63,7 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       data: priceAlerts,
-      timestamp: new Date().toISOString(),
+      timestamp: ThaiTimeUtils.getCurrentThaiTimeISO(),
       message: 'Using real product data with simulated price alerts'
     });
   } catch (error) {

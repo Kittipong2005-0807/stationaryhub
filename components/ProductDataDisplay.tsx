@@ -25,15 +25,13 @@ export default function ProductDataDisplay({ data, title, variant = 'old' }: Pro
         try {
           const date = new Date(value.toString())
           
-          // ลบ 7 ชั่วโมงเพื่อแก้ไขปัญหา +7 ที่เก็บในฐานข้อมูล
-          const adjustedDate = new Date(date.getTime() - (7 * 60 * 60 * 1000))
-          
-          const day = adjustedDate.getDate().toString().padStart(2, '0')
-          const month = (adjustedDate.getMonth() + 1).toString().padStart(2, '0')
-          const year = (adjustedDate.getFullYear() + 543).toString().slice(-4) // แปลงเป็นปี พ.ศ.
-          const hours = adjustedDate.getHours().toString().padStart(2, '0')
-          const minutes = adjustedDate.getMinutes().toString().padStart(2, '0')
-          const seconds = adjustedDate.getSeconds().toString().padStart(2, '0')
+          // แสดงเวลาจากฐานข้อมูลโดยตรง ไม่แปลงเวลา
+          const day = date.getDate().toString().padStart(2, '0')
+          const month = (date.getMonth() + 1).toString().padStart(2, '0')
+          const year = (date.getFullYear() + 543).toString().slice(-4) // แปลงเป็นปี พ.ศ.
+          const hours = date.getHours().toString().padStart(2, '0')
+          const minutes = date.getMinutes().toString().padStart(2, '0')
+          const seconds = date.getSeconds().toString().padStart(2, '0')
           
           return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
         } catch (error) {

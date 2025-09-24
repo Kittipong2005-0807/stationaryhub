@@ -67,7 +67,7 @@ export interface PriceAlert {
   PERCENTAGE_CHANGE: number;
   ALERT_LEVEL: string;
   ALERT_MESSAGE: string;
-  ALERT_DATE: string;
+  ALERT_DATE?: string; // Optional เพราะฐานข้อมูลจะใช้ GETDATE() อัตโนมัติ
 }
 
 export interface PriceComparison {

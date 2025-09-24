@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         PRICE_CHANGE: priceChange,
         PERCENTAGE_CHANGE: percentageChange,
         YEAR: currentYear,
-        RECORDED_DATE: new Date(),
+        // ไม่ต้องส่ง RECORDED_DATE ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
         NOTES: notes || `Price updated by admin from ฿${oldPrice || 0} to ฿${newPrice}`,
         CREATED_BY: user?.USERNAME || 'ADMIN',
       },

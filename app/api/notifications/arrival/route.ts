@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         SUBJECT: `สินค้ามาแล้ว - Requisition #${requisition.REQUISITION_ID}`,
         BODY: message || `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`,
         STATUS: 'SENT',
-        SENT_AT: ThaiTimeUtils.getCurrentThaiTime()
+        // ไม่ต้องส่ง SENT_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
       }
     })
 
