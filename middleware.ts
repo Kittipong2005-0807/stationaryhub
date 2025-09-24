@@ -49,11 +49,12 @@ export async function middleware(request: NextRequest) {
     );
 
     // ถ้าเป็น public path ให้ผ่านไปได้
-    if (isPublicPath) {
+    if (isPublicPath && !token) {
       const loginUrl = new URL(
         `${basePath}${pathWithoutBase}`,
         request.nextUrl.origin
       );
+      console.log('loginUrl : ', loginUrl);
       return NextResponse.redirect(loginUrl);
     }
 
