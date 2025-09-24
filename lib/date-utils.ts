@@ -11,6 +11,8 @@ export class ThaiDateUtils {
    * ฐานข้อมูลเก็บเวลาไทยแล้ว ไม่ต้องแปลงอะไรเพิ่ม
    */
   private static parseDate(date: Date | string): Date {
+    // ใช้ new Date() โดยตรงเพื่อแสดงเวลาตามที่เก็บในฐานข้อมูล
+    // ฐานข้อมูลเก็บเวลาไทยแล้ว ไม่ต้องแปลง timezone
     return new Date(date)
   }
 
@@ -76,7 +78,7 @@ export class ThaiDateUtils {
    */
   static formatRelativeTime(date: Date | string): string {
     const d = this.parseDate(date)
-    const now = new Date()
+    const now = ThaiTimeUtils.getCurrentThaiTime()
     // เปรียบเทียบกับเวลาปัจจุบันโดยตรง
     const diffInMs = now.getTime() - d.getTime()
     
@@ -126,7 +128,7 @@ export class ThaiDateUtils {
    */
   static formatThaiNotificationDate(date: Date | string): string {
     const d = this.parseDate(date)
-    const now = new Date()
+    const now = ThaiTimeUtils.getCurrentThaiTime()
     const diffInHours = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60))
     
     if (diffInHours < 24) {
