@@ -51,21 +51,15 @@ export async function POST(request: NextRequest) {
     console.log("🔔 Using TO_USER_ID:", toUserId)
 
     // สร้างการแจ้งเตือนว่าสินค้ามาแล้ว
-    const notification = await prisma.eMAIL_LOGS.create({
-      data: {
-        TO_USER_ID: toUserId,
-        SUBJECT: `สินค้ามาแล้ว - Requisition #${requisition.REQUISITION_ID}`,
-        BODY: message || `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`,
-        STATUS: 'SENT',
-        // ไม่ต้องส่ง SENT_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
-      }
-    })
+    const notification = await prisma.$executeRaw`
+      INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT)
+      VALUES (${toUserId}, ${`สินค้ามาแล้ว - Requisition #${requisition.REQUISITION_ID}`}, ${message || `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`}, 'SENT', GETDATE())
+    `
 
-    console.log("🔔 Created notification:", notification)
+    console.log("🔔 Created notification with GETDATE()")
 
     return NextResponse.json({ 
       success: true, 
-      notification,
       message: "ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ" 
     })
   } catch (error: any) {

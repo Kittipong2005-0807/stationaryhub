@@ -275,29 +275,19 @@ export async function POST(request: NextRequest) {
             console.log(`✅ Reminder sent to ${recipient} for requisition: ${requisition.REQUISITION_ID}`);
             
             // บันทึก log การส่งอีเมลแจ้งเตือนซ้ำ
-            await prisma.eMAIL_LOGS.create({
-              data: {
-                TO_USER_ID: recipient,
-                SUBJECT: `🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`,
-                BODY: htmlContent,
-                STATUS: 'sent',
-                // ไม่ต้องส่ง SENT_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
-              }
-            });
+            await prisma.$executeRaw`
+              INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT)
+              VALUES (${recipient}, ${`🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`}, ${htmlContent}, 'sent', GETDATE())
+            `;
 
           } catch (emailError) {
             console.log(`❌ Failed to send reminder to ${recipient} for requisition: ${requisition.REQUISITION_ID}`, emailError);
             
             // บันทึก log การส่งอีเมลล้มเหลว
-              await prisma.eMAIL_LOGS.create({
-                data: {
-                  TO_USER_ID: recipient,
-                  SUBJECT: `🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`,
-                  BODY: htmlContent,
-                  STATUS: 'failed',
-                  // ไม่ต้องส่ง SENT_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
-                }
-              });
+              await prisma.$executeRaw`
+                INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT)
+                VALUES (${recipient}, ${`🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`}, ${htmlContent}, 'failed', GETDATE())
+              `;
           }
         }
 

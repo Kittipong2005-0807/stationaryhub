@@ -64,17 +64,19 @@ export async function POST(request: NextRequest) {
 
     if (action === 'markAsRead' && emailId) {
       // อัปเดตสถานะการอ่าน
-      const updatedLog = await prisma.eMAIL_LOGS.update({
-        where: { EMAIL_ID: parseInt(emailId) },
-        data: { IS_READ: true }
-      });
+      await prisma.$executeRaw`
+        UPDATE EMAIL_LOGS 
+        SET IS_READ = 1,
+            UPDATED_AT = GETDATE()
+        WHERE EMAIL_ID = ${parseInt(emailId)}
+      `;
 
       console.log(`✅ Marked email log ${emailId} as read`);
 
       return NextResponse.json({ 
         success: true, 
         message: "Email log marked as read",
-        emailId: updatedLog.EMAIL_ID
+        emailId: parseInt(emailId)
       });
     }
 

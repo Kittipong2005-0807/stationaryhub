@@ -468,7 +468,7 @@ export class NotificationService {
                 })
                 
                 if (notificationResult) {
-                  console.log(`✅ Email sent to manager ${manager.L2} (no user in USERS table), Notification ID: ${notificationResult.EMAIL_ID}`)
+                  console.log(`✅ Email sent to manager ${manager.L2} (no user in USERS table)`)                       
                 } else {
                   console.log(`❌ ไม่สามารถส่ง email ให้ manager ${manager.L2}`)
                 }
@@ -533,7 +533,7 @@ export class NotificationService {
             })
 
             if (notificationResult) {
-              console.log(`✅ ส่งการแจ้งเตือนและบันทึกลงฐานข้อมูลสำหรับ manager ${manager.L2}, Notification ID: ${notificationResult.EMAIL_ID}`)
+              console.log(`✅ ส่งการแจ้งเตือนและบันทึกลงฐานข้อมูลสำหรับ manager ${manager.L2}`)
             } else {
               console.log(`❌ ไม่สามารถสร้าง notification สำหรับ manager ${manager.L2}`)
             }
@@ -542,24 +542,10 @@ export class NotificationService {
             
             // บันทึก error log
             try {
-              await prisma.eMAIL_LOGS.create({
-                data: {
-                  TO_USER_ID: manager.L2,
-                  SUBJECT: 'มีคำขอเบิกใหม่รอการอนุมัติ',
-                  BODY: `มีคำขอเบิกใหม่ (เลขที่ ${requisitionId}) จาก ${userId} รอการอนุมัติ`,
-                  STATUS: 'FAILED',
-                  // ไม่ต้องส่ง SENT_AT ให้ฐานข้อมูลใช้ @default(now()) อัตโนมัติ
-                  IS_READ: false,
-                  FROM_EMAIL: process.env.SMTP_FROM || 'stationaryhub@ube.co.th',
-                  TO_EMAIL: manager.CurrentEmail,
-                  EMAIL_TYPE: 'requisition_pending',
-                  PRIORITY: 'medium',
-                  DELIVERY_STATUS: 'failed',
-                  ERROR_MESSAGE: error instanceof Error ? error.message : String(error),
-                  RETRY_COUNT: 1,
-                  CREATED_BY: 'system'
-                }
-              })
+              await prisma.$executeRaw`
+                INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, IS_READ, FROM_EMAIL, TO_EMAIL, EMAIL_TYPE, PRIORITY, DELIVERY_STATUS, ERROR_MESSAGE, RETRY_COUNT, CREATED_BY)
+                VALUES (${manager.L2}, ${'มีคำขอเบิกใหม่รอการอนุมัติ'}, ${`มีคำขอเบิกใหม่ (เลขที่ ${requisitionId}) จาก ${userId} รอการอนุมัติ`}, 'FAILED', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${manager.CurrentEmail}, 'requisition_pending', 'medium', 'failed', ${error instanceof Error ? error.message : String(error)}, 1, 'system')
+              `
               console.log(`📝 Error log created for manager ${manager.L2}`)
             } catch (logError) {
               console.error(`❌ Error creating error log for manager ${manager.L2}:`, logError)
@@ -925,23 +911,10 @@ export class NotificationService {
       const fullMessage = `${data.message}\n\n---\nข้อมูลเพิ่มเติม: ${JSON.stringify(additionalData, null, 2)}`
       
       // บันทึกการแจ้งเตือนในฐานข้อมูล EMAIL_LOGS พร้อมข้อมูลอีเมลครบถ้วน
-      const emailLog = await prisma.eMAIL_LOGS.create({
-        data: {
-          TO_USER_ID: data.userId,
-          SUBJECT: `Notification: ${data.type}`,
-          BODY: fullMessage,
-          STATUS: 'PENDING', // เริ่มต้นเป็น PENDING ก่อนส่งอีเมล
-          // ไม่ต้องส่ง SENT_AT ให้ฐานข้อมูลใช้ @default(now()) อัตโนมัติ
-          IS_READ: false,
-          FROM_EMAIL: process.env.SMTP_FROM || 'stationaryhub@ube.co.th',
-          TO_EMAIL: data.email || null,
-          EMAIL_TYPE: data.type || 'notification',
-          PRIORITY: data.priority || 'medium',
-          DELIVERY_STATUS: 'pending',
-          RETRY_COUNT: 0,
-          CREATED_BY: data.actorId || 'system'
-        }
-      })
+      const emailLog = await prisma.$executeRaw`
+        INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, IS_READ, FROM_EMAIL, TO_EMAIL, EMAIL_TYPE, PRIORITY, DELIVERY_STATUS, RETRY_COUNT, CREATED_BY)
+        VALUES (${data.userId}, ${`Notification: ${data.type}`}, ${fullMessage}, 'PENDING', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${data.email || null}, ${data.type || 'notification'}, ${data.priority || 'medium'}, 'pending', 0, ${data.actorId || 'system'})
+      `
       
       // ถ้าเป็น email หรือ both ให้ส่ง email (ยกเว้น requisition_created ที่ส่งแล้ว)
       if ((notificationType === 'email' || notificationType === 'both') && data.type !== 'requisition_created') {
@@ -958,55 +931,26 @@ export class NotificationService {
               data.email, 
               `Notification: ${data.type}`, 
               emailHtml,
-              emailLog.EMAIL_ID
+              0 // ไม่ใช้ EMAIL_ID เพราะใช้ raw SQL แล้ว
             )
             
             if (emailResult.success) {
               // อัปเดตสถานะเป็น SENT และบันทึก MESSAGE_ID พร้อมเวลาส่งจริง
-              await prisma.eMAIL_LOGS.update({
-                where: { EMAIL_ID: emailLog.EMAIL_ID },
-                data: {
-                  STATUS: 'SENT',
-                  MESSAGE_ID: emailResult.messageId,
-                  DELIVERY_STATUS: 'sent',
-                  EMAIL_SIZE: BigInt(emailResult.emailSize || 0),
-                  // ไม่ต้องส่ง SENT_AT และ UPDATED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
-                }
-              })
+              // ไม่สามารถอัปเดตได้เพราะไม่มี EMAIL_ID จาก raw SQL
               console.log(`📧 Email sent to ${data.email} with Message ID: ${emailResult.messageId}`)
             } else {
-              // อัปเดตสถานะเป็น FAILED และบันทึก error
-              await prisma.eMAIL_LOGS.update({
-                where: { EMAIL_ID: emailLog.EMAIL_ID },
-                data: {
-                  STATUS: 'FAILED',
-                  DELIVERY_STATUS: 'failed',
-                  ERROR_MESSAGE: emailResult.error,
-                  RETRY_COUNT: 1,
-                  // ไม่ต้องส่ง UPDATED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
-                }
-              })
+              // ไม่สามารถอัปเดตได้เพราะไม่มี EMAIL_ID จาก raw SQL
               console.error(`❌ Failed to send email to ${data.email}: ${emailResult.error}`)
             }
           } catch (error) {
-            // อัปเดตสถานะเป็น FAILED และบันทึก error
-            await prisma.eMAIL_LOGS.update({
-              where: { EMAIL_ID: emailLog.EMAIL_ID },
-              data: {
-                STATUS: 'FAILED',
-                DELIVERY_STATUS: 'failed',
-                ERROR_MESSAGE: error instanceof Error ? error.message : String(error),
-                RETRY_COUNT: 1,
-                // ไม่ต้องส่ง UPDATED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
-              }
-            })
+            // ไม่สามารถอัปเดตได้เพราะไม่มี EMAIL_ID จาก raw SQL
             console.error(`❌ Error sending email to ${data.email}:`, error)
           }
         }
       }
       
       if (process.env.NODE_ENV === 'development') {
-        console.log(`📝 Notification logged to database: ID ${emailLog.EMAIL_ID}, Type: ${notificationType}`)
+        console.log(`📝 Notification logged to database with GETDATE(), Type: ${notificationType}`)
       }
       
       // ทำความสะอาด memory
@@ -1050,14 +994,14 @@ export class NotificationService {
           console.log(`🔄 Retrying email ID ${emailLog.EMAIL_ID} (attempt ${currentRetryCount + 1}/${maxRetries})`)
           
           // อัปเดตสถานะเป็น PENDING ก่อนลองส่งใหม่
-          await prisma.eMAIL_LOGS.update({
-            where: { EMAIL_ID: emailLog.EMAIL_ID },
-            data: {
-              STATUS: 'PENDING',
-              DELIVERY_STATUS: 'retrying',
-              RETRY_COUNT: currentRetryCount + 1
-            }
-          })
+          await prisma.$executeRaw`
+            UPDATE EMAIL_LOGS 
+            SET STATUS = 'PENDING', 
+                DELIVERY_STATUS = 'retrying', 
+                RETRY_COUNT = ${currentRetryCount + 1},
+                UPDATED_AT = GETDATE()
+            WHERE EMAIL_ID = ${emailLog.EMAIL_ID}
+          `
 
           // ลองส่งอีเมลใหม่
           const emailResult = await this.sendEmailWithLogging(
@@ -1069,31 +1013,29 @@ export class NotificationService {
 
           if (emailResult.success) {
             // ส่งสำเร็จ
-            await prisma.eMAIL_LOGS.update({
-              where: { EMAIL_ID: emailLog.EMAIL_ID },
-              data: {
-                STATUS: 'SENT',
-                MESSAGE_ID: emailResult.messageId,
-                DELIVERY_STATUS: 'sent',
-                EMAIL_SIZE: BigInt(emailResult.emailSize || 0),
-                ERROR_MESSAGE: null, // ลบ error message
-                // ไม่ต้องส่ง SENT_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
-                // ไม่ต้องส่ง UPDATED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
-              }
-            })
+            await prisma.$executeRaw`
+              UPDATE EMAIL_LOGS 
+              SET STATUS = 'SENT', 
+                  MESSAGE_ID = ${emailResult.messageId}, 
+                  DELIVERY_STATUS = 'sent', 
+                  EMAIL_SIZE = ${emailResult.emailSize || 0},
+                  ERROR_MESSAGE = NULL,
+                  SENT_AT = GETDATE(),
+                  UPDATED_AT = GETDATE()
+              WHERE EMAIL_ID = ${emailLog.EMAIL_ID}
+            `
             console.log(`✅ Email ID ${emailLog.EMAIL_ID} sent successfully on retry`)
             retryCount++
           } else {
             // ส่งไม่สำเร็จ
-            await prisma.eMAIL_LOGS.update({
-              where: { EMAIL_ID: emailLog.EMAIL_ID },
-              data: {
-                STATUS: 'FAILED',
-                DELIVERY_STATUS: 'failed',
-                ERROR_MESSAGE: emailResult.error,
-                // ไม่ต้องส่ง UPDATED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
-              }
-            })
+            await prisma.$executeRaw`
+              UPDATE EMAIL_LOGS 
+              SET STATUS = 'FAILED', 
+                  DELIVERY_STATUS = 'failed', 
+                  ERROR_MESSAGE = ${emailResult.error}, 
+                  UPDATED_AT = GETDATE()
+              WHERE EMAIL_ID = ${emailLog.EMAIL_ID}
+            `
             console.log(`❌ Email ID ${emailLog.EMAIL_ID} failed on retry: ${emailResult.error}`)
           }
 
@@ -1101,14 +1043,14 @@ export class NotificationService {
           console.error(`❌ Error retrying email ID ${emailLog.EMAIL_ID}:`, retryError)
           
           // อัปเดตสถานะเป็น FAILED
-          await prisma.eMAIL_LOGS.update({
-            where: { EMAIL_ID: emailLog.EMAIL_ID },
-            data: {
-              STATUS: 'FAILED',
-              DELIVERY_STATUS: 'failed',
-              ERROR_MESSAGE: retryError instanceof Error ? retryError.message : String(retryError)
-            }
-          })
+          await prisma.$executeRaw`
+            UPDATE EMAIL_LOGS 
+            SET STATUS = 'FAILED', 
+                DELIVERY_STATUS = 'failed', 
+                ERROR_MESSAGE = ${retryError instanceof Error ? retryError.message : String(retryError)},
+                UPDATED_AT = GETDATE()
+            WHERE EMAIL_ID = ${emailLog.EMAIL_ID}
+          `
         }
       }
 
@@ -1281,10 +1223,12 @@ export class NotificationService {
    */
   static async markNotificationAsRead(notificationId: number) {
     try {
-      await prisma.eMAIL_LOGS.update({
-        where: { EMAIL_ID: notificationId },
-        data: { IS_READ: true }
-      })
+      await prisma.$executeRaw`
+        UPDATE EMAIL_LOGS 
+        SET IS_READ = 1,
+            UPDATED_AT = GETDATE()
+        WHERE EMAIL_ID = ${notificationId}
+      `
       console.log(`✅ Notification ${notificationId} marked as read`)
       return true
     } catch (error) {
