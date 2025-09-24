@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
     }
 
     // สร้างเนื้อหาอีเมล HTML ตามประเภท
-    const currentDate = new Date().toLocaleDateString();
-    const currentTime = new Date().toLocaleTimeString();
+    const currentDate = new Date().toLocaleDateString('th-TH', {timeZone: 'Asia/Bangkok'});
+    const currentTime = new Date().toLocaleTimeString('th-TH', {timeZone: 'Asia/Bangkok'});
 
     // สร้าง HTML content ตาม emailType
     let htmlContent = '';

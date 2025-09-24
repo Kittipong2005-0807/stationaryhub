@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     console.log('🔔 ===== TEST REMINDER API START =====');
-    console.log('🔔 Test API called at:', new Date().toLocaleString());
+    console.log('🔔 Test API called at:', new Date().toLocaleString('th-TH', {timeZone: 'Asia/Bangkok'}));
 
     // สร้างข้อมูลจำลอง
     const mockData = {

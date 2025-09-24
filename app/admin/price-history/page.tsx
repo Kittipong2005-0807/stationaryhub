@@ -335,12 +335,12 @@ export default function PriceHistoryPage() {
                         </TableCell>
                         <TableCell className="font-medium text-gray-600 py-3">
                           {history.OLD_PRICE
-                            ? `฿${history.OLD_PRICE.toLocaleString()}`
+                            ? `฿${history.OLD_PRICE.toLocaleString('th-TH')}`
                             : '-'}
                         </TableCell>
                         <TableCell className="font-semibold text-green-600 py-3">
                           {history.NEW_PRICE
-                            ? `฿${history.NEW_PRICE.toLocaleString()}`
+                            ? `฿${history.NEW_PRICE.toLocaleString('th-TH')}`
                             : '-'}
                         </TableCell>
                         <TableCell className="py-3">
@@ -357,7 +357,7 @@ export default function PriceHistoryPage() {
                               }`}
                             >
                               {history.PRICE_CHANGE
-                                ? `฿${history.PRICE_CHANGE.toLocaleString()}`
+                                ? `฿${history.PRICE_CHANGE.toLocaleString('th-TH')}`
                                 : '-'}
                             </span>
                           </div>

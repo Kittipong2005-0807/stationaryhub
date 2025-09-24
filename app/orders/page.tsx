@@ -331,9 +331,7 @@ export default function OrdersPage() {
                 </Typography>
                 <Typography variant="body2" className="text-gray-600">
                   <strong>Submitted:</strong>{' '}
-                  {new Date(selectedOrder.SUBMITTED_AT).toLocaleDateString(
-                    'th-TH'
-                  )}
+                  {ThaiDateUtils.formatThaiDateOnly(selectedOrder.SUBMITTED_AT)}
                 </Typography>
                 <Typography variant="body2" className="text-gray-600">
                   <strong>Total Amount:</strong> ฿

@@ -15,6 +15,7 @@ import { th } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { getBasePathUrl } from '@/lib/base-path'
 import ProductDataDisplay from '@/components/ProductDataDisplay'
+import ThaiDateUtils from '@/lib/date-utils'
 
 interface AuditLog {
   AUDIT_ID: number
@@ -138,20 +139,8 @@ export default function ProductAuditPage() {
 
   const formatDateTime = (dateString: string) => {
     try {
-      // Parse the date string directly - database stores Thai time
-      const date = new Date(dateString)
-      
-      // ลบ 7 ชั่วโมงเพื่อแก้ไขปัญหา +7 ที่เก็บในฐานข้อมูล
-      const adjustedDate = new Date(date.getTime() - (7 * 60 * 60 * 1000))
-      
-      const day = adjustedDate.getDate().toString().padStart(2, '0')
-      const month = (adjustedDate.getMonth() + 1).toString().padStart(2, '0')
-      const year = (adjustedDate.getFullYear() + 543).toString().slice(-4) // แปลงเป็นปี พ.ศ.
-      const hours = adjustedDate.getHours().toString().padStart(2, '0')
-      const minutes = adjustedDate.getMinutes().toString().padStart(2, '0')
-      const seconds = adjustedDate.getSeconds().toString().padStart(2, '0')
-      
-      return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
+      // ใช้ ThaiDateUtils แทนการแก้ไขเวลาเอง
+      return ThaiDateUtils.formatShortThaiDate(dateString)
     } catch (error) {
       console.error('Error formatting date:', error)
       return dateString

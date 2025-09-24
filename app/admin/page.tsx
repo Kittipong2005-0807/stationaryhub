@@ -48,6 +48,7 @@ import { useAuth } from "@/src/contexts/AuthContext"
 // import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import ThaiDateUtils from "@/lib/date-utils"
 import { motion } from "framer-motion"
 import type { Requisition } from "@/lib/database"
 import { apiGet, apiPost } from "@/lib/api-utils"
@@ -460,14 +461,7 @@ export default function AdminDashboard() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('th-TH', {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false
-    });
+    return ThaiDateUtils.formatShortThaiDate(dateString)
   }
 
   if (!isAuthenticated || user?.ROLE !== "ADMIN") {
@@ -1180,7 +1174,7 @@ export default function AdminDashboard() {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" className="text-gray-600">
-                            {new Date(item.RECORDED_DATE).toLocaleDateString()}
+                            {ThaiDateUtils.formatThaiDateOnly(item.RECORDED_DATE)}
                           </Typography>
                         </TableCell>
                         <TableCell>

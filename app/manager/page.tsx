@@ -353,7 +353,7 @@ export default function ManagerDashboard() {
                 <Box className="flex items-center justify-between">
                   <Box>
                     <Typography variant="h4" className="font-bold text-green-600">
-                      ฿{stats.approvedValue.toLocaleString()}
+                      ฿{stats.approvedValue.toLocaleString('th-TH')}
                     </Typography>
                     <Typography variant="body2" className="text-gray-600">
                       Approved Value

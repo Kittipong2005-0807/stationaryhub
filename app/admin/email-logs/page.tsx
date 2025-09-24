@@ -41,6 +41,7 @@ import { useAuth } from '@/src/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { getBasePathUrl } from '@/lib/base-path';
 import { motion } from 'framer-motion';
+import ThaiDateUtils from '@/lib/date-utils';
 
 interface EmailLog {
   EMAIL_ID: number;
@@ -156,7 +157,7 @@ export default function EmailLogsPage() {
         log.TO_USER_ID,
         log.SUBJECT,
         log.STATUS,
-        new Date(log.SENT_AT).toLocaleString(),
+        ThaiDateUtils.formatShortThaiDate(log.SENT_AT),
         log.IS_READ ? 'Yes' : 'No'
       ])
     ].map(row => row.join(',')).join('\n');
@@ -366,7 +367,7 @@ export default function EmailLogsPage() {
                     </Typography>
                     {lastUpdated && (
                       <Typography variant="body2" color="textSecondary">
-                        Last updated: {lastUpdated.toLocaleString()}
+                        Last updated: {ThaiDateUtils.formatShortThaiDate(lastUpdated.toISOString())}
                       </Typography>
                     )}
                   </div>
@@ -402,7 +403,7 @@ export default function EmailLogsPage() {
                               />
                             </TableCell>
                             <TableCell>
-                              {new Date(log.SENT_AT).toLocaleString()}
+                              {ThaiDateUtils.formatShortThaiDate(log.SENT_AT)}
                             </TableCell>
                             <TableCell>
                               <Chip
@@ -478,7 +479,7 @@ export default function EmailLogsPage() {
                     Sent At:
                   </Typography>
                   <Typography variant="body1">
-                    {new Date(selectedLog.SENT_AT).toLocaleString()}
+                    {ThaiDateUtils.formatShortThaiDate(selectedLog.SENT_AT)}
                   </Typography>
                 </div>
                 <div>

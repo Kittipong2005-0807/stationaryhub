@@ -142,7 +142,7 @@ async function getEmailSettings() {
 export async function POST(request: NextRequest) {
   try {
     console.log('🔔 ===== EMAIL REMINDER SYSTEM START =====');
-    console.log('🔔 Starting daily reminder check at:', new Date().toLocaleString());
+    console.log('🔔 Starting daily reminder check at:', new Date().toLocaleString('th-TH', {timeZone: 'Asia/Bangkok'}));
 
     // ดึงคำขอที่รอการอนุมัติ (สถานะ PENDING)
     const pendingRequisitions = await prisma.rEQUISITIONS.findMany({
@@ -353,8 +353,8 @@ function createReminderEmailTemplate(data: {
   createdDate: Date;
   items: Array<{ productName: string; quantity: number; unitPrice: number }>;
 }): string {
-  const currentDate = new Date().toLocaleDateString();
-  const currentTime = new Date().toLocaleTimeString();
+  const currentDate = new Date().toLocaleDateString('th-TH', {timeZone: 'Asia/Bangkok'});
+  const currentTime = new Date().toLocaleTimeString('th-TH', {timeZone: 'Asia/Bangkok'});
 
   return `
     <!DOCTYPE html>
@@ -569,7 +569,7 @@ function createReminderEmailTemplate(data: {
               </tr>
               <tr>
                 <td>วันที่ส่งคำขอ:</td>
-                <td>${new Date(data.createdDate).toLocaleDateString()}</td>
+                <td>${new Date(data.createdDate).toLocaleDateString('th-TH', {timeZone: 'Asia/Bangkok'})}</td>
               </tr>
               <tr>
                 <td>จำนวนวันที่รอ:</td>

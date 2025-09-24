@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { apiPost, apiGet } from '@/lib/api-utils';
+import ThaiDateUtils from '@/lib/date-utils';
 import {
   Bell,
   CheckCircle,
@@ -146,8 +147,8 @@ export default function EmailRemindersPage() {
       const mockStats: ReminderStats = {
         pendingCount: 5,
         remindersSent: 3,
-        lastRun: new Date().toLocaleString(),
-        nextRun: new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleString()
+        lastRun: ThaiDateUtils.formatShortThaiDate(new Date().toISOString()),
+        nextRun: ThaiDateUtils.formatShortThaiDate(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString())
       };
       setStats(mockStats);
     } catch (error) {
@@ -882,7 +883,7 @@ export default function EmailRemindersPage() {
                           {emailLogs.map((log) => (
                             <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
                               <td className="py-3 px-4 text-gray-700">
-                                {new Date(log.timestamp).toLocaleString()}
+                                {ThaiDateUtils.formatShortThaiDate(log.timestamp)}
                               </td>
                               <td className="py-3 px-4 text-gray-700">{log.recipient}</td>
                               <td className="py-3 px-4 text-gray-700">{log.subject}</td>

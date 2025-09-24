@@ -628,7 +628,7 @@ export default function ProductManagementPage() {
                         </TableCell>
                         <TableCell className="font-semibold text-green-600 py-3">
                           {product.UNIT_COST
-                            ? `฿${product.UNIT_COST.toLocaleString()}`
+                            ? `฿${product.UNIT_COST.toLocaleString('th-TH')}`
                             : '-'}
                         </TableCell>
                         <TableCell className="text-gray-600 py-3">
@@ -777,7 +777,7 @@ export default function ProductManagementPage() {
                   label="Unit Price"
                   value={
                     formData.UNIT_COST
-                      ? formData.UNIT_COST.toLocaleString()
+                      ? formData.UNIT_COST.toLocaleString('th-TH')
                       : ''
                   }
                   onChange={(e) => {

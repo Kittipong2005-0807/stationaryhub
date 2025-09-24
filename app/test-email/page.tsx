@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { motion } from 'framer-motion';
 import { apiPost } from '@/lib/api-utils';
+import ThaiDateUtils from '@/lib/date-utils';
 import {
   Mail,
   CheckCircle,
@@ -98,7 +99,7 @@ export default function TestEmailPage() {
 - เลขที่คำขอ: #REQ-${Date.now().toString().slice(-6)}
 - จำนวนเงิน: ฿1,500.00
 - สถานะ: รอการอนุมัติ
-- วันที่ส่ง: ${new Date().toLocaleDateString()}
+- วันที่ส่ง: ${ThaiDateUtils.formatThaiDateOnly(new Date().toISOString())}
 
 ระบบจะแจ้งเตือนเมื่อคำขอของคุณได้รับการอนุมัติหรือปฏิเสธ
 
@@ -116,7 +117,7 @@ export default function TestEmailPage() {
 - เลขที่คำขอ: #REQ-${Date.now().toString().slice(-6)}
 - อนุมัติโดย: ผู้จัดการแผนก
 - สถานะ: อนุมัติแล้ว
-- วันที่อนุมัติ: ${new Date().toLocaleDateString()}
+- วันที่อนุมัติ: ${ThaiDateUtils.formatThaiDateOnly(new Date().toISOString())}
 
 คุณสามารถติดตามสถานะได้ในระบบ
 
@@ -134,7 +135,7 @@ export default function TestEmailPage() {
 - เลขที่คำขอ: #REQ-${Date.now().toString().slice(-6)}
 - ปฏิเสธโดย: ผู้จัดการแผนก
 - สถานะ: ปฏิเสธ
-- วันที่ปฏิเสธ: ${new Date().toLocaleDateString()}
+- วันที่ปฏิเสธ: ${ThaiDateUtils.formatThaiDateOnly(new Date().toISOString())}
 - เหตุผล: งบประมาณไม่เพียงพอ
 
 หากมีคำถาม กรุณาติดต่อผู้จัดการ
@@ -153,7 +154,7 @@ export default function TestEmailPage() {
 - เลขที่คำขอ: #REQ-${Date.now().toString().slice(-6)}
 - จากผู้ใช้: ผู้ใช้งานทดสอบ
 - สถานะ: รอการอนุมัติ
-- วันที่ส่ง: ${new Date().toLocaleDateString()}
+- วันที่ส่ง: ${ThaiDateUtils.formatThaiDateOnly(new Date().toISOString())}
 
 กรุณาเข้าสู่ระบบเพื่อตรวจสอบและดำเนินการ
 
@@ -172,7 +173,7 @@ export default function TestEmailPage() {
 - ผู้ขอเบิก: ผู้ใช้งานทดสอบ
 - จำนวนเงิน: ฿1,500.00
 - แจ้งเตือนโดย: ผู้ดูแลระบบ
-- วันที่แจ้งเตือน: ${new Date().toLocaleDateString()}
+- วันที่แจ้งเตือน: ${ThaiDateUtils.formatThaiDateOnly(new Date().toISOString())}
 
 ข้อความพิเศษ: สินค้าพร้อมส่งมอบแล้ว กรุณาติดต่อแผนกจัดซื้อ
 
@@ -383,7 +384,7 @@ export default function TestEmailPage() {
                             </div>
                             <div className="flex justify-between">
                               <span className="font-semibold text-gray-600">เวลาส่ง:</span>
-                              <span className="text-gray-800">{new Date().toLocaleString()}</span>
+                              <span className="text-gray-800">{ThaiDateUtils.formatShortThaiDate(new Date().toISOString())}</span>
                             </div>
                           </div>
                         </div>

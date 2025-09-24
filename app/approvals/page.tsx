@@ -674,7 +674,7 @@ export default function ApprovalsPage() {
       pdf.setFontSize(12);
       pdf.text(`Total Requisitions: ${filteredRequisitions.length}`, 20, 80);
       pdf.text(`Processed: 0`, 20, 90);
-      pdf.text(`Date: ${new Date().toLocaleString()}`, 20, 100);
+      pdf.text(`Date: ${ThaiDateUtils.formatShortThaiDate(new Date().toISOString())}`, 20, 100);
 
       for (let i = 0; i < filteredRequisitions.length; i++) {
         const requisition = filteredRequisitions[i];
@@ -1248,7 +1248,7 @@ export default function ApprovalsPage() {
             pdf.setFontSize(8);
             pdf.setTextColor(102, 102, 102);
             pdf.text('Document created by StationaryHub System', 105, 280, { align: 'center' });
-            pdf.text(`Created: ${new Date().toLocaleDateString('en-US')} ${new Date().toLocaleTimeString('en-US')}`, 105, 285, { align: 'center' });
+            pdf.text(`Created: ${ThaiDateUtils.formatShortThaiDate(new Date().toISOString())}`, 105, 285, { align: 'center' });
           }
           
           yOffset += pageHeight;
