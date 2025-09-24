@@ -385,7 +385,14 @@ export default function OrdersPage() {
                             >
                               Quantity: {item.QUANTITY} × ฿
                               {(Number(item.UNIT_PRICE) || 0).toFixed(2)} = ฿
-                              {(Number(item.TOTAL_PRICE) || 0).toFixed(2)}
+                              {(() => {
+                                if (item.TOTAL_PRICE) {
+                                  return Number(item.TOTAL_PRICE).toFixed(2);
+                                }
+                                const qty = Number(item.QUANTITY || 0);
+                                const price = Number(item.UNIT_PRICE || 0);
+                                return (isNaN(qty) || isNaN(price)) ? '0.00' : (qty * price).toFixed(2);
+                              })()}
                             </Typography>
                           </Box>
                         </Box>

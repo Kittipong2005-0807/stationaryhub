@@ -503,7 +503,14 @@ export default function AdminOrdersPage() {
                                   Unit Price: <span className="font-semibold">฿{Number(item.UNIT_PRICE).toFixed(2)}</span>
                                 </Typography>
                                 <Typography variant="body2" className="text-gray-600">
-                                  Total: <span className="font-semibold text-green-600">฿{Number(item.TOTAL_PRICE).toFixed(2)}</span>
+                                  Total: <span className="font-semibold text-green-600">฿{(() => {
+                                    if (item.TOTAL_PRICE) {
+                                      return Number(item.TOTAL_PRICE).toFixed(2);
+                                    }
+                                    const qty = Number(item.QUANTITY || 0);
+                                    const price = Number(item.UNIT_PRICE || 0);
+                                    return (isNaN(qty) || isNaN(price)) ? '0.00' : (qty * price).toFixed(2);
+                                  })()}</span>
                                 </Typography>
                               </div>
                             </div>

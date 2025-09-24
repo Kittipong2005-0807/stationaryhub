@@ -153,6 +153,7 @@ export interface PrismaTransaction {
   sTATUS_HISTORY: {
     create: (args: any) => Promise<any>;
   };
+  $executeRaw: (query: TemplateStringsArray, ...values: any[]) => Promise<any>;
 }
 
 // Utility Types

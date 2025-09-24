@@ -86,6 +86,19 @@ interface Requisition {
   category?: string;
 }
 
+// ฟังก์ชันคำนวณ TOTAL_PRICE อย่างปลอดภัย
+const calculateSafeTotalPrice = (item: any) => {
+  if (item.TOTAL_PRICE) {
+    return Number(item.TOTAL_PRICE).toFixed(2);
+  }
+  const qty = Number(item.QUANTITY || 0);
+  const price = Number(item.UNIT_PRICE || 0);
+  if (isNaN(qty) || isNaN(price)) {
+    return '0.00';
+  }
+  return (qty * price).toFixed(2);
+};
+
 export default function ApprovalsPage() {
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -781,7 +794,7 @@ export default function ApprovalsPage() {
               <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.QUANTITY}</td>
               <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ORDER_UNIT || 'ชิ้น'}</td>
               <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${Number(item.UNIT_PRICE).toFixed(2)}</td>
-              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${Number(item.TOTAL_PRICE).toFixed(2)}</td>
+              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${calculateSafeTotalPrice(item)}</td>
             </tr>
           `).join('');
 
@@ -1091,6 +1104,7 @@ export default function ApprovalsPage() {
         const sortedCategories = Object.keys(groupedItems).sort();
         let itemCounter = 1;
 
+
         const categoryHTML = sortedCategories.map(category => {
           const items = groupedItems[category];
           const categoryItemsHTML = items.map(item => {
@@ -1100,8 +1114,8 @@ export default function ApprovalsPage() {
                 <td style="padding: 8px; font-size: 10px;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
                 <td style="padding: 8px; text-align: center; font-size: 10px;">${item.QUANTITY}</td>
                 <td style="padding: 8px; text-align: center; font-size: 10px;">ชิ้น</td>
-                <td style="padding: 8px; text-align: right; font-size: 10px;">฿${Number(item.UNIT_PRICE).toFixed(2)}</td>
-                <td style="padding: 8px; text-align: right; font-size: 10px; font-weight: bold;">฿${Number(item.TOTAL_PRICE).toFixed(2)}</td>
+                <td style="padding: 8px; text-align: right; font-size: 10px;">฿${Number(item.UNIT_PRICE || 0).toFixed(2)}</td>
+                <td style="padding: 8px; text-align: right; font-size: 10px; font-weight: bold;">฿${calculateSafeTotalPrice(item)}</td>
               </tr>
             `;
             return itemHTML;
@@ -2601,7 +2615,7 @@ export default function ApprovalsPage() {
                                         variant="h6"
                                         className="font-bold text-purple-600"
                                       >
-                                        ฿{Number(item.TOTAL_PRICE || 0).toFixed(2)}
+                                        ฿{calculateSafeTotalPrice(item)}
                                       </Typography>
                                     </div>
                                   </div>
@@ -3058,7 +3072,7 @@ export default function ApprovalsPage() {
                         <div className="text-right">
                           <p className="text-sm text-gray-600">ยอดรวม</p>
                           <p className="text-lg font-bold text-green-600">
-                            ฿{Number(item.TOTAL_PRICE || 0).toFixed(2)}
+                            ฿{calculateSafeTotalPrice(item)}
                           </p>
                         </div>
 
