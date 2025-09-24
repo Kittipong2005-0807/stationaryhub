@@ -90,44 +90,51 @@ export async function POST(request: NextRequest) {
                      'unknown'
     const userAgent = request.headers.get('user-agent') || 'unknown'
     
-    // Add product to database using Prisma
-    const newProduct = await prisma.pRODUCTS.create({
-      data: {
-        ITEM_ID: body.ITEM_ID || null,
+    // Add product to database using GETDATE() เพื่อให้ได้เวลาที่ถูกต้อง
+    const newProduct = await prisma.$executeRaw`
+      INSERT INTO PRODUCTS (ITEM_ID, PRODUCT_NAME, CATEGORY_ID, UNIT_COST, ORDER_UNIT, PHOTO_URL, CREATED_AT)
+      VALUES (${body.ITEM_ID || null}, ${body.PRODUCT_NAME}, ${parseInt(body.CATEGORY_ID)}, 
+              ${body.UNIT_COST !== undefined && body.UNIT_COST !== null && body.UNIT_COST !== '' ? parseFloat(body.UNIT_COST) : 0}, 
+              ${body.ORDER_UNIT}, ${body.PHOTO_URL || null}, GETDATE())
+    `
+    
+    // ดึงข้อมูล product ที่เพิ่งสร้าง
+    const createdProduct = await prisma.pRODUCTS.findFirst({
+      where: {
         PRODUCT_NAME: body.PRODUCT_NAME,
-        CATEGORY_ID: parseInt(body.CATEGORY_ID),
-        UNIT_COST: body.UNIT_COST !== undefined && body.UNIT_COST !== null && body.UNIT_COST !== '' ? parseFloat(body.UNIT_COST) : 0,
-        ORDER_UNIT: body.ORDER_UNIT,
-        PHOTO_URL: body.PHOTO_URL || null,
+        CATEGORY_ID: parseInt(body.CATEGORY_ID)
       },
+      orderBy: { CREATED_AT: 'desc' },
       include: {
         PRODUCT_CATEGORIES: true,
       },
     })
     
+    if (!createdProduct) {
+      throw new Error("Failed to retrieve created product")
+    }
+    
     // Create audit log for product creation using raw query
     const newDataJson = JSON.stringify({
-      ITEM_ID: newProduct.ITEM_ID,
-      PRODUCT_NAME: newProduct.PRODUCT_NAME,
-      CATEGORY_ID: newProduct.CATEGORY_ID,
-      UNIT_COST: newProduct.UNIT_COST,
-      ORDER_UNIT: newProduct.ORDER_UNIT,
-      PHOTO_URL: newProduct.PHOTO_URL,
-      CREATED_AT: newProduct.CREATED_AT
+      ITEM_ID: createdProduct.ITEM_ID,
+      PRODUCT_NAME: createdProduct.PRODUCT_NAME,
+      CATEGORY_ID: createdProduct.CATEGORY_ID,
+      UNIT_COST: createdProduct.UNIT_COST,
+      ORDER_UNIT: createdProduct.ORDER_UNIT,
+      PHOTO_URL: createdProduct.PHOTO_URL,
+      CREATED_AT: createdProduct.CREATED_AT
     })
     
-    const auditLogQuery = `
+    await prisma.$executeRaw`
       INSERT INTO PRODUCT_AUDIT_LOG 
       (PRODUCT_ID, ACTION_TYPE, OLD_DATA, NEW_DATA, CHANGED_BY, CHANGED_AT, IP_ADDRESS, USER_AGENT, NOTES)
-      VALUES (${newProduct.PRODUCT_ID}, 'CREATE', NULL, '${newDataJson.replace(/'/g, "''")}', '${user.USER_ID}', GETDATE(), '${clientIP}', '${userAgent}', 'Product created successfully')
+      VALUES (${createdProduct.PRODUCT_ID}, 'CREATE', NULL, ${newDataJson.replace(/'/g, "''")}, ${user.USER_ID}, GETDATE(), ${clientIP}, ${userAgent}, 'Product created successfully')
     `
-    
-    await prisma.$executeRawUnsafe(auditLogQuery)
     
     return NextResponse.json({ 
       success: true, 
-      product: newProduct,
-      message: "Product added successfully"
+      product: createdProduct,
+      message: "Product added successfully with GETDATE()"
     })
   } catch (error) {
     console.error("Error adding product:", error)

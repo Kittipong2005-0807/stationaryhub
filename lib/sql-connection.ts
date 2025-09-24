@@ -179,7 +179,7 @@ export async function updateRequisitionStatus(
         WHERE REQUISITION_ID = @requisitionId
       `)
 
-    // Insert approval record
+    // Insert approval record ใช้ GETDATE() เพื่อให้ได้เวลาที่ถูกต้อง
     await transaction
       .request()
       .input("requisitionId", sql.Int, requisitionId)
@@ -187,11 +187,11 @@ export async function updateRequisitionStatus(
       .input("status", sql.VarChar(20), status)
       .input("note", sql.VarChar(500), note || "")
       .query(`
-        INSERT INTO APPROVALS (REQUISITION_ID, APPROVED_BY, STATUS, NOTE)
-        VALUES (@requisitionId, @approvedBy, @status, @note)
+        INSERT INTO APPROVALS (REQUISITION_ID, APPROVED_BY, STATUS, NOTE, APPROVED_AT)
+        VALUES (@requisitionId, @approvedBy, @status, @note, GETDATE())
       `)
 
-    // Insert status history
+    // Insert status history ใช้ GETDATE() เพื่อให้ได้เวลาที่ถูกต้อง
     await transaction
       .request()
       .input("requisitionId", sql.Int, requisitionId)
@@ -199,8 +199,8 @@ export async function updateRequisitionStatus(
       .input("changedBy", sql.Int, approvedBy)
       .input("comment", sql.VarChar(500), note || "")
       .query(`
-        INSERT INTO STATUS_HISTORY (REQUISITION_ID, STATUS, CHANGED_BY, COMMENT)
-        VALUES (@requisitionId, @status, @changedBy, @comment)
+        INSERT INTO STATUS_HISTORY (REQUISITION_ID, STATUS, CHANGED_BY, COMMENT, CHANGED_AT)
+        VALUES (@requisitionId, @status, @changedBy, @comment, GETDATE())
       `)
 
     await transaction.commit()

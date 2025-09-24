@@ -69,8 +69,8 @@ model EMAIL_SETTINGS {
   INCLUDE_PRODUCT_DETAILS Boolean  @default(true, map: "DF__EMAIL_SET__INCLU__5D60DB10")
   INCLUDE_REQUESTER_INFO  Boolean  @default(true, map: "DF__EMAIL_SET__INCLU__5E54FF49")
   CUSTOM_MESSAGE          String?  @db.NVarChar(Max)
-  CREATED_DATE            DateTime @default(now(), map: "DF__EMAIL_SET__CREAT__5F492382")
-  UPDATED_DATE            DateTime @default(now(), map: "DF__EMAIL_SET__UPDAT__603D47BB")
+  CREATED_DATE            DateTime @db.DateTime
+  UPDATED_DATE            DateTime @db.DateTime
 }
 
 model EXPORT_LOGS {
@@ -78,7 +78,7 @@ model EXPORT_LOGS {
   REQUISITION_ID Int
   EXPORTED_BY    String       @db.VarChar(50)
   FILE_TYPE      String?      @db.VarChar(50)
-  EXPORTED_AT    DateTime?    @default(now(), map: "DF__EXPORT_LO__EXPOR__5629CD9C") @db.DateTime
+  EXPORTED_AT    DateTime?    @db.DateTime
   USERS          USERS        @relation(fields: [EXPORTED_BY], references: [USER_ID], onUpdate: NoAction, map: "FK__EXPORT_LO__EXPOR__5812160E")
   REQUISITIONS   REQUISITIONS @relation(fields: [REQUISITION_ID], references: [REQUISITION_ID], onUpdate: NoAction, map: "FK__EXPORT_LO__REQUI__571DF1D5")
 }
@@ -131,7 +131,7 @@ model PRODUCTS {
   UNIT_COST          Decimal?            @db.Decimal(18, 2)
   ORDER_UNIT         String?             @db.VarChar(50)
   PHOTO_URL          String?             @db.VarChar(500)
-  CREATED_AT         DateTime?           @default(now(), map: "DF__PRODUCTS__CREATE__4316F928") @db.DateTime
+  CREATED_AT         DateTime?           @db.DateTime
   PRICE_HISTORY      PRICE_HISTORY[]
   PRODUCT_AUDIT_LOG  PRODUCT_AUDIT_LOG[]
   PRODUCT_CATEGORIES PRODUCT_CATEGORIES  @relation(fields: [CATEGORY_ID], references: [CATEGORY_ID], onUpdate: NoAction, map: "FK__PRODUCTS__CATEGO__440B1D61")

@@ -115,25 +115,48 @@ async function saveEmailSettings(settings: any) {
       INCLUDE_PRODUCT_DETAILS: settings.template.includeProductDetails,
       INCLUDE_REQUESTER_INFO: settings.template.includeRequesterInfo,
       CUSTOM_MESSAGE: settings.template.customMessage,
-      UPDATED_DATE: new Date()
+      // ไม่ต้องส่ง UPDATED_DATE ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
     };
 
     if (existingSettings) {
-      // อัปเดตข้อมูลเดิม
-      await prisma.eMAIL_SETTINGS.update({
-        where: { ID: existingSettings.ID },
-        data: settingsData
-      });
-      console.log('✅ Email settings updated successfully');
+      // อัปเดตข้อมูลเดิม ใช้ GETDATE() เพื่อให้ได้เวลาที่ถูกต้อง
+      await prisma.$executeRaw`
+        UPDATE EMAIL_SETTINGS 
+        SET ENABLED = ${settingsData.ENABLED},
+            SCHEDULE_HOUR = ${settingsData.SCHEDULE_HOUR},
+            SCHEDULE_MINUTE = ${settingsData.SCHEDULE_MINUTE},
+            TIMEZONE = ${settingsData.TIMEZONE},
+            FREQUENCY = ${settingsData.FREQUENCY},
+            MIN_DAYS_PENDING = ${settingsData.MIN_DAYS_PENDING},
+            MAX_DAYS_PENDING = ${settingsData.MAX_DAYS_PENDING},
+            EMAIL_SUBJECT = ${settingsData.EMAIL_SUBJECT},
+            HEADER_COLOR = ${settingsData.HEADER_COLOR},
+            URGENCY_LEVEL = ${settingsData.URGENCY_LEVEL},
+            INCLUDE_PRODUCT_DETAILS = ${settingsData.INCLUDE_PRODUCT_DETAILS},
+            INCLUDE_REQUESTER_INFO = ${settingsData.INCLUDE_REQUESTER_INFO},
+            CUSTOM_MESSAGE = ${settingsData.CUSTOM_MESSAGE},
+            UPDATED_DATE = GETDATE()
+        WHERE ID = ${existingSettings.ID}
+      `;
+      console.log('✅ Email settings updated successfully with GETDATE()');
     } else {
-      // สร้างข้อมูลใหม่ถ้ายังไม่มี
-      await prisma.eMAIL_SETTINGS.create({
-        data: {
-          ...settingsData,
-          CREATED_DATE: new Date()
-        }
-      });
-      console.log('✅ Email settings created successfully');
+      // สร้างข้อมูลใหม่ถ้ายังไม่มี ใช้ GETDATE() เพื่อให้ได้เวลาที่ถูกต้อง
+      await prisma.$executeRaw`
+        INSERT INTO EMAIL_SETTINGS (
+          ENABLED, SCHEDULE_HOUR, SCHEDULE_MINUTE, TIMEZONE, FREQUENCY,
+          MIN_DAYS_PENDING, MAX_DAYS_PENDING, EMAIL_SUBJECT, HEADER_COLOR,
+          URGENCY_LEVEL, INCLUDE_PRODUCT_DETAILS, INCLUDE_REQUESTER_INFO,
+          CUSTOM_MESSAGE, CREATED_DATE, UPDATED_DATE
+        )
+        VALUES (
+          ${settingsData.ENABLED}, ${settingsData.SCHEDULE_HOUR}, ${settingsData.SCHEDULE_MINUTE},
+          ${settingsData.TIMEZONE}, ${settingsData.FREQUENCY}, ${settingsData.MIN_DAYS_PENDING},
+          ${settingsData.MAX_DAYS_PENDING}, ${settingsData.EMAIL_SUBJECT}, ${settingsData.HEADER_COLOR},
+          ${settingsData.URGENCY_LEVEL}, ${settingsData.INCLUDE_PRODUCT_DETAILS}, ${settingsData.INCLUDE_REQUESTER_INFO},
+          ${settingsData.CUSTOM_MESSAGE}, GETDATE(), GETDATE()
+        )
+      `;
+      console.log('✅ Email settings created successfully with GETDATE()');
     }
 
   } catch (error) {
