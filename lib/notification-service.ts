@@ -1,6 +1,7 @@
 import { prisma } from './prisma'
 import nodemailer from 'nodemailer'
 import { User } from '@/types'
+import { ThaiTimeUtils } from './thai-time-utils'
 
 export interface NotificationData {
   type: 'requisition_created' | 'requisition_approved' | 'requisition_rejected' | 'requisition_pending' | 'no_manager_found'
@@ -596,7 +597,7 @@ export class NotificationService {
             ROLE: a.ROLE,
             DEPARTMENT: a.DEPARTMENT
           })),
-          timestamp: new Date().toISOString()
+          timestamp: ThaiTimeUtils.getCurrentThaiTimeISO()
         };
 
         // แสดง Log เฉพาะใน development
@@ -725,7 +726,7 @@ export class NotificationService {
           ROLE: a.ROLE,
           DEPARTMENT: a.DEPARTMENT
         })),
-        timestamp: new Date().toISOString()
+        timestamp: ThaiTimeUtils.getCurrentThaiTimeISO()
       };
 
       // แสดง Log เฉพาะใน development
@@ -917,7 +918,7 @@ export class NotificationService {
         requisitionId: data.requisitionId,
         actorId: data.actorId,
         priority: data.priority || 'medium',
-        timestamp: new Date().toISOString()
+        timestamp: ThaiTimeUtils.getCurrentThaiTimeISO()
       }
       
       // รวมข้อความหลักกับข้อมูลเพิ่มเติม
@@ -969,8 +970,8 @@ export class NotificationService {
                   MESSAGE_ID: emailResult.messageId,
                   DELIVERY_STATUS: 'sent',
                   EMAIL_SIZE: BigInt(emailResult.emailSize || 0),
-                  SENT_AT: new Date(), // อัปเดตเวลาส่งจริง
-                  UPDATED_AT: new Date() // อัปเดตเวลาอัปเดต
+                  SENT_AT: ThaiTimeUtils.getCurrentThaiTime(), // อัปเดตเวลาส่งจริง
+                  UPDATED_AT: ThaiTimeUtils.getCurrentThaiTime() // อัปเดตเวลาอัปเดต
                 }
               })
               console.log(`📧 Email sent to ${data.email} with Message ID: ${emailResult.messageId}`)
@@ -983,7 +984,7 @@ export class NotificationService {
                   DELIVERY_STATUS: 'failed',
                   ERROR_MESSAGE: emailResult.error,
                   RETRY_COUNT: 1,
-                  UPDATED_AT: new Date() // อัปเดตเวลาอัปเดต
+                  UPDATED_AT: ThaiTimeUtils.getCurrentThaiTime() // อัปเดตเวลาอัปเดต
                 }
               })
               console.error(`❌ Failed to send email to ${data.email}: ${emailResult.error}`)
@@ -997,7 +998,7 @@ export class NotificationService {
                 DELIVERY_STATUS: 'failed',
                 ERROR_MESSAGE: error instanceof Error ? error.message : String(error),
                 RETRY_COUNT: 1,
-                UPDATED_AT: new Date() // อัปเดตเวลาอัปเดต
+                UPDATED_AT: ThaiTimeUtils.getCurrentThaiTime() // อัปเดตเวลาอัปเดต
               }
             })
             console.error(`❌ Error sending email to ${data.email}:`, error)
@@ -1078,7 +1079,7 @@ export class NotificationService {
                 EMAIL_SIZE: BigInt(emailResult.emailSize || 0),
                 ERROR_MESSAGE: null, // ลบ error message
                 SENT_AT: new Date(), // อัปเดตเวลาส่งจริง
-                UPDATED_AT: new Date() // อัปเดตเวลาอัปเดต
+                UPDATED_AT: ThaiTimeUtils.getCurrentThaiTime() // อัปเดตเวลาอัปเดต
               }
             })
             console.log(`✅ Email ID ${emailLog.EMAIL_ID} sent successfully on retry`)
@@ -1091,7 +1092,7 @@ export class NotificationService {
                 STATUS: 'FAILED',
                 DELIVERY_STATUS: 'failed',
                 ERROR_MESSAGE: emailResult.error,
-                UPDATED_AT: new Date() // อัปเดตเวลาอัปเดต
+                UPDATED_AT: ThaiTimeUtils.getCurrentThaiTime() // อัปเดตเวลาอัปเดต
               }
             })
             console.log(`❌ Email ID ${emailLog.EMAIL_ID} failed on retry: ${emailResult.error}`)
@@ -1153,7 +1154,7 @@ export class NotificationService {
       const recentEmails = await prisma.eMAIL_LOGS.count({
         where: {
           SENT_AT: {
-            gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 ชั่วโมงที่แล้ว
+            gte: new Date(ThaiTimeUtils.getCurrentThaiTimestamp() - 24 * 60 * 60 * 1000) // 24 ชั่วโมงที่แล้ว
           }
         }
       })
@@ -1597,7 +1598,7 @@ export class NotificationService {
                 <div class="info"><strong>เลขที่คำขอ:</strong> #${data.requisitionId}</div>
                 <div class="info"><strong>ผู้ขอเบิก:</strong> ${data.requesterName || 'ไม่ระบุ'}</div>
                 <div class="info"><strong>จำนวนเงิน:</strong> ฿${data.totalAmount?.toFixed(2) || '0.00'}</div>
-                <div class="info"><strong>วันที่ส่ง:</strong> ${data.submittedAt ? new Date(data.submittedAt).toLocaleDateString('th-TH') : new Date().toLocaleDateString('th-TH')}</div>
+                <div class="info"><strong>วันที่ส่ง:</strong> ${data.submittedAt ? ThaiTimeUtils.toThaiDateString(data.submittedAt) : ThaiTimeUtils.toThaiDateString(ThaiTimeUtils.getCurrentThaiTime())}</div>
                 <div class="info"><strong>สถานะ:</strong> รอการอนุมัติ</div>
                 <p>คำขอเบิกของคุณจะถูกส่งไปยัง Manager เพื่อพิจารณาอนุมัติ</p>
                 <a href="${baseUrl}/orders" class="button">ดูรายการคำขอเบิก</a>
@@ -1870,11 +1871,11 @@ export class NotificationService {
               </tr>
               <tr>
                 <td>วันที่ส่ง:</td>
-                <td>${data.submittedAt ? new Date(data.submittedAt).toLocaleDateString('th-TH') : new Date().toLocaleDateString('th-TH')}</td>
+                <td>${data.submittedAt ? ThaiTimeUtils.toThaiDateString(data.submittedAt) : ThaiTimeUtils.toThaiDateString(ThaiTimeUtils.getCurrentThaiTime())}</td>
               </tr>
               <tr>
                 <td>เวลาส่ง:</td>
-                <td>${data.submittedAt ? new Date(data.submittedAt).toLocaleTimeString('th-TH') : new Date().toLocaleTimeString('th-TH')}</td>
+                <td>${data.submittedAt ? ThaiTimeUtils.toThaiTimeOnlyString(data.submittedAt) : ThaiTimeUtils.toThaiTimeOnlyString(ThaiTimeUtils.getCurrentThaiTime())}</td>
               </tr>
               <tr>
                 <td>สถานะ:</td>
@@ -1943,11 +1944,11 @@ export class NotificationService {
               </tr>
               <tr>
                 <td>วันที่อนุมัติ:</td>
-                <td>${new Date().toLocaleDateString('th-TH')}</td>
+                <td>${ThaiTimeUtils.toThaiDateString(ThaiTimeUtils.getCurrentThaiTime())}</td>
               </tr>
               <tr>
                 <td>เวลาอนุมัติ:</td>
-                <td>${new Date().toLocaleTimeString('th-TH')}</td>
+                <td>${ThaiTimeUtils.toThaiTimeOnlyString(ThaiTimeUtils.getCurrentThaiTime())}</td>
               </tr>
               <tr>
                 <td>สถานะ:</td>
@@ -2017,11 +2018,11 @@ export class NotificationService {
               </tr>
               <tr>
                 <td>วันที่ปฏิเสธ:</td>
-                <td>${new Date().toLocaleDateString('th-TH')}</td>
+                <td>${ThaiTimeUtils.toThaiDateString(ThaiTimeUtils.getCurrentThaiTime())}</td>
               </tr>
               <tr>
                 <td>เวลาปฏิเสธ:</td>
-                <td>${new Date().toLocaleTimeString('th-TH')}</td>
+                <td>${ThaiTimeUtils.toThaiTimeOnlyString(ThaiTimeUtils.getCurrentThaiTime())}</td>
               </tr>
               <tr>
                 <td>สถานะ:</td>
@@ -2097,11 +2098,11 @@ export class NotificationService {
               </tr>
               <tr>
                 <td>วันที่ส่ง:</td>
-                <td>${new Date().toLocaleDateString('th-TH')}</td>
+                <td>${ThaiTimeUtils.toThaiDateString(ThaiTimeUtils.getCurrentThaiTime())}</td>
               </tr>
               <tr>
                 <td>เวลาส่ง:</td>
-                <td>${new Date().toLocaleTimeString('th-TH')}</td>
+                <td>${ThaiTimeUtils.toThaiTimeOnlyString(ThaiTimeUtils.getCurrentThaiTime())}</td>
               </tr>
               <tr>
                 <td>สถานะ:</td>
@@ -2239,7 +2240,7 @@ export class NotificationService {
               </tr>
               <tr>
                 <td>วันที่สร้าง:</td>
-                <td>${new Date().toLocaleDateString()}</td>
+                <td>${ThaiTimeUtils.toThaiDateString(ThaiTimeUtils.getCurrentThaiTime())}</td>
               </tr>
             </table>
             <div class="warning-box">
@@ -2541,7 +2542,7 @@ export class NotificationService {
                 </tr>
                 <tr>
                   <td>วันที่แจ้งเตือน:</td>
-                  <td>${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</td>
+                  <td>${ThaiTimeUtils.toThaiDateString(ThaiTimeUtils.getCurrentThaiTime())} ${ThaiTimeUtils.toThaiTimeOnlyString(ThaiTimeUtils.getCurrentThaiTime())}</td>
                 </tr>
               </table>
             </div>
@@ -2594,7 +2595,7 @@ export class NotificationService {
             <div class="content">
               <h2>${subject}</h2>
               <p>${message}</p>
-              <p><strong>เวลาส่ง:</strong> ${new Date().toLocaleString()}</p>
+              <p><strong>เวลาส่ง:</strong> ${ThaiTimeUtils.toThaiTimeString(ThaiTimeUtils.getCurrentThaiTime())}</p>
             </div>
             <div class="footer">
               <p>นี่เป็นอีเมลทดสอบจากระบบ Stationary Hub</p>

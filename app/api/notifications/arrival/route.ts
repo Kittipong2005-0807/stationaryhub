@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
 import { prisma } from "@/lib/prisma"
+import { ThaiTimeUtils } from "@/lib/thai-time-utils"
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
         SUBJECT: `สินค้ามาแล้ว - Requisition #${requisition.REQUISITION_ID}`,
         BODY: message || `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`,
         STATUS: 'SENT',
-        SENT_AT: new Date()
+        SENT_AT: ThaiTimeUtils.getCurrentThaiTime()
       }
     })
 

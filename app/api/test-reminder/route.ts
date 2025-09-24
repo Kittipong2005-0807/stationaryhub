@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ThaiTimeUtils } from "@/lib/thai-time-utils";
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🔔 ===== TEST REMINDER API START =====');
-    console.log('🔔 Test API called at:', new Date().toLocaleString('th-TH', {timeZone: 'Asia/Bangkok'}));
+    console.log('🔔 Test API called at:', ThaiTimeUtils.toThaiTimeString(ThaiTimeUtils.getCurrentThaiTime()));
 
     // สร้างข้อมูลจำลอง
     const mockData = {
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "ทดสอบระบบแจ้งเตือนสำเร็จ",
       ...mockData,
-      timestamp: new Date().toISOString()
+      timestamp: ThaiTimeUtils.getCurrentThaiTimeISO()
     });
 
   } catch (error) {

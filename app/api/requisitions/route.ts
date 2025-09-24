@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/authOptions"
 import { ApprovalService } from "@/lib/approval-service"
 import { OrgCode3Service } from "@/lib/orgcode3-service"
 import { NotificationService } from "@/lib/notification-service"
+import { ThaiTimeUtils } from "@/lib/thai-time-utils"
 
 // ฟังก์ชันดึง EmpCode จาก session
 async function getEmpCodeFromSession(request: NextRequest) {
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
           USERNAME: requisition.USERS?.USERNAME || requisition.USER_ID,
           DEPARTMENT: requisition.USERS?.DEPARTMENT,
           USER_ROLE: requisition.USERS?.ROLE,
-          SUBMITTED_AT: requisition.SUBMITTED_AT?.toISOString() || new Date().toISOString(),
+          SUBMITTED_AT: requisition.SUBMITTED_AT?.toISOString() || ThaiTimeUtils.getCurrentThaiTimeISO(),
           STATUS: latestStatus || requisition.STATUS || "PENDING",
           TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
           ISSUE_NOTE: requisition.ISSUE_NOTE,
@@ -155,7 +156,7 @@ export async function GET(request: NextRequest) {
         USERNAME: requisition.USERS?.USERNAME || requisition.USER_ID,
         DEPARTMENT: requisition.USERS?.DEPARTMENT,
         USER_ROLE: requisition.USERS?.ROLE,
-        SUBMITTED_AT: requisition.SUBMITTED_AT?.toISOString() || new Date().toISOString(),
+        SUBMITTED_AT: requisition.SUBMITTED_AT?.toISOString() || ThaiTimeUtils.getCurrentThaiTimeISO(),
         STATUS: requisition.STATUS || "PENDING",
         TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
         ISSUE_NOTE: requisition.ISSUE_NOTE,
@@ -228,7 +229,7 @@ export async function POST(request: NextRequest) {
     const requisition = await prisma.rEQUISITIONS.create({
       data: {
         USER_ID: empCode,
-        SUBMITTED_AT: new Date(),
+        SUBMITTED_AT: ThaiTimeUtils.getCurrentThaiTime(),
         STATUS: "PENDING",
         TOTAL_AMOUNT: data.TOTAL_AMOUNT || 0,
         ISSUE_NOTE: data.ISSUE_NOTE || null,

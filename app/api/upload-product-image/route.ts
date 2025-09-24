@@ -3,6 +3,7 @@ import { writeFile, mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { getBasePathUrl } from '@/lib/base-path';
+import { ThaiTimeUtils } from '@/lib/thai-time-utils';
 
 // ฟังก์ชันสำหรับลบไฟล์รูปภาพ
 async function deleteImageFile(filename: string): Promise<boolean> {
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     // สร้างชื่อไฟล์ที่ไม่ซ้ำกัน
-    const timestamp = Date.now();
+    const timestamp = ThaiTimeUtils.getCurrentThaiTimestamp();
     const randomString = Math.random().toString(36).substring(2, 15);
     const fileExtension = file.name.split('.').pop();
     const fileName = `product_${timestamp}_${randomString}.${fileExtension}`;

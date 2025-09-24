@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import nodemailer from 'nodemailer';
+import { ThaiTimeUtils } from "@/lib/thai-time-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,8 +35,8 @@ export async function POST(request: NextRequest) {
     }
 
     // สร้างเนื้อหาอีเมล HTML ตามประเภท
-    const currentDate = new Date().toLocaleDateString('th-TH', {timeZone: 'Asia/Bangkok'});
-    const currentTime = new Date().toLocaleTimeString('th-TH', {timeZone: 'Asia/Bangkok'});
+    const currentDate = ThaiTimeUtils.toThaiDateString(ThaiTimeUtils.getCurrentThaiTime());
+    const currentTime = ThaiTimeUtils.toThaiTimeOnlyString(ThaiTimeUtils.getCurrentThaiTime());
 
     // สร้าง HTML content ตาม emailType
     let htmlContent = '';
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
       console.log('  - Email Type:', emailType)
       console.log('  - From:', process.env.SMTP_FROM || 'stationaryhub@ube.co.th')
       console.log('  - HTML Length:', htmlContent.length, 'characters')
-      console.log('  - Timestamp:', new Date().toISOString())
+      console.log('  - Timestamp:', ThaiTimeUtils.getCurrentThaiTimeISO())
       console.log('📧 ===== EMAIL SENDING IN PROGRESS =====')
     }
     
@@ -456,7 +457,7 @@ export async function POST(request: NextRequest) {
               <table class="info-table">
                 <tr>
                   <td>เลขที่การทดสอบ:</td>
-                  <td>#TEST-${Date.now().toString().slice(-6)}</td>
+                  <td>#TEST-${ThaiTimeUtils.generateUniqueId()}</td>
                 </tr>
                 <tr>
                   <td>ผู้รับการทดสอบ:</td>
@@ -521,7 +522,7 @@ export async function POST(request: NextRequest) {
       
       // สร้างข้อมูลจำลองสำหรับการทดสอบ
       const mockData = {
-        requisitionId: parseInt(Date.now().toString().slice(-6)),
+        requisitionId: parseInt(ThaiTimeUtils.generateUniqueId()),
         totalAmount: 1500.00,
         approvedBy: 'ผู้จัดการแผนก',
         rejectedBy: 'ผู้จัดการแผนก',
@@ -578,7 +579,7 @@ export async function POST(request: NextRequest) {
       to: to,
       messageId: result.messageId,
       response: result.response,
-      timestamp: new Date().toISOString()
+      timestamp: ThaiTimeUtils.getCurrentThaiTimeISO()
     });
 
   } catch (error) {

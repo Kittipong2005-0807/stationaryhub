@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/notification-service";
 import { Manager, Requisition } from "@/types";
+import { ThaiTimeUtils } from "@/lib/thai-time-utils";
 
 // ฟังก์ชันหา Manager อัตโนมัติสำหรับคำขอเบิก โดยใช้ CostCenter
 async function findManagersForRequisition(requisition: Requisition): Promise<string[]> {
@@ -142,7 +143,7 @@ async function getEmailSettings() {
 export async function POST(request: NextRequest) {
   try {
     console.log('🔔 ===== EMAIL REMINDER SYSTEM START =====');
-    console.log('🔔 Starting daily reminder check at:', new Date().toLocaleString('th-TH', {timeZone: 'Asia/Bangkok'}));
+    console.log('🔔 Starting daily reminder check at:', ThaiTimeUtils.toThaiTimeString(ThaiTimeUtils.getCurrentThaiTime()));
 
     // ดึงคำขอที่รอการอนุมัติ (สถานะ PENDING)
     const pendingRequisitions = await prisma.rEQUISITIONS.findMany({
@@ -183,10 +184,8 @@ export async function POST(request: NextRequest) {
         console.log(`📧 Processing reminder for requisition: ${requisition.REQUISITION_ID}`);
 
         // คำนวณจำนวนวันที่รอการอนุมัติ
-        const submittedDate = requisition.SUBMITTED_AT || new Date();
-        const daysPending = Math.floor(
-          (new Date().getTime() - new Date(submittedDate).getTime()) / (1000 * 60 * 60 * 24)
-        );
+        const submittedDate = requisition.SUBMITTED_AT || ThaiTimeUtils.getCurrentThaiTime();
+        const daysPending = ThaiTimeUtils.getDaysDifference(ThaiTimeUtils.getCurrentThaiTime(), submittedDate);
 
         // สร้างข้อมูลสำหรับอีเมลแจ้งเตือนซ้ำ
         const reminderData = {
@@ -224,7 +223,7 @@ export async function POST(request: NextRequest) {
           recipients: recipients,
           daysPending: daysPending,
           totalAmount: reminderData.totalAmount,
-          timestamp: new Date().toISOString()
+          timestamp: ThaiTimeUtils.getCurrentThaiTimeISO()
         };
 
         // แสดง Log เฉพาะใน development
@@ -262,7 +261,7 @@ export async function POST(request: NextRequest) {
               console.log('  - CostCenter:', requisition.USERS?.DEPARTMENT)
               console.log('  - Days Pending:', daysPending)
               console.log('  - Total Amount:', reminderData.totalAmount)
-              console.log('  - Timestamp:', new Date().toISOString())
+              console.log('  - Timestamp:', ThaiTimeUtils.getCurrentThaiTimeISO())
               console.log('📧 ===== EMAIL SENDING IN PROGRESS =====')
             }
             
@@ -282,7 +281,7 @@ export async function POST(request: NextRequest) {
                 SUBJECT: `🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`,
                 BODY: htmlContent,
                 STATUS: 'sent',
-                SENT_AT: new Date()
+                SENT_AT: ThaiTimeUtils.getCurrentThaiTime()
               }
             });
 
@@ -296,7 +295,7 @@ export async function POST(request: NextRequest) {
                   SUBJECT: `🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`,
                   BODY: htmlContent,
                   STATUS: 'failed',
-                  SENT_AT: new Date()
+                  SENT_AT: ThaiTimeUtils.getCurrentThaiTime()
                 }
               });
           }
@@ -329,7 +328,7 @@ export async function POST(request: NextRequest) {
       pendingCount: pendingRequisitions.length,
       remindersSent: remindersSent,
       results: results,
-      timestamp: new Date().toISOString()
+      timestamp: ThaiTimeUtils.getCurrentThaiTimeISO()
     });
 
   } catch (error) {
@@ -353,8 +352,8 @@ function createReminderEmailTemplate(data: {
   createdDate: Date;
   items: Array<{ productName: string; quantity: number; unitPrice: number }>;
 }): string {
-  const currentDate = new Date().toLocaleDateString('th-TH', {timeZone: 'Asia/Bangkok'});
-  const currentTime = new Date().toLocaleTimeString('th-TH', {timeZone: 'Asia/Bangkok'});
+  const currentDate = ThaiTimeUtils.toThaiDateString(ThaiTimeUtils.getCurrentThaiTime());
+  const currentTime = ThaiTimeUtils.toThaiTimeOnlyString(ThaiTimeUtils.getCurrentThaiTime());
 
   return `
     <!DOCTYPE html>
