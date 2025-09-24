@@ -731,19 +731,23 @@ export default function ApprovalsPage() {
         // ตรวจสอบว่าเป็นคำสั่งซื้อสุดท้ายหรือไม่
         const isLastRequisition = i === filteredRequisitions.length - 1;
 
-        // ดึง OrgCode4 และ OrgTDesc3 ของ user สำหรับแสดงใน Cost Center
+        // ดึง OrgCode4 และข้อมูลชื่อพนักงานของ user สำหรับแสดงใน Cost Center
         let userOrgCode4 = requisition.SITE_ID; // fallback to SITE_ID
         let userOrgTDesc3 = 'UCHA'; // fallback to UCHA
+        let userFullName = requisition.USER_ID; // fallback to USER_ID
         try {
           const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`));
           if (response.ok) {
             const data = await response.json();
             userOrgCode4 = data.orgCode4 || requisition.SITE_ID;
             userOrgTDesc3 = data.orgTDesc3 || 'UCHA';
+            // ใช้ชื่อไทยก่อน หากไม่มีให้ใช้ชื่ออังกฤษ หากไม่มีให้ใช้ USER_ID
+            userFullName = data.fullNameThai || data.fullNameEng || requisition.USER_ID;
             console.log(`OrgCode data for requisition ${requisition.REQUISITION_ID}:`, {
               userId: requisition.USER_ID,
               orgCode4: userOrgCode4,
               orgTDesc3: userOrgTDesc3,
+              userFullName: userFullName,
               siteId: requisition.SITE_ID
             });
           }
@@ -818,7 +822,7 @@ export default function ApprovalsPage() {
             <div style="margin-bottom: 25px;">
               <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
                 <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${userOrgCode4}</div>
-                <div style="font-size: 11px; color: #666; margin-top: 2px;">${userOrgTDesc3} ${requisition.SITE_ID} - ${requisition.USER_ID}</div>
+                <div style="font-size: 11px; color: #666; margin-top: 2px;">${userFullName} - ${requisition.USER_ID}</div>
                 <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisition.DEPARTMENT || 'N/A'}</div>
               </div>
               
@@ -1016,16 +1020,19 @@ export default function ApprovalsPage() {
       return;
     }
 
-    // ดึง OrgCode4 และ OrgTDesc3 ของ user สำหรับแสดงใน Cost Center
+    // ดึง OrgCode4 และข้อมูลชื่อพนักงานของ user สำหรับแสดงใน Cost Center
     let userOrgCode4 = requisition.SITE_ID; // fallback to SITE_ID
     let userOrgTDesc3 = 'UCHA'; // fallback to UCHA
+    let userFullName = requisition.USER_ID; // fallback to USER_ID
     try {
       const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`));
       if (response.ok) {
         const data = await response.json();
         userOrgCode4 = data.orgCode4 || requisition.SITE_ID;
         userOrgTDesc3 = data.orgTDesc3 || 'UCHA';
-        console.log('PDF Data:', { userOrgCode4, userOrgTDesc3, requisition: requisition.REQUISITION_ID });
+        // ใช้ชื่อไทยก่อน หากไม่มีให้ใช้ชื่ออังกฤษ หากไม่มีให้ใช้ USER_ID
+        userFullName = data.fullNameThai || data.fullNameEng || requisition.USER_ID;
+        console.log('PDF Data:', { userOrgCode4, userOrgTDesc3, userFullName, requisition: requisition.REQUISITION_ID });
       }
     } catch (error) {
       console.error('Error fetching user OrgCode4:', error);
@@ -1137,7 +1144,7 @@ export default function ApprovalsPage() {
             <div style="margin-bottom: 25px;">
               <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
                 <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${userOrgCode4}</div>
-                <div style="font-size: 11px; color: #666; margin-top: 2px;">${userOrgTDesc3} ${requisition.SITE_ID} - ${requisition.USER_ID}</div>
+                <div style="font-size: 11px; color: #666; margin-top: 2px;">${userFullName} - ${requisition.USER_ID}</div>
                 <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisition.DEPARTMENT || 'N/A'}</div>
               </div>
               
