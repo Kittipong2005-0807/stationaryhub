@@ -8,12 +8,16 @@ import { ThaiTimeUtils } from './thai-time-utils'
 export class ThaiDateUtils {
   /**
    * แปลงวันที่เป็น Date object โดยตรง ไม่แปลง timezone
-   * ฐานข้อมูลเก็บเวลาไทยแล้ว ไม่ต้องแปลงอะไรเพิ่ม
+   * ฐานข้อมูลเก็บเวลาไทยแล้ว (GETDATE()) ไม่ต้องแปลงอะไรเพิ่ม
    */
   private static parseDate(date: Date | string): Date {
-    // ใช้ new Date() โดยตรงเพื่อแสดงเวลาตามที่เก็บในฐานข้อมูล
-    // ฐานข้อมูลเก็บเวลาไทยแล้ว ไม่ต้องแปลง timezone
-    return new Date(date)
+    // ถ้าเป็น string ให้แปลงเป็น Date object โดยตรง
+    // ฐานข้อมูลเก็บเวลาไทยแล้ว (GETDATE()) ไม่ต้องแปลง timezone
+    if (typeof date === 'string') {
+      // แปลง string เป็น Date object โดยตรง ไม่แปลง timezone
+      return new Date(date)
+    }
+    return date
   }
 
   /**
@@ -27,21 +31,23 @@ export class ThaiDateUtils {
   /**
    * แปลงวันที่เป็นรูปแบบไทยแบบย่อ
    * ตัวอย่าง: "15 ม.ค. 2567 14:30"
+   * แสดงเวลาตามที่เก็บในฐานข้อมูลโดยตรง (GETDATE())
    */
   static formatShortThaiDate(date: Date | string): string {
     const d = this.parseDate(date)
     
-    // แสดงเวลาตามที่เก็บในฐานข้อมูลจริงๆ ไม่แก้ไข timezone
+    // แสดงเวลาตามที่เก็บในฐานข้อมูลจริงๆ (GETDATE()) ไม่แก้ไข timezone
     const thaiMonthsShort = [
       'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
       'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
     ]
     
-    const dateNum = d.getDate().toString().padStart(2, '0')
-    const month = thaiMonthsShort[d.getMonth()]
-    const year = (d.getFullYear() + 543).toString().slice(-4) // ปี พ.ศ. 4 หลัก
-    const hours = d.getHours().toString().padStart(2, '0')
-    const minutes = d.getMinutes().toString().padStart(2, '0')
+    // ใช้ UTC methods เพื่อแสดงเวลาตามที่เก็บในฐานข้อมูลโดยตรง
+    const dateNum = d.getUTCDate().toString().padStart(2, '0')
+    const month = thaiMonthsShort[d.getUTCMonth()]
+    const year = (d.getUTCFullYear() + 543).toString().slice(-4) // ปี พ.ศ. 4 หลัก
+    const hours = d.getUTCHours().toString().padStart(2, '0')
+    const minutes = d.getUTCMinutes().toString().padStart(2, '0')
     
     return `${dateNum} ${month} ${year} ${hours}:${minutes}`
   }
@@ -75,10 +81,12 @@ export class ThaiDateUtils {
   /**
    * แปลงวันที่เป็นรูปแบบ "เมื่อ X ที่แล้ว"
    * ตัวอย่าง: "2 ชั่วโมงที่แล้ว", "3 วันที่แล้ว"
+   * เปรียบเทียบกับเวลาปัจจุบันของ SQL Server (GETDATE())
    */
   static formatRelativeTime(date: Date | string): string {
     const d = this.parseDate(date)
-    const now = ThaiTimeUtils.getCurrentThaiTime()
+    const now = new Date() // เวลาปัจจุบันของ client
+    
     // เปรียบเทียบกับเวลาปัจจุบันโดยตรง
     const diffInMs = now.getTime() - d.getTime()
     
@@ -128,7 +136,7 @@ export class ThaiDateUtils {
    */
   static formatThaiNotificationDate(date: Date | string): string {
     const d = this.parseDate(date)
-    const now = ThaiTimeUtils.getCurrentThaiTime()
+    const now = new Date() // เวลาปัจจุบันของ client
     const diffInHours = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60))
     
     if (diffInHours < 24) {
