@@ -83,6 +83,25 @@ export async function POST(request: NextRequest) {
 
       console.log(`✅ Arrival email sent successfully to ${toUserId} at ${userEmail}`)
 
+      // อัปเดตสถานะในฐานข้อมูลเป็น CLOSED
+      await prisma.rEQUISITIONS.update({
+        where: { REQUISITION_ID: requisition.REQUISITION_ID },
+        data: { STATUS: 'CLOSED' }
+      })
+
+      // บันทึก status history
+      await prisma.sTATUS_HISTORY.create({
+        data: {
+          REQUISITION_ID: requisition.REQUISITION_ID,
+          STATUS: 'CLOSED',
+          CHANGED_BY: session.user.email || 'admin',
+          CHANGED_AT: new Date(),
+          COMMENT: 'สินค้ามาแล้ว - ส่งแจ้งเตือนให้ผู้ใช้'
+        }
+      })
+
+      console.log(`🔄 Updated requisition ${requisition.REQUISITION_ID} status to CLOSED`)
+
       // บันทึกลง EMAIL_LOGS หลังจากส่งเมลสำเร็จ
       const notification = await prisma.$executeRaw`
         INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, TO_EMAIL)
@@ -93,9 +112,10 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ 
         success: true, 
-        message: "ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ",
+        message: "ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ สถานะถูกเปลี่ยนเป็น CLOSED",
         emailSent: true,
-        userEmail
+        userEmail,
+        statusUpdated: true
       })
 
     } catch (emailError) {
