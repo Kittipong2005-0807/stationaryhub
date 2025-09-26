@@ -118,7 +118,7 @@ export default function ApprovalsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<
-    'all' | 'pending' | 'approved' | 'rejected'
+    'all' | 'pending' | 'approved' | 'rejected' | 'closed'
   >('all');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingRequisition, setEditingRequisition] =
@@ -529,7 +529,16 @@ export default function ApprovalsPage() {
       });
 
       if (response.ok) {
-        alert('ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ!');
+        // อัปเดตสถานะเป็น CLOSED หลังจากส่งแจ้งเตือนสำเร็จ
+        setRequisitions(prevRequisitions => 
+          prevRequisitions.map(req => 
+            req.REQUISITION_ID === selectedRequisition.REQUISITION_ID 
+              ? { ...req, STATUS: 'CLOSED' }
+              : req
+          )
+        );
+        
+        alert('ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ! สถานะถูกเปลี่ยนเป็น Closed');
         setNotifyDialogOpen(false);
         setNotifyMessage('');
         setSelectedRequisition(null);
@@ -1379,6 +1388,8 @@ export default function ApprovalsPage() {
         return 'bg-green-50 text-green-700 border-green-200';
       case 'REJECTED':
         return 'bg-red-50 text-red-700 border-red-200';
+      case 'CLOSED':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
       default:
         return 'bg-gray-50 text-gray-700 border-gray-200';
     }
@@ -1392,6 +1403,8 @@ export default function ApprovalsPage() {
         return <CheckSquare className="h-4 w-4" />;
       case 'REJECTED':
         return <AlertTriangle className="h-4 w-4" />;
+      case 'CLOSED':
+        return <CheckCircle className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
     }
@@ -1416,8 +1429,11 @@ export default function ApprovalsPage() {
       case 'rejected':
         filtered = requisitions.filter((r) => r.STATUS === 'REJECTED');
         break;
+      case 'closed':
+        filtered = requisitions.filter((r) => r.STATUS === 'CLOSED');
+        break;
       default:
-        // สำหรับ "all" ให้เรียงลำดับ: PENDING อยู่ด้านบน, APPROVED/REJECTED อยู่ด้านล่าง
+        // สำหรับ "all" ให้เรียงลำดับ: PENDING อยู่ด้านบน, APPROVED/REJECTED/CLOSED อยู่ด้านล่าง
         filtered = [...requisitions].sort((a, b) => {
           if (a.STATUS === 'PENDING' && b.STATUS !== 'PENDING') return -1;
           if (a.STATUS !== 'PENDING' && b.STATUS === 'PENDING') return 1;
@@ -1456,6 +1472,9 @@ export default function ApprovalsPage() {
   ).length;
   const rejectedCount = requisitions.filter(
     (r) => r.STATUS === 'REJECTED'
+  ).length;
+  const closedCount = requisitions.filter(
+    (r) => r.STATUS === 'CLOSED'
   ).length;
 
   if (
@@ -1688,6 +1707,19 @@ export default function ApprovalsPage() {
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   Rejected ({rejectedCount})
                 </Button>
+
+                <Button
+                  variant={activeFilter === 'closed' ? 'default' : 'outline'}
+                  onClick={() => setActiveFilter('closed')}
+                  className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                    activeFilter === 'closed'
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg hover:shadow-xl'
+                      : 'hover:bg-blue-50 border-blue-200 text-blue-700'
+                  }`}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Closed ({closedCount})
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -1850,7 +1882,9 @@ export default function ApprovalsPage() {
                     ? 'bg-gradient-to-r from-green-50 to-emerald-100 border-green-200'
                     : activeFilter === 'rejected'
                       ? 'bg-gradient-to-r from-red-50 to-pink-100 border-red-200'
-                      : 'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200'
+                      : activeFilter === 'closed'
+                        ? 'bg-gradient-to-r from-blue-50 to-indigo-100 border-blue-200'
+                        : 'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200'
               }`}
             >
               <CardTitle
@@ -1861,7 +1895,9 @@ export default function ApprovalsPage() {
                       ? 'text-green-800'
                       : activeFilter === 'rejected'
                         ? 'text-red-800'
-                        : 'text-gray-800'
+                        : activeFilter === 'closed'
+                          ? 'text-blue-800'
+                          : 'text-gray-800'
                 }`}
               >
                 {activeFilter === 'pending' && (
@@ -1873,6 +1909,9 @@ export default function ApprovalsPage() {
                 {activeFilter === 'rejected' && (
                   <AlertTriangle className="h-6 w-6 text-red-600" />
                 )}
+                {activeFilter === 'closed' && (
+                  <CheckCircle className="h-6 w-6 text-blue-600" />
+                )}
                 {activeFilter === 'all' && (
                   <ClipboardList className="h-6 w-6 text-gray-600" />
                 )}
@@ -1883,6 +1922,8 @@ export default function ApprovalsPage() {
                   `Approved Requisitions (${approvedCount})`}
                 {activeFilter === 'rejected' &&
                   `Rejected Requisitions (${rejectedCount})`}
+                {activeFilter === 'closed' &&
+                  `Closed Requisitions (${closedCount})`}
               </CardTitle>
               <p
                 className={`text-sm ${
@@ -1892,7 +1933,9 @@ export default function ApprovalsPage() {
                       ? 'text-green-700'
                       : activeFilter === 'rejected'
                         ? 'text-red-700'
-                        : 'text-gray-600'
+                        : activeFilter === 'closed'
+                          ? 'text-blue-700'
+                          : 'text-gray-600'
                 }`}
               >
                 {activeFilter === 'all' &&
@@ -1903,6 +1946,8 @@ export default function ApprovalsPage() {
                   'Requisitions that have been approved'}
                 {activeFilter === 'rejected' &&
                   'Requisitions that have been rejected'}
+                {activeFilter === 'closed' &&
+                  'Requisitions that have been completed and delivered'}
               </p>
             </CardHeader>
             <CardContent className="p-0">
@@ -1931,7 +1976,9 @@ export default function ApprovalsPage() {
                               ? 'bg-gradient-to-r from-green-100 to-emerald-100'
                               : activeFilter === 'rejected'
                                 ? 'bg-gradient-to-r from-red-100 to-pink-100'
-                                : 'bg-gradient-to-r from-gray-100 to-gray-200'
+                                : activeFilter === 'closed'
+                                  ? 'bg-gradient-to-r from-blue-100 to-indigo-100'
+                                  : 'bg-gradient-to-r from-gray-100 to-gray-200'
                         }`}
                       >
                         {activeFilter === 'pending' && (
@@ -1942,6 +1989,9 @@ export default function ApprovalsPage() {
                         )}
                         {activeFilter === 'rejected' && (
                           <AlertTriangle className="h-10 w-10 text-red-600" />
+                        )}
+                        {activeFilter === 'closed' && (
+                          <CheckCircle className="h-10 w-10 text-blue-600" />
                         )}
                         {activeFilter === 'all' && (
                           <ClipboardList className="h-10 w-10 text-gray-400" />
@@ -1955,7 +2005,9 @@ export default function ApprovalsPage() {
                               ? 'text-green-700'
                               : activeFilter === 'rejected'
                                 ? 'text-red-700'
-                                : 'text-gray-500'
+                                : activeFilter === 'closed'
+                                  ? 'text-blue-700'
+                                  : 'text-gray-500'
                         }`}
                       >
                         {activeFilter === 'pending' &&
@@ -1964,6 +2016,8 @@ export default function ApprovalsPage() {
                           'No approved requisitions'}
                         {activeFilter === 'rejected' &&
                           'No rejected requisitions'}
+                        {activeFilter === 'closed' &&
+                          'No closed requisitions'}
                         {activeFilter === 'all' && 'No requisitions found'}
                       </h3>
                       <p
@@ -1974,7 +2028,9 @@ export default function ApprovalsPage() {
                               ? 'text-green-600'
                               : activeFilter === 'rejected'
                                 ? 'text-red-600'
-                                : 'text-gray-400'
+                                : activeFilter === 'closed'
+                                  ? 'text-blue-600'
+                                  : 'text-gray-400'
                         }`}
                       >
                         {activeFilter === 'pending' &&
@@ -1983,6 +2039,8 @@ export default function ApprovalsPage() {
                           'No requisitions have been approved yet.'}
                         {activeFilter === 'rejected' &&
                           'No requisitions have been rejected yet.'}
+                        {activeFilter === 'closed' &&
+                          'No requisitions have been closed yet.'}
                         {activeFilter === 'all' &&
                           'No requisitions found in the system.'}
                       </p>
@@ -1998,7 +2056,9 @@ export default function ApprovalsPage() {
                                 ? 'bg-green-50/50 hover:bg-green-50/70'
                                 : activeFilter === 'rejected'
                                   ? 'bg-red-50/50 hover:bg-red-50/70'
-                                  : 'bg-gray-50/50 hover:bg-gray-50/70'
+                                  : activeFilter === 'closed'
+                                    ? 'bg-blue-50/50 hover:bg-blue-50/70'
+                                    : 'bg-gray-50/50 hover:bg-gray-50/70'
                           }`}
                         >
                           <TableHead
@@ -2009,7 +2069,9 @@ export default function ApprovalsPage() {
                                   ? 'text-green-800'
                                   : activeFilter === 'rejected'
                                     ? 'text-red-800'
-                                    : 'text-gray-700'
+                                    : activeFilter === 'closed'
+                                      ? 'text-blue-800'
+                                      : 'text-gray-700'
                             }`}
                           >
                             Requisition ID
@@ -2022,7 +2084,9 @@ export default function ApprovalsPage() {
                                   ? 'text-green-800'
                                   : activeFilter === 'rejected'
                                     ? 'text-red-800'
-                                    : 'text-gray-700'
+                                    : activeFilter === 'closed'
+                                      ? 'text-blue-800'
+                                      : 'text-gray-700'
                             }`}
                           >
                             Requested By
@@ -2035,7 +2099,9 @@ export default function ApprovalsPage() {
                                   ? 'text-green-800'
                                   : activeFilter === 'rejected'
                                     ? 'text-red-800'
-                                    : 'text-gray-700'
+                                    : activeFilter === 'closed'
+                                      ? 'text-blue-800'
+                                      : 'text-gray-700'
                             }`}
                           >
                             Department
@@ -2048,7 +2114,9 @@ export default function ApprovalsPage() {
                                   ? 'text-green-800'
                                   : activeFilter === 'rejected'
                                     ? 'text-red-800'
-                                    : 'text-gray-700'
+                                    : activeFilter === 'closed'
+                                      ? 'text-blue-800'
+                                      : 'text-gray-700'
                             }`}
                           >
                             Submitted Date
@@ -2061,7 +2129,9 @@ export default function ApprovalsPage() {
                                   ? 'text-green-800'
                                   : activeFilter === 'rejected'
                                     ? 'text-red-800'
-                                    : 'text-gray-700'
+                                    : activeFilter === 'closed'
+                                      ? 'text-blue-800'
+                                      : 'text-gray-700'
                             }`}
                           >
                             Total Amount
@@ -2074,7 +2144,9 @@ export default function ApprovalsPage() {
                                   ? 'text-green-800'
                                   : activeFilter === 'rejected'
                                     ? 'text-red-800'
-                                    : 'text-gray-700'
+                                    : activeFilter === 'closed'
+                                      ? 'text-blue-800'
+                                      : 'text-gray-700'
                             }`}
                           >
                             Status
@@ -2087,7 +2159,9 @@ export default function ApprovalsPage() {
                                   ? 'text-green-800'
                                   : activeFilter === 'rejected'
                                     ? 'text-red-800'
-                                    : 'text-gray-700'
+                                    : activeFilter === 'closed'
+                                      ? 'text-blue-800'
+                                      : 'text-gray-700'
                             }`}
                           >
                             Actions
@@ -2128,7 +2202,9 @@ export default function ApprovalsPage() {
                                               : requisition.STATUS ===
                                                   'REJECTED'
                                                 ? 'bg-gradient-to-r from-red-500 to-pink-600'
-                                                : 'bg-gradient-to-r from-gray-500 to-gray-600'
+                                                : requisition.STATUS === 'CLOSED'
+                                                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                                                  : 'bg-gradient-to-r from-gray-500 to-gray-600'
                                     }`}
                                   >
                                     <span className="text-white text-sm font-bold">
