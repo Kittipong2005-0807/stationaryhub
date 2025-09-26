@@ -89,12 +89,28 @@ export async function POST(request: NextRequest) {
         data: { STATUS: 'CLOSED' }
       })
 
+      // หา USER_ID ของ admin จาก email
+      let adminUserId = 'admin'
+      try {
+        if (session.user.email) {
+          const adminUser = await prisma.uSERS.findFirst({
+            where: { EMAIL: session.user.email },
+            select: { USER_ID: true }
+          })
+          if (adminUser) {
+            adminUserId = adminUser.USER_ID
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Could not find admin user, using default admin ID')
+      }
+
       // บันทึก status history
       await prisma.sTATUS_HISTORY.create({
         data: {
           REQUISITION_ID: requisition.REQUISITION_ID,
           STATUS: 'CLOSED',
-          CHANGED_BY: session.user.email || 'admin',
+          CHANGED_BY: adminUserId,
           CHANGED_AT: new Date(),
           COMMENT: 'สินค้ามาแล้ว - ส่งแจ้งเตือนให้ผู้ใช้'
         }
