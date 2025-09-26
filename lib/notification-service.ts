@@ -2284,36 +2284,42 @@ export class NotificationService {
         <title>สินค้ามาแล้ว - StationaryHub</title>
         <style>
           body { 
-            font-family: Arial, sans-serif; 
-            line-height: 1.5; 
-            color: #333; 
-            background-color: #f5f5f5;
+            font-family: 'Times New Roman', serif; 
+            line-height: 1.6; 
+            color: #000000; 
+            background-color: #ffffff;
             margin: 0;
-            padding: 0;
+            padding: 20px;
           }
           
           .email-container { 
             width: 100%; 
+            max-width: 800px;
             background-color: #ffffff;
-            border: 1px solid #ddd;
+            border: 1px solid #000000;
+            margin: 0 auto 40px auto;
           }
           
           .header { 
-            background-color: #2c3e50; 
-            color: white; 
+            background-color: #ffffff; 
+            color: #000000; 
             padding: 30px 40px; 
             text-align: center;
+            border-bottom: 2px solid #000000;
           }
           
           .header h1 { 
             font-size: 24px; 
             font-weight: bold; 
             margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
           }
           
           .header p { 
             font-size: 16px; 
             margin: 8px 0 0 0;
+            font-style: italic;
           }
           
           .content { 
@@ -2324,155 +2330,132 @@ export class NotificationService {
           .section { 
             margin-bottom: 30px;
             padding: 20px;
-            border: 1px solid #e0e0e0;
-            background-color: #fafafa;
+            border: 1px solid #000000;
+            background-color: #ffffff;
           }
           
           .section h3 { 
-            color: #2c3e50; 
+            color: #000000; 
             font-size: 18px; 
             font-weight: bold; 
             margin: 0 0 15px 0;
-            border-bottom: 2px solid #2c3e50;
+            border-bottom: 1px solid #000000;
             padding-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
           }
           
           .info-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
+            border: 1px solid #000000;
           }
           
           .info-table td {
-            padding: 8px 0;
-            border-bottom: 1px solid #e0e0e0;
-            font-size: 15px;
+            padding: 12px 15px;
+            border: 1px solid #000000;
+            font-size: 14px;
+            vertical-align: top;
           }
           
           .info-table td:first-child {
             font-weight: bold;
             width: 200px;
-            color: #2c3e50;
+            background-color: #f5f5f5;
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 0.5px;
           }
           
           .message-box {
             background-color: #ffffff;
-            border: 1px solid #ccc;
+            border: 2px solid #000000;
             padding: 20px;
-            margin-top: 15px;
-            font-size: 15px;
+            margin: 20px 0;
+            font-size: 14px;
             line-height: 1.5;
             white-space: pre-line;
           }
           
           .button { 
             display: inline-block; 
-            padding: 15px 30px; 
-            background-color: #2c3e50; 
-            color: #ffffff; 
+            padding: 12px 24px; 
+            background-color: #ffffff; 
+            color: #000000; 
             text-decoration: none; 
-            border: none;
-            font-size: 16px;
+            border: 2px solid #000000;
+            font-size: 14px;
             text-align: center;
             margin: 20px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: bold;
+          }
+          
+          .button:hover {
+            background-color: #000000;
+            color: #ffffff;
           }
           
           .footer { 
             margin-top: 30px; 
             padding: 30px 40px; 
-            background-color: #f8f9fa; 
-            border-top: 1px solid #e0e0e0;
-            font-size: 14px; 
-            color: #666;
+            background-color: #ffffff; 
+            border-top: 2px solid #000000;
+            font-size: 12px; 
+            color: #000000;
             text-align: center;
           }
           
           .footer p {
             margin: 8px 0;
+            font-style: italic;
           }
           
-          /* Responsive Design */
-          @media only screen and (max-width: 767px) {
-            .email-container {
-              width: 100%;
-              margin: 0;
-            }
-            
-            .header {
-              padding: 20px 15px;
-            }
-            
-            .header h1 {
-              font-size: 20px;
-            }
-            
-            .header p {
-              font-size: 14px;
-            }
-            
-            .content {
-              padding: 25px 15px;
-            }
-            
-            .section {
-              padding: 15px;
-              margin-bottom: 20px;
-            }
-            
-            .section h3 {
-              font-size: 16px;
-            }
-            
-            .info-table td {
-              font-size: 14px;
-              padding: 6px 0;
-            }
-            
-            .info-table td:first-child {
-              width: 120px;
-              font-size: 13px;
-            }
-            
-            .message-box {
-              font-size: 14px;
-              padding: 15px;
-            }
-            
-            .button {
-              width: 100%;
-              display: block;
-              text-align: center;
-              padding: 12px 20px;
-              font-size: 15px;
-            }
-            
-            .footer {
-              padding: 20px 15px;
-            }
+          .warning-box {
+            background-color: #ffffff;
+            border: 2px solid #000000;
+            padding: 20px;
+            margin: 20px 0;
+            font-size: 14px;
+          }
+          
+          .warning-box p {
+            margin: 10px 0;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          
+          .warning-box ul {
+            margin: 10px 0;
+            padding-left: 20px;
+          }
+          
+          .warning-box li {
+            margin-bottom: 8px;
+            font-size: 13px;
           }
         </style>
       </head>
       <body>
         <div class="email-container">
           <div class="header">
-            <h1>สินค้ามาแล้ว</h1>
-            <p>StationaryHub - การแจ้งเตือนสินค้ามาแล้ว</p>
+            <h1>การแจ้งเตือนระบบ</h1>
+            <p>StationaryHub - ระบบจัดการวัสดุสำนักงาน</p>
           </div>
           <div class="content">
             <div class="section">
-              <h3>สถานะสินค้า</h3>
-              <p>สินค้าที่คุณขอเบิกได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า</p>
-            </div>
-            
-            <div class="section">
-              <h3>รายละเอียดคำขอเบิก</h3>
+              <h3>สินค้ามาถึงแล้ว</h3>
+              <p>สินค้าที่คุณสั่งซื้อมาถึงแล้ว กรุณามารับสินค้า</p>
               <table class="info-table">
                 <tr>
                   <td>เลขที่คำขอ:</td>
                   <td>#${data.requisitionId}</td>
                 </tr>
                 <tr>
-                  <td>ผู้ขอเบิก:</td>
+                  <td>ผู้สั่งซื้อ:</td>
                   <td>${data.requesterName}</td>
                 </tr>
                 <tr>
@@ -2488,15 +2471,15 @@ export class NotificationService {
                   <td>${ThaiTimeUtils.toThaiDateString(ThaiTimeUtils.getCurrentThaiTime())} ${ThaiTimeUtils.toThaiTimeOnlyString(ThaiTimeUtils.getCurrentThaiTime())}</td>
                 </tr>
               </table>
-            </div>
-            
-            <div class="section">
-              <h3>ข้อความจากผู้ดูแลระบบ</h3>
-              <div class="message-box">${data.message}</div>
-            </div>
-            
-            <div style="text-align: center;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/orders" class="button">ดูรายการคำขอเบิก</a>
+              
+              <div class="message-box">
+                <p><strong>ข้อความจากผู้ดูแลระบบ:</strong></p>
+                <p>${data.message}</p>
+              </div>
+              
+              <div style="text-align: center;">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/orders" class="button">ดูรายละเอียดสินค้า</a>
+              </div>
             </div>
           </div>
           <div class="footer">

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
 import { prisma } from "@/lib/prisma"
 import { ThaiTimeUtils } from "@/lib/thai-time-utils"
+import { NotificationService } from "@/lib/notification-service"
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,18 +51,70 @@ export async function POST(request: NextRequest) {
     const toUserId = requisition.USERS?.USER_ID || requisition.USER_ID?.toString() || 'unknown'
     console.log("🔔 Using TO_USER_ID:", toUserId)
 
-    // สร้างการแจ้งเตือนว่าสินค้ามาแล้ว
-    const notification = await prisma.$executeRaw`
-      INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT)
-      VALUES (${toUserId}, ${`สินค้ามาแล้ว - Requisition #${requisition.REQUISITION_ID}`}, ${message || `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`}, 'SENT', GETDATE())
-    `
+    // ดึง email ของ user จาก LDAP
+    const userEmail = await NotificationService.getUserEmailFromLDAP(toUserId)
+    
+    if (!userEmail) {
+      console.log(`⚠️ No email found for user ${toUserId}`)
+      return NextResponse.json({ 
+        success: false, 
+        message: "ไม่พบอีเมลของ user นี้",
+        reason: "User has no email configured"
+      })
+    }
 
-    console.log("🔔 Created notification with GETDATE()")
+    // สร้างข้อความอีเมล
+    const emailSubject = `📦 สินค้ามาแล้ว - Requisition #${requisition.REQUISITION_ID}`
+    const emailMessage = message || `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ" 
-    })
+    // ส่งอีเมลจริง
+    try {
+      await NotificationService.sendTestEmail(
+        userEmail,
+        emailSubject,
+        NotificationService.createArrivalEmailTemplate({
+          requisitionId: requisition.REQUISITION_ID,
+          message: emailMessage,
+          adminName: session.user.name || 'Admin',
+          totalAmount: Number(requisition.TOTAL_AMOUNT || 0),
+          requesterName: requisition.USERS?.USERNAME || toUserId
+        })
+      )
+
+      console.log(`✅ Arrival email sent successfully to ${toUserId} at ${userEmail}`)
+
+      // บันทึกลง EMAIL_LOGS หลังจากส่งเมลสำเร็จ
+      const notification = await prisma.$executeRaw`
+        INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, TO_EMAIL)
+        VALUES (${toUserId}, ${emailSubject}, ${emailMessage}, 'SENT', GETDATE(), ${userEmail})
+      `
+
+      console.log("🔔 Created notification with GETDATE()")
+
+      return NextResponse.json({ 
+        success: true, 
+        message: "ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ",
+        emailSent: true,
+        userEmail
+      })
+
+    } catch (emailError) {
+      console.error(`❌ Error sending arrival email to ${userEmail}:`, emailError)
+      
+      // บันทึก error ลง EMAIL_LOGS
+      const notification = await prisma.$executeRaw`
+        INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, TO_EMAIL, ERROR_MESSAGE)
+        VALUES (${toUserId}, ${emailSubject}, ${emailMessage}, 'FAILED', GETDATE(), ${userEmail}, ${emailError instanceof Error ? emailError.message : String(emailError)})
+      `
+
+      return NextResponse.json({ 
+        success: false, 
+        message: "เกิดข้อผิดพลาดในการส่งอีเมล",
+        emailSent: false,
+        error: emailError instanceof Error ? emailError.message : String(emailError),
+        userEmail
+      })
+    }
   } catch (error: any) {
     console.error("❌ Error creating arrival notification:", error)
     console.error("❌ Error details:", {
