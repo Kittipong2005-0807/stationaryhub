@@ -1297,19 +1297,28 @@ export class NotificationService {
         }
       }
 
+      // ใช้ Gmail SMTP เป็น fallback หาก server หลักไม่ทำงาน
+      const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com'
+      const smtpPort = Number(process.env.SMTP_PORT) || 587
+      
+      console.log(`📧 Using SMTP: ${smtpHost}:${smtpPort}`)
+
       console.log('📧 Creating SMTP transporter...')
       const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: Number(process.env.SMTP_PORT) || 587,
+        host: smtpHost,
+        port: smtpPort,
         secure: false,
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
         },
         // เพิ่ม timeout และ debug options
-        connectionTimeout: 10000, // 10 seconds
-        greetingTimeout: 10000,   // 10 seconds
-        socketTimeout: 10000,     // 10 seconds
+        connectionTimeout: 30000, // 30 seconds
+        greetingTimeout: 30000,   // 30 seconds
+        socketTimeout: 30000,     // 30 seconds
+        tls: {
+          rejectUnauthorized: false
+        }
       })
 
       // ทดสอบการเชื่อมต่อ SMTP
@@ -1324,6 +1333,50 @@ export class NotificationService {
       } catch (verifyError) {
         console.error('❌ SMTP connection verification failed:', verifyError)
         console.error('❌ Please check your SMTP settings and network connection')
+        
+        // ลองใช้ Gmail SMTP หาก server หลักไม่ทำงาน
+        if (smtpHost !== 'smtp.gmail.com') {
+          console.log('🔄 Trying Gmail SMTP as fallback...')
+          try {
+            const gmailTransporter = nodemailer.createTransport({
+              host: 'smtp.gmail.com',
+              port: 587,
+              secure: false,
+              auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+              },
+              connectionTimeout: 30000,
+              greetingTimeout: 30000,
+              socketTimeout: 30000,
+              tls: {
+                rejectUnauthorized: false
+              }
+            })
+            
+            await gmailTransporter.verify()
+            console.log('✅ Gmail SMTP connection verified successfully')
+            
+            // ใช้ Gmail transporter แทน
+            const result = await gmailTransporter.sendMail({
+              from: process.env.SMTP_FROM || 'stationaryhub@ube.co.th',
+              to,
+              subject,
+              html
+            })
+            
+            console.log('✅ Email sent via Gmail SMTP successfully!')
+            return {
+              success: true,
+              error: null,
+              messageId: result.messageId,
+              emailSize: html.length
+            }
+          } catch (gmailError) {
+            console.error('❌ Gmail SMTP also failed:', gmailError)
+          }
+        }
+        
         return {
           success: false,
           error: `SMTP connection failed: ${verifyError instanceof Error ? verifyError.message : String(verifyError)}`,
