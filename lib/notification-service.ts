@@ -2499,37 +2499,8 @@ export class NotificationService {
    */
   static async sendTestEmail(toEmail: string, subject: string, message: string) {
     try {
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Test Email</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-            .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
-            .footer { margin-top: 20px; padding: 20px; background: #f5f5f5; border-radius: 8px; font-size: 12px; color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🧪 Test Email</h1>
-            </div>
-            <div class="content">
-              <h2>${subject}</h2>
-              <p>${message}</p>
-              <p><strong>เวลาส่ง:</strong> ${ThaiTimeUtils.toThaiTimeString(ThaiTimeUtils.getCurrentThaiTime())}</p>
-            </div>
-            <div class="footer">
-              <p>นี่เป็นอีเมลทดสอบจากระบบ Stationary Hub</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `
+      // ใช้ message ที่ส่งมาเป็น HTML template โดยตรง
+      const htmlContent = message
 
       await this.sendEmail(toEmail, subject, htmlContent)
       if (process.env.NODE_ENV === 'development') {
