@@ -48,14 +48,15 @@ export default function LoginPage() {
     setError('');
     try {
       const res = await signIn('credentials', {
-        redirect: false,
+        redirect: true,
         username,
         password,
-        basePath: `${basePath}/api/auth`
+        callbackUrl: `${basePath}/`
+        // basePath: `${basePath}/api/auth`
       });
       if (res?.ok && !res?.error) {
         console.log('T : ', res);
-        router.push('/');
+        // router.push('/');
       } else {
         setError('Invalid username or password');
       }
