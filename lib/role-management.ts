@@ -315,14 +315,14 @@ export class RoleManagementService {
         select: { ROLE: true }
       })
       
-      users.forEach(user => {
+      users.forEach((user: { ROLE: string | null }) => {
         if (user.ROLE && stats.hasOwnProperty(user.ROLE)) {
           stats[user.ROLE as UserRole]++
         }
       })
       
       return stats
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error getting role statistics:", error)
       return {
         [UserRole.USER]: 0,

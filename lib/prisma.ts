@@ -26,12 +26,12 @@ const prismaClientSingleton = () => {
       .then(() => {
         console.log("✅ Prisma client connected successfully")
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         console.error("❌ Prisma client connection failed:", error)
       })
 
     return client
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("❌ Failed to create Prisma client:", error)
     throw error
   }
@@ -49,7 +49,7 @@ export async function disconnectPrisma() {
       await prisma.$disconnect()
       console.log("✅ Prisma client disconnected successfully")
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("❌ Failed to disconnect Prisma client:", error)
   }
 }
