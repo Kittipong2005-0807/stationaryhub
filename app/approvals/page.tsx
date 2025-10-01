@@ -166,7 +166,7 @@ export default function ApprovalsPage() {
 
     // แยก API call ตาม Role
     if (user?.ROLE === 'ADMIN') {
-      // Admin เห็น requisitions ทั้งหมดเพื่อแสดงจำนวนครบถ้วน
+      // Admin เห็น requisitions ของทุกแผนก
       console.log('Admin user data:', {
         EmpCode: user?.EmpCode,
         USER_ID: user?.USER_ID,
@@ -174,7 +174,7 @@ export default function ApprovalsPage() {
         ROLE: user?.ROLE
       });
 
-      fetch(getApiUrl(`/api/orgcode3?action=getAllRequisitionsForDepartment&userId=${user?.USER_ID}`))
+      fetch(getApiUrl(`/api/orgcode3?action=getAllRequisitionsForAdmin`))
         .then((res) => {
           console.log('Admin API response status:', res.status);
           if (!res.ok) {
@@ -183,7 +183,7 @@ export default function ApprovalsPage() {
           return res.json();
         })
         .then(async (data) => {
-          console.log('Fetched approved requisitions for admin:', data);
+          console.log('Fetched all requisitions for admin:', data);
           if (data.requisitions && Array.isArray(data.requisitions)) {
             setRequisitions(data.requisitions);
           } else if (Array.isArray(data)) {
@@ -195,7 +195,7 @@ export default function ApprovalsPage() {
           setLoading(false);
         })
         .catch((error) => {
-          console.error('Error fetching approved requisitions:', error);
+          console.error('Error fetching all requisitions for admin:', error);
           alert('โหลดข้อมูล requisitions ไม่สำเร็จ: ' + error.message);
           setRequisitions([]);
           setLoading(false);
@@ -272,7 +272,7 @@ export default function ApprovalsPage() {
         if (user?.ROLE === 'ADMIN') {
           // Admin refresh ข้อมูล
           const refreshResponse = await fetch(
-            getApiUrl(`/api/orgcode3?action=getAllRequisitionsForDepartment&userId=${user?.USER_ID}`)
+            getApiUrl(`/api/orgcode3?action=getAllRequisitionsForAdmin`)
           );
           if (refreshResponse.ok) {
             const data = await refreshResponse.json();
@@ -319,7 +319,7 @@ export default function ApprovalsPage() {
     try {
       if (user?.ROLE === 'ADMIN') {
         const response = await fetch(
-          getApiUrl(`/api/orgcode3?action=getAllRequisitionsForDepartment&userId=${user?.USER_ID}`)
+          getApiUrl(`/api/orgcode3?action=getAllRequisitionsForAdmin`)
         );
         if (response.ok) {
           const data = await response.json();

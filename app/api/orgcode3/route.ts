@@ -44,6 +44,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    if (action === "getAllRequisitionsForAdmin") {
+      const user = session.user as any
+      if (user?.ROLE !== "ADMIN") {
+        return NextResponse.json({ error: "Admin access required" }, { status: 403 })
+      }
+
+      try {
+        const requisitions = await OrgCode3Service.getAllRequisitionsForAdmin()
+        return NextResponse.json({ requisitions })
+      } catch (error) {
+        console.error("Error getting all requisitions for admin:", error)
+        return NextResponse.json({ error: "Failed to get all requisitions" }, { status: 500 })
+      }
+    }
+
     switch (action) {
       case "getUserSiteId":
         if (!userId) {

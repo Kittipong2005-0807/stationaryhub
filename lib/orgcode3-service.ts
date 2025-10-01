@@ -436,6 +436,42 @@ export class OrgCode3Service {
   }
 
   /**
+   * ดึงข้อมูลคำสั่งซื้อทั้งหมดสำหรับ Admin (ทุกแผนก)
+   */
+  static async getAllRequisitionsForAdmin(): Promise<unknown[]> {
+    try {
+      console.log("🔍 Getting all requisitions for Admin (all departments)")
+      
+      // ดึง requisitions ทั้งหมดจากทุกแผนก
+      const requisitions = await prisma.$queryRaw`
+        SELECT
+          r.REQUISITION_ID, 
+          r.USER_ID, 
+          r.STATUS, 
+          r.SUBMITTED_AT, 
+          r.TOTAL_AMOUNT, 
+          r.SITE_ID, 
+          r.ISSUE_NOTE, 
+          u.USERNAME, 
+          u.DEPARTMENT,
+          u.ROLE
+        FROM REQUISITIONS r
+        JOIN USERS u ON r.USER_ID = u.USER_ID
+        ORDER BY r.SUBMITTED_AT DESC
+      `
+      
+      console.log("🔍 Found all requisitions for Admin:", Array.isArray(requisitions) ? requisitions.length : 0)
+      return Array.isArray(requisitions) ? requisitions : []
+    } catch (error: unknown) {
+      console.error('Error fetching all requisitions for Admin:', error)
+      if (error instanceof Error) { 
+        console.error('Error details:', { message: error.message, stack: error.stack }) 
+      }
+      return []
+    }
+  }
+
+  /**
    * ดึงข้อมูลคำสั่งซื้อทั้งหมดจาก SITE_ID ที่กำหนด (สำหรับกรณีที่ต้องการข้อมูลจาก SITE_ID เฉพาะ)
    */
   static async getRequisitionsBySiteId(siteId: string): Promise<unknown[]> {
