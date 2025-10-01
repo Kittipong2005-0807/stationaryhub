@@ -82,6 +82,7 @@ export default function Layout({ children }: LayoutProps) {
   const [loadingNotifications, setLoadingNotifications] = React.useState(false)
   const [_adminMenuAnchor, setAdminMenuAnchor] = React.useState<null | HTMLElement>(null)
   const [adminDropdownOpen, setAdminDropdownOpen] = React.useState(false)
+  const [userMenuOpen, setUserMenuOpen] = React.useState(false)
 
   const unreadCount = notifications.filter((n) => !n.isRead).length
 
@@ -147,12 +148,29 @@ export default function Layout({ children }: LayoutProps) {
     }
   }, [adminDropdownOpen])
 
+  // Click outside handler for user menu dropdown
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuOpen && !(event.target as Element).closest('[data-user-menu]')) {
+        setUserMenuOpen(false)
+        setAnchorEl(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [userMenuOpen])
+
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
+    setUserMenuOpen(true)
   }
 
   const handleClose = () => {
     setAnchorEl(null)
+    setUserMenuOpen(false)
   }
 
   const handleAdminMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -733,6 +751,7 @@ export default function Layout({ children }: LayoutProps) {
               aria-label="Open user menu"
               tabIndex={0}
               onKeyDown={(e) => e.key === "Enter" && handleMenu(e as any)}
+              data-user-menu
             >
               <Avatar sx={{ width: 28, height: 28 }} className="bg-blue-500">
                 {getRoleIcon(user?.ROLE || "")}
@@ -759,6 +778,7 @@ export default function Layout({ children }: LayoutProps) {
               onClose={handleClose}
               PaperProps={{
                 className: "mt-2 min-w-[250px]",
+                'data-user-menu': true,
               }}
               transformOrigin={{ horizontal: "right", vertical: "top" }}
               anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
