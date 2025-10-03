@@ -26,16 +26,13 @@ export class NotificationService {
   }
 
   /**
-   * ส่งการแจ้งเตือนเมื่อสร้าง requisition ใหม่
+   * ส่งการแจ้งเตือนเมื่อสร้าง requisition ใหม่ - ส่งอีเมลไปยัง User และ Manager ทันทีโดยไม่มีเงื่อนไข
    */
     static async notifyRequisitionCreated(requisitionId: number, userId: string) {
-    // ลด console.log เพื่อประหยัด memory
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🔔 Notifying requisition created: ${requisitionId} by ${userId}`)
-    }
+    console.log(`🔔 Sending immediate email notifications for requisition: ${requisitionId} by ${userId}`)
     
     try {
-      // ดึงข้อมูล requisition พร้อม limit เพื่อประหยัด memory
+      // ดึงข้อมูล requisition
       const requisition = await prisma.rEQUISITIONS.findUnique({
         where: { REQUISITION_ID: requisitionId },
         include: {
@@ -47,7 +44,7 @@ export class NotificationService {
             }
           },
           REQUISITION_ITEMS: {
-            take: 50, // จำกัดจำนวนรายการสินค้า
+            take: 50,
             include: {
               PRODUCTS: {
                 select: {
@@ -65,96 +62,65 @@ export class NotificationService {
         return
       }
 
-      // สร้างข้อความแจ้งเตือน
-      const message = `คำขอเบิกของคุณ (เลขที่ ${requisitionId}) ได้ทำการส่งเรียบร้อยแล้ว จำนวนเงิน: ฿${requisition.TOTAL_AMOUNT?.toFixed(2)}`
+      // สร้างข้อมูลสำหรับอีเมล
+      const emailData = {
+        requisitionId,
+        requesterName: requisition.USERS?.USERNAME || userId,
+        totalAmount: requisition.TOTAL_AMOUNT || 0,
+        submittedAt: requisition.SUBMITTED_AT || new Date(),
+        items: requisition.REQUISITION_ITEMS?.slice(0, 20).map((item: any) => ({
+          productName: item.PRODUCTS?.PRODUCT_NAME || 'Unknown Product',
+          quantity: item.QUANTITY || 0,
+          unitPrice: Number(item.UNIT_PRICE || 0),
+          totalPrice: Number(item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0)
+        })) || []
+      }
 
-      // ตรวจสอบว่าเคยสร้าง notification สำหรับ requisition นี้แล้วหรือไม่
-      const existingNotification = await prisma.eMAIL_LOGS.findFirst({
-        where: {
-          TO_USER_ID: userId,
-          EMAIL_TYPE: 'requisition_created',
-          BODY: {
-            contains: `requisitionId: ${requisitionId}`
-          }
-        },
-        select: {
-          EMAIL_ID: true
-        }
-      })
-
-      // ดึง email จาก LDAP ก่อน
+      // 1. ส่งอีเมลให้ User ทันที (ไม่มีเงื่อนไข)
       const userEmail = await this.getUserEmailFromLDAP(userId)
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`📧 User email from LDAP: ${userEmail}`)
-      }
-
-      if (!existingNotification) {
-        // ส่งอีเมล HTML template ที่มีข้อมูลครบถ้วน
-        if (userEmail) {
-          try {
-            if (process.env.NODE_ENV === 'development') {
-              console.log(`📧 Sending HTML email to user ${userId} at ${userEmail}`)
-            }
-            
-            // สร้างข้อมูลรายการสินค้าแบบจำกัดเพื่อประหยัด memory
-            const items = requisition.REQUISITION_ITEMS?.slice(0, 20).map((item: any) => ({
-              productName: item.PRODUCTS?.PRODUCT_NAME || 'Unknown Product',
-              quantity: item.QUANTITY || 0,
-              unitPrice: Number(item.UNIT_PRICE || 0),
-              totalPrice: Number(item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0)
-            })) || []
-            
-            // สร้าง email template แบบง่ายเพื่อประหยัด memory
-            const emailHtml = this.createSimpleEmailTemplate('requisition_created', {
-              requisitionId,
-              totalAmount: requisition.TOTAL_AMOUNT,
-              submittedAt: requisition.SUBMITTED_AT,
-              items: items,
-              requesterName: requisition.USERS?.USERNAME || userId
-            })
-            
-            await this.sendEmail(
-              userEmail,
-              'คำขอเบิกได้รับการส่งเรียบร้อยแล้ว',
-              emailHtml
-            )
-            
-            if (process.env.NODE_ENV === 'development') {
-              console.log(`✅ HTML email sent to user ${userId}`)
-            }
-          } catch (emailError) {
-            console.error(`❌ Error sending HTML email to user ${userId}:`, emailError)
-          }
+      if (userEmail) {
+        try {
+          console.log(`📧 Sending email to user ${userId} at ${userEmail}`)
+          
+          const userEmailHtml = this.createSimpleEmailTemplate('requisition_created', emailData)
+          
+          await this.sendEmail(
+            userEmail,
+            'คำขอเบิกได้รับการส่งเรียบร้อยแล้ว',
+            userEmailHtml
+          )
+          
+          console.log(`✅ Email sent to user ${userId}`)
+        } catch (emailError) {
+          console.error(`❌ Error sending email to user ${userId}:`, emailError)
         }
-
-        // บันทึกการแจ้งเตือนในฐานข้อมูล
-        await this.logNotification({
-          type: 'requisition_created',
-          userId,
-          requisitionId,
-          message,
-          email: userEmail || undefined,
-          actorId: userId,
-          priority: 'medium'
-        })
-        console.log(`📝 Created new notification for requisition ${requisitionId}`)
       } else {
-        console.log(`⚠️ Notification already exists for requisition ${requisitionId}`)
+        console.log(`⚠️ No email found for user ${userId}`)
       }
 
-      // ส่งอีเมลหา Manager ตรงๆ (เร็วกว่าและเรียบง่ายกว่า)
+      // 2. ส่งอีเมลให้ Manager ทันที (ไม่มีเงื่อนไข)
       await this.sendDirectManagerEmail(requisitionId, userId)
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`✅ Requisition creation notification completed for ${requisitionId}`)
-      }
+      // 3. บันทึกการแจ้งเตือนในฐานข้อมูล
+      const message = `คำขอเบิกของคุณ (เลขที่ ${requisitionId}) ได้ทำการส่งเรียบร้อยแล้ว จำนวนเงิน: ฿${requisition.TOTAL_AMOUNT?.toFixed(2)}`
+      
+      await this.logNotification({
+        type: 'requisition_created',
+        userId,
+        requisitionId,
+        message,
+        email: userEmail || undefined,
+        actorId: userId,
+        priority: 'medium'
+      })
+
+      console.log(`✅ All email notifications sent for requisition ${requisitionId}`)
 
       // ทำความสะอาด memory
       this.memoryCleanup()
 
     } catch (error) {
       console.error('❌ Error notifying requisition created:', error)
-      // ทำความสะอาด memory แม้เกิด error
       this.memoryCleanup()
     }
   }
@@ -347,12 +313,11 @@ export class NotificationService {
   }
 
   /**
-   * ส่งอีเมลหา Manager ตรงๆ โดยไม่ผ่าน logNotification
-   * ใช้สำหรับการส่งอีเมลที่ต้องการความเร็วและความเรียบง่าย
+   * ส่งอีเมลหา Manager ตรงๆ โดยไม่มีเงื่อนไข - ส่งทันทีเมื่อมีการสั่งของ
    */
   static async sendDirectManagerEmail(requisitionId: number, userId: string) {
     try {
-      console.log(`📧 Sending direct email to managers for requisition ${requisitionId} from user ${userId}`)
+      console.log(`📧 Sending immediate email to managers for requisition ${requisitionId} from user ${userId}`)
       
       // ดึงข้อมูล user เพื่อหา CostCenter
       const user = await prisma.$queryRaw<{ 
@@ -377,7 +342,7 @@ export class NotificationService {
 
       console.log(`🔍 User CostCenter: ${userCostCenter}`)
 
-      // หา managers จาก VS_DivisionMgr
+      // หา managers จาก VS_DivisionMgr - ส่งให้ทุกคนที่เจอ
       const managers = await prisma.$queryRaw<{ 
         L2: string, 
         CurrentEmail: string, 
@@ -394,9 +359,9 @@ export class NotificationService {
 
       console.log(`🔔 Found ${managers.length} managers for CostCenter ${userCostCenter}`)
 
+      // ส่งอีเมลให้ทุก Manager ที่เจอ (ไม่มีเงื่อนไข)
       if (managers.length === 0) {
-        console.log(`❌ No managers found for CostCenter ${userCostCenter}`)
-        return;
+        console.log(`⚠️ No managers found for CostCenter ${userCostCenter} - but continuing anyway`)
       }
 
       // ดึงข้อมูล requisition สำหรับสร้างอีเมล
@@ -442,80 +407,76 @@ export class NotificationService {
         })) || []
       };
 
-      // ส่งอีเมลไปยัง managers แต่ละคน
+      // ส่งอีเมลไปยัง managers แต่ละคน (ไม่มีเงื่อนไข)
       for (const manager of managers) {
-        if (manager.CurrentEmail) {
-          try {
-            console.log(`📤 Sending direct email to manager: ${manager.FullNameEng} (${manager.CurrentEmail})`)
+        try {
+          console.log(`📤 Sending immediate email to manager: ${manager.FullNameEng} (${manager.CurrentEmail})`)
+          
+          // สร้าง HTML email template
+          const emailHtml = this.createEmailTemplate('requisition_pending', emailData)
+          
+          // บันทึกลง EMAIL_LOGS ก่อนส่งอีเมล
+          const emailLog = await prisma.$executeRaw`
+            INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, IS_READ, FROM_EMAIL, TO_EMAIL, EMAIL_TYPE, PRIORITY, DELIVERY_STATUS, RETRY_COUNT, CREATED_BY)
+            VALUES (${manager.L2}, ${`มีคำขอเบิกใหม่รอการอนุมัติ - Requisition #${requisitionId}`}, ${emailHtml}, 'PENDING', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${manager.CurrentEmail}, 'requisition_pending', 'medium', 'pending', 0, 'system')
+          `;
+          
+          // ส่งอีเมลตรงๆ (ไม่มีเงื่อนไข)
+          const emailResult = await this.sendEmail(
+            manager.CurrentEmail,
+            `มีคำขอเบิกใหม่รอการอนุมัติ - Requisition #${requisitionId}`,
+            emailHtml
+          );
+
+          if (emailResult) {
+            console.log(`✅ Email sent successfully to manager ${manager.FullNameEng} (${manager.CurrentEmail})`)
             
-            // สร้าง HTML email template
-            const emailHtml = this.createEmailTemplate('requisition_pending', emailData)
-            
-            // บันทึกลง EMAIL_LOGS ก่อนส่งอีเมล
-            const emailLog = await prisma.$executeRaw`
-              INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, IS_READ, FROM_EMAIL, TO_EMAIL, EMAIL_TYPE, PRIORITY, DELIVERY_STATUS, RETRY_COUNT, CREATED_BY)
-              VALUES (${manager.L2}, ${`มีคำขอเบิกใหม่รอการอนุมัติ - Requisition #${requisitionId}`}, ${emailHtml}, 'PENDING', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${manager.CurrentEmail}, 'requisition_pending', 'medium', 'pending', 0, 'system')
+            // อัปเดตสถานะเป็น SENT ใน EMAIL_LOGS
+            await prisma.$executeRaw`
+              UPDATE EMAIL_LOGS 
+              SET STATUS = 'SENT', 
+                  DELIVERY_STATUS = 'sent',
+                  UPDATED_AT = GETDATE()
+              WHERE TO_USER_ID = ${manager.L2} 
+              AND EMAIL_TYPE = 'requisition_pending'
+              AND TO_EMAIL = ${manager.CurrentEmail}
+              AND STATUS = 'PENDING'
             `;
-
-            // ส่งอีเมลตรงๆ
-            const emailResult = await this.sendEmail(
-              manager.CurrentEmail,
-              `มีคำขอเบิกใหม่รอการอนุมัติ - Requisition #${requisitionId}`,
-              emailHtml
-            );
-
-            if (emailResult) {
-              console.log(`✅ Direct email sent successfully to manager ${manager.FullNameEng} (${manager.CurrentEmail})`)
-              
-              // อัปเดตสถานะเป็น SENT ใน EMAIL_LOGS
-              await prisma.$executeRaw`
-                UPDATE EMAIL_LOGS 
-                SET STATUS = 'SENT', 
-                    DELIVERY_STATUS = 'sent',
-                    UPDATED_AT = GETDATE()
-                WHERE TO_USER_ID = ${manager.L2} 
-                AND EMAIL_TYPE = 'requisition_pending'
-                AND TO_EMAIL = ${manager.CurrentEmail}
-                AND STATUS = 'PENDING'
-              `;
-            } else {
-              console.log(`❌ Failed to send direct email to manager ${manager.FullNameEng}`)
-              
-              // อัปเดตสถานะเป็น FAILED ใน EMAIL_LOGS
-              await prisma.$executeRaw`
-                UPDATE EMAIL_LOGS 
-                SET STATUS = 'FAILED', 
-                    DELIVERY_STATUS = 'failed',
-                    ERROR_MESSAGE = 'Direct email sending failed',
-                    UPDATED_AT = GETDATE()
-                WHERE TO_USER_ID = ${manager.L2} 
-                AND EMAIL_TYPE = 'requisition_pending'
-                AND TO_EMAIL = ${manager.CurrentEmail}
-                AND STATUS = 'PENDING'
-              `;
-            }
-          } catch (emailError) {
-            console.error(`❌ Error sending direct email to manager ${manager.FullNameEng}:`, emailError)
+          } else {
+            console.log(`❌ Failed to send email to manager ${manager.FullNameEng}`)
             
             // อัปเดตสถานะเป็น FAILED ใน EMAIL_LOGS
-            try {
-              await prisma.$executeRaw`
-                UPDATE EMAIL_LOGS 
-                SET STATUS = 'FAILED', 
-                    DELIVERY_STATUS = 'failed',
-                    ERROR_MESSAGE = ${emailError instanceof Error ? emailError.message : String(emailError)},
-                    UPDATED_AT = GETDATE()
-                WHERE TO_USER_ID = ${manager.L2} 
-                AND EMAIL_TYPE = 'requisition_pending'
-                AND TO_EMAIL = ${manager.CurrentEmail}
-                AND STATUS = 'PENDING'
-              `;
-            } catch (updateError) {
-              console.error(`❌ Error updating EMAIL_LOGS for manager ${manager.L2}:`, updateError)
-            }
+            await prisma.$executeRaw`
+              UPDATE EMAIL_LOGS 
+              SET STATUS = 'FAILED', 
+                  DELIVERY_STATUS = 'failed',
+                  ERROR_MESSAGE = 'Direct email sending failed',
+                  UPDATED_AT = GETDATE()
+              WHERE TO_USER_ID = ${manager.L2} 
+              AND EMAIL_TYPE = 'requisition_pending'
+              AND TO_EMAIL = ${manager.CurrentEmail}
+              AND STATUS = 'PENDING'
+            `;
           }
-        } else {
-          console.log(`⚠️ Manager ${manager.L2} has no email address`)
+        } catch (emailError) {
+          console.error(`❌ Error sending email to manager ${manager.FullNameEng}:`, emailError)
+          
+          // อัปเดตสถานะเป็น FAILED ใน EMAIL_LOGS
+          try {
+            await prisma.$executeRaw`
+              UPDATE EMAIL_LOGS 
+              SET STATUS = 'FAILED', 
+                  DELIVERY_STATUS = 'failed',
+                  ERROR_MESSAGE = ${emailError instanceof Error ? emailError.message : String(emailError)},
+                  UPDATED_AT = GETDATE()
+              WHERE TO_USER_ID = ${manager.L2} 
+              AND EMAIL_TYPE = 'requisition_pending'
+              AND TO_EMAIL = ${manager.CurrentEmail}
+              AND STATUS = 'PENDING'
+            `;
+          } catch (updateError) {
+            console.error(`❌ Error updating EMAIL_LOGS for manager ${manager.L2}:`, updateError)
+          }
         }
       }
 
