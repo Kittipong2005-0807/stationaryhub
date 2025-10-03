@@ -415,10 +415,10 @@ export class NotificationService {
           // สร้าง HTML email template
           const emailHtml = this.createEmailTemplate('requisition_pending', emailData)
           
-          // บันทึกลง EMAIL_LOGS ก่อนส่งอีเมล
+          // บันทึกลง EMAIL_LOGS ก่อนส่งอีเมล (ใช้ userId แทน manager.L2 เพื่อหลีกเลี่ยง Foreign Key constraint)
           const emailLog = await prisma.$executeRaw`
             INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, IS_READ, FROM_EMAIL, TO_EMAIL, EMAIL_TYPE, PRIORITY, DELIVERY_STATUS, RETRY_COUNT, CREATED_BY)
-            VALUES (${manager.L2}, ${`มีคำขอเบิกใหม่รอการอนุมัติ - Requisition #${requisitionId}`}, ${emailHtml}, 'PENDING', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${manager.CurrentEmail}, 'requisition_pending', 'medium', 'pending', 0, 'system')
+            VALUES (${userId}, ${`มีคำขอเบิกใหม่รอการอนุมัติ - Requisition #${requisitionId}`}, ${emailHtml}, 'PENDING', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${manager.CurrentEmail}, 'requisition_pending', 'medium', 'pending', 0, 'system')
           `;
           
           // ส่งอีเมลตรงๆ (ไม่มีเงื่อนไข)
@@ -437,7 +437,7 @@ export class NotificationService {
               SET STATUS = 'SENT', 
                   DELIVERY_STATUS = 'sent',
                   UPDATED_AT = GETDATE()
-              WHERE TO_USER_ID = ${manager.L2} 
+              WHERE TO_USER_ID = ${userId} 
               AND EMAIL_TYPE = 'requisition_pending'
               AND TO_EMAIL = ${manager.CurrentEmail}
               AND STATUS = 'PENDING'
@@ -452,7 +452,7 @@ export class NotificationService {
                   DELIVERY_STATUS = 'failed',
                   ERROR_MESSAGE = 'Direct email sending failed',
                   UPDATED_AT = GETDATE()
-              WHERE TO_USER_ID = ${manager.L2} 
+              WHERE TO_USER_ID = ${userId} 
               AND EMAIL_TYPE = 'requisition_pending'
               AND TO_EMAIL = ${manager.CurrentEmail}
               AND STATUS = 'PENDING'
@@ -469,7 +469,7 @@ export class NotificationService {
                   DELIVERY_STATUS = 'failed',
                   ERROR_MESSAGE = ${emailError instanceof Error ? emailError.message : String(emailError)},
                   UPDATED_AT = GETDATE()
-              WHERE TO_USER_ID = ${manager.L2} 
+              WHERE TO_USER_ID = ${userId} 
               AND EMAIL_TYPE = 'requisition_pending'
               AND TO_EMAIL = ${manager.CurrentEmail}
               AND STATUS = 'PENDING'
