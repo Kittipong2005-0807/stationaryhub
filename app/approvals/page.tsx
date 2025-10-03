@@ -581,7 +581,7 @@ export default function ApprovalsPage() {
   const handleEditAllData = () => {
     setEditAllFormData({
       deliveryDate: '',
-      contactPerson: 'คุณสมชาย ใจดี',
+      contactPerson: '',
       category: '',
       companyName: 'บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)',
       companyAddress: '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
@@ -1065,11 +1065,11 @@ export default function ApprovalsPage() {
     }
 
     try {
-      // รวบรวมข้อมูลทั้งหมดและจัดกลุ่มตามคนก่อน แล้วค่อยแยกตามหมวดหมู่
-      const allItemsByUserAndCategory: Record<string, Record<string, Array<{requisition: Requisition, item: RequisitionItem}>>> = {};
-      const userCategoryTotals: Record<string, Record<string, number>> = {};
+      // รวบรวมข้อมูลทั้งหมดและจัดกลุ่มตามหมวดหมู่เท่านั้น
+      const allItemsByCategory: Record<string, Array<{requisition: Requisition, item: RequisitionItem}>> = {};
+      const categoryTotals: Record<string, number> = {};
 
-      // วนลูปผ่านทุก requisition และจัดกลุ่มตามคนและหมวดหมู่
+      // วนลูปผ่านทุก requisition และจัดกลุ่มตามหมวดหมู่
       for (const requisition of filteredRequisitions) {
         if (!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0) {
           // ลองดึงข้อมูล items ใหม่
@@ -1094,82 +1094,84 @@ export default function ApprovalsPage() {
           }
         }
 
-        const userId = requisition.USER_ID;
-        if (!allItemsByUserAndCategory[userId]) {
-          allItemsByUserAndCategory[userId] = {};
-          userCategoryTotals[userId] = {};
-        }
-
-        // จัดกลุ่ม items ตามหมวดหมู่สำหรับคนนี้
+        // จัดกลุ่ม items ตามหมวดหมู่
         for (const item of requisition.REQUISITION_ITEMS) {
           const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
           
-          if (!allItemsByUserAndCategory[userId][category]) {
-            allItemsByUserAndCategory[userId][category] = [];
-            userCategoryTotals[userId][category] = 0;
+          if (!allItemsByCategory[category]) {
+            allItemsByCategory[category] = [];
+            categoryTotals[category] = 0;
           }
           
-          allItemsByUserAndCategory[userId][category].push({ requisition, item });
-          userCategoryTotals[userId][category] += Number(calculateSafeTotalPrice(item)) || 0;
+          allItemsByCategory[category].push({ requisition, item });
+          categoryTotals[category] += Number(calculateSafeTotalPrice(item)) || 0;
         }
       }
 
-      console.log('Items grouped by user and category:', {
-        users: Object.keys(allItemsByUserAndCategory),
-        userCategories: Object.keys(allItemsByUserAndCategory).map(userId => ({
-          user: userId,
-          categories: Object.keys(allItemsByUserAndCategory[userId])
-        }))
+      console.log('Items grouped by category:', {
+        categories: Object.keys(allItemsByCategory),
+        categoryTotals
       });
 
-      // สร้าง PDF สำหรับแต่ละคนและแต่ละหมวดหมู่
-      const userIds = Object.keys(allItemsByUserAndCategory).sort();
+      // สร้าง PDF สำหรับแต่ละหมวดหมู่
+      const categoryKeys = Object.keys(allItemsByCategory).sort();
       let totalPDFs = 0;
       
-      for (const userId of userIds) {
-        const userCategories = Object.keys(allItemsByUserAndCategory[userId]).sort();
+      for (const category of categoryKeys) {
+        const items = allItemsByCategory[category];
+        totalPDFs++;
         
-        for (const category of userCategories) {
-          const items = allItemsByUserAndCategory[userId][category];
-          totalPDFs++;
-          
-          console.log(`Processing user ${userId}, category ${category}`, {
-            itemCount: items.length,
-            totalAmount: userCategoryTotals[userId][category]
-          });
-          
-          // เพิ่ม delay ระหว่างการดาวน์โหลดแต่ละไฟล์
-          if (totalPDFs > 1) {
-            await new Promise(resolve => setTimeout(resolve, 1000)); // รอ 1 วินาที
+        console.log(`Processing category ${category}`, {
+          itemCount: items.length,
+          totalAmount: categoryTotals[category]
+        });
+        
+        // เพิ่ม delay ระหว่างการดาวน์โหลดแต่ละไฟล์
+        if (totalPDFs > 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // รอ 1 วินาที
+        }
+        
+        // สร้าง PDF ใหม่สำหรับหมวดหมู่นี้
+        const pdf = new jsPDF('p', 'mm', 'a4');
+
+        // เรียงลำดับ items ตาม requisition ID และ item order
+        items.sort((a, b) => {
+          const aId = String(a.requisition.REQUISITION_ID);
+          const bId = String(b.requisition.REQUISITION_ID);
+          if (aId !== bId) {
+            return aId.localeCompare(bId);
           }
-        
-          // สร้าง PDF ใหม่สำหรับหมวดหมู่นี้
-          const pdf = new jsPDF('p', 'mm', 'a4');
+          return 0; // ถ้าเป็น requisition เดียวกัน ให้เรียงตามลำดับเดิม
+        });
 
-          // เรียงลำดับ items ตาม requisition ID และ item order
-          items.sort((a, b) => {
-            const aId = String(a.requisition.REQUISITION_ID);
-            const bId = String(b.requisition.REQUISITION_ID);
-            if (aId !== bId) {
-              return aId.localeCompare(bId);
-            }
-            return 0; // ถ้าเป็น requisition เดียวกัน ให้เรียงตามลำดับเดิม
-          });
+        // สร้าง HTML content สำหรับหมวดหมู่นี้
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.top = '-9999px';
+        tempDiv.style.width = '210mm';
+        tempDiv.style.padding = '20mm';
+        tempDiv.style.backgroundColor = 'white';
+        tempDiv.style.fontFamily = 'Arial, sans-serif';
+        tempDiv.style.fontSize = '11px';
+        tempDiv.style.lineHeight = '1.2';
 
-          // สร้าง HTML content สำหรับหมวดหมู่นี้
-          const tempDiv = document.createElement('div');
-          tempDiv.style.position = 'absolute';
-          tempDiv.style.left = '-9999px';
-          tempDiv.style.top = '-9999px';
-          tempDiv.style.width = '210mm';
-          tempDiv.style.padding = '20mm';
-          tempDiv.style.backgroundColor = 'white';
-          tempDiv.style.fontFamily = 'Arial, sans-serif';
-          tempDiv.style.fontSize = '11px';
-          tempDiv.style.lineHeight = '1.2';
+        // จัดกลุ่ม items ตามคนก่อน แล้วสร้างรายการ items
+        const itemsByUser = items.reduce((acc, { requisition, item }) => {
+          const userId = requisition.USER_ID;
+          if (!acc[userId]) {
+            acc[userId] = {
+              user: requisition,
+              items: []
+            };
+          }
+          acc[userId].items.push({ requisition, item });
+          return acc;
+        }, {} as Record<string, { user: Requisition, items: Array<{requisition: Requisition, item: RequisitionItem}> }>);
 
-          // สร้างรายการ items สำหรับหมวดหมู่นี้
-          const itemsHTML = items.map(({ requisition, item }, index) => `
+        // สร้างรายการ items แยกตามคน
+        const itemsHTML = Object.entries(itemsByUser).map(([userId, { user, items: userItems }]) => {
+          const userItemsHTML = userItems.map(({ requisition, item }, index) => `
             <tr>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${(item as any).PRODUCTS?.ITEM_ID || item.ITEM_ID || 'N/A'}</td>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px;">${item.PRODUCT_NAME}</td>
@@ -1180,178 +1182,187 @@ export default function ApprovalsPage() {
             </tr>
           `).join('');
 
-          // ดึงข้อมูล Cost Center จริงจาก requisition แรก
-          const firstRequisition = items[0]?.requisition;
-          const userOrgCode4 = firstRequisition?.SITE_ID || 'N/A';
-          const userFullName = firstRequisition?.USERNAME || firstRequisition?.USER_ID || 'N/A';
-          const department = firstRequisition?.DEPARTMENT || 'N/A';
+          return `
+            <tr style="background: #f8f9fa;">
+              <td colspan="6" style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #495057;">
+                ผู้สั่ง: ${user.USERNAME || user.USER_ID} - ${user.DEPARTMENT || 'N/A'} (${userItems.length} รายการ)
+              </td>
+            </tr>
+            ${userItemsHTML}
+          `;
+        }).join('');
 
-          const htmlContent = `
-            <div style="padding: 20px;">
-              <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
-                <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
+        // สร้างรายการผู้สั่งทั้งหมด
+        const allUsers = Object.values(itemsByUser).map(({ user }) => user);
+        const uniqueUsers = allUsers.filter((user, index, self) => 
+          index === self.findIndex(u => u.USER_ID === user.USER_ID)
+        );
+        
+        const usersList = uniqueUsers.map(user => 
+          `${user.USERNAME || user.USER_ID} (${user.DEPARTMENT || 'N/A'})`
+        ).join(', ');
+
+        const htmlContent = `
+          <div style="padding: 20px;">
+            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+              <div style="text-align: left;">
+                <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editAllFormData.companyName}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">${editAllFormData.companyAddress}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}</p>
               </div>
-              
-              <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <div style="text-align: left;">
-                  <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editAllFormData.companyName}</p>
-                  <p style="margin: 0 0 2px 0; font-size: 10px;">${editAllFormData.companyAddress}</p>
-                  <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}</p>
-                  <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}</p>
-                </div>
-                <div style="text-align: right;">
-                  <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(new Date())}</p>
-                  <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #REQ001</p>
-                </div>
-              </div>
-              
-              <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-                <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
-                <p style="margin: 0 0 3px 0; font-size: 11px;">${editAllFormData.deliveryDate || '_________________________________'}</p>
-                <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ต้องการสินค้าด่วน</p>
-                <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editAllFormData.contactPerson || 'N/A'}</p>
-              </div>
-              
-              <div style="margin-bottom: 25px;">
-                <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
-                  <div style="font-size: 12px; color: #333; line-height: 1.4;">
-                    <strong>Cost Center:</strong> ${userOrgCode4} | 
-                    <strong>ผู้สั่ง:</strong> ${userFullName} - ${firstRequisition?.USER_ID || 'N/A'} | 
-                    <strong>แผนก:</strong> ${department}
-                  </div>
-                </div>
-                
-                <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
-                  <thead>
-                    <tr style="background: #e9ecef;">
-                      <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">ITEM_ID</th>
-                      <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Description</th>
-                      <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Qty</th>
-                      <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit</th>
-                      <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit Price</th>
-                      <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr style="background: #f8f9fa;">
-                      <td colspan="6" style="padding: 6px 8px; border: 1px solid #ddd; font-size: 9px; font-weight: bold; color: #495057;">${category}</td>
-                    </tr>
-                    ${itemsHTML}
-                  </tbody>
-                </table>
+              <div style="text-align: right;">
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(new Date())}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #REQ001</p>
               </div>
             </div>
-          `;
+            
+            <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+              <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">${editAllFormData.deliveryDate || '_________________________________'}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ต้องการสินค้าด่วน</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editAllFormData.contactPerson || 'N/A'}</p>
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+              <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
+                <div style="font-size: 12px; color: #333; line-height: 1.4;">
+                  <strong>หมวดหมู่:</strong> ${category} | 
+                  <strong>ผู้สั่ง:</strong> ${usersList}
+                </div>
+              </div>
+              
+              <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
+                <thead>
+                  <tr style="background: #e9ecef;">
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">ITEM_ID</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Description</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Qty</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit Price</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHTML}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
 
-          console.log(`HTML content for user ${userId}, category ${category}:`, {
-            htmlLength: htmlContent.length,
-            hasContent: htmlContent.length > 1000,
-            itemsCount: items.length,
-            categoryTotal: userCategoryTotals[userId][category]
-          });
+        console.log(`HTML content for category ${category}:`, {
+          htmlLength: htmlContent.length,
+          hasContent: htmlContent.length > 1000,
+          itemsCount: items.length,
+          categoryTotal: categoryTotals[category]
+        });
 
-          tempDiv.innerHTML = htmlContent;
+        tempDiv.innerHTML = htmlContent;
 
-          // เพิ่ม element ลงใน DOM
-          document.body.appendChild(tempDiv);
+        // เพิ่ม element ลงใน DOM
+        document.body.appendChild(tempDiv);
 
-          // รอให้ content render เสร็จ
-          await new Promise((resolve) => setTimeout(resolve, 100));
+        // รอให้ content render เสร็จ
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
-          // แปลง HTML เป็น canvas
-          const canvas = await html2canvas(tempDiv, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: '#ffffff'
-          });
+        // แปลง HTML เป็น canvas
+        const canvas = await html2canvas(tempDiv, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        });
 
-          console.log(`Canvas for user ${userId}, category ${category} generated:`, { 
-            width: canvas.width, 
-            height: canvas.height,
-            hasContent: canvas.width > 0 && canvas.height > 0,
-            category,
-            itemsCount: items.length
-          });
+        console.log(`Canvas for category ${category} generated:`, { 
+          width: canvas.width, 
+          height: canvas.height,
+          hasContent: canvas.width > 0 && canvas.height > 0,
+          category,
+          itemsCount: items.length
+        });
 
-          // ลบ element ชั่วคราว
-          document.body.removeChild(tempDiv);
+        // ลบ element ชั่วคราว
+        document.body.removeChild(tempDiv);
 
-          // ตรวจสอบ canvas ก่อนสร้าง PDF
-          if (canvas.width === 0 || canvas.height === 0) {
-            console.error(`Canvas for user ${userId}, category ${category} is empty, skipping...`);
-            continue;
-          }
+        // ตรวจสอบ canvas ก่อนสร้าง PDF
+        if (canvas.width === 0 || canvas.height === 0) {
+          console.error(`Canvas for category ${category} is empty, skipping...`);
+          continue;
+        }
 
-          // เพิ่มรูปภาพลงใน PDF
-          const imgData = canvas.toDataURL('image/png');
-          console.log(`Image data for user ${userId}, category ${category} generated:`, { 
-            dataLength: imgData.length,
-            hasData: imgData.length > 100,
-            category,
-            dataPreview: imgData.substring(0, 100) + '...'
-          });
-          const imgWidth = 210; // A4 width in mm
-          const pageHeight = 275; // A4 height in mm (ลดลงเพื่อให้มี margin)
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        // เพิ่มรูปภาพลงใน PDF
+        const imgData = canvas.toDataURL('image/png');
+        console.log(`Image data for category ${category} generated:`, { 
+          dataLength: imgData.length,
+          hasData: imgData.length > 100,
+          category,
+          dataPreview: imgData.substring(0, 100) + '...'
+        });
+        const imgWidth = 210; // A4 width in mm
+        const pageHeight = 275; // A4 height in mm (ลดลงเพื่อให้มี margin)
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        // ตรวจสอบว่าต้องแบ่งหน้าไหม
+        if (imgHeight <= pageHeight) {
+          // เนื้อหาไม่เกินหน้าเดียว
+          pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
           
-          // ตรวจสอบว่าต้องแบ่งหน้าไหม
-          if (imgHeight <= pageHeight) {
-            // เนื้อหาไม่เกินหน้าเดียว
-            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+          // เพิ่มหมายเลขหน้า
+          pdf.setFontSize(10);
+          pdf.setTextColor(102, 102, 102);
+          pdf.text(`Page 1 of 1`, 105, 290, { align: 'center' });
+        } else {
+          // เนื้อหาเกินหน้าเดียว - แบ่งเป็นหลายหน้า
+          let currentPage = 1;
+          let yOffset = 0;
+          
+          while (yOffset < imgHeight) {
+            if (currentPage > 1) {
+              pdf.addPage();
+            }
+            
+            // คำนวณความสูงของส่วนที่จะแสดงในหน้านี้
+            const remainingHeight = imgHeight - yOffset;
+            const _pageContentHeight = Math.min(pageHeight, remainingHeight);
+            
+            // เพิ่มรูปภาพเฉพาะส่วนที่ต้องการ
+            pdf.addImage(imgData, 'PNG', 0, -yOffset, imgWidth, imgHeight);
             
             // เพิ่มหมายเลขหน้า
             pdf.setFontSize(10);
             pdf.setTextColor(102, 102, 102);
-            pdf.text(`Page 1 of 1`, 105, 290, { align: 'center' });
-          } else {
-            // เนื้อหาเกินหน้าเดียว - แบ่งเป็นหลายหน้า
-            let currentPage = 1;
-            let yOffset = 0;
+            pdf.text(`Page ${currentPage}`, 105, 290, { align: 'center' });
             
-            while (yOffset < imgHeight) {
-              if (currentPage > 1) {
-                pdf.addPage();
-              }
-              
-              // คำนวณความสูงของส่วนที่จะแสดงในหน้านี้
-              const remainingHeight = imgHeight - yOffset;
-              const _pageContentHeight = Math.min(pageHeight, remainingHeight);
-              
-              // เพิ่มรูปภาพเฉพาะส่วนที่ต้องการ
-              pdf.addImage(imgData, 'PNG', 0, -yOffset, imgWidth, imgHeight);
-              
-              // เพิ่มหมายเลขหน้า
-              pdf.setFontSize(10);
-              pdf.setTextColor(102, 102, 102);
-              pdf.text(`Page ${currentPage}`, 105, 290, { align: 'center' });
-              
-              yOffset += pageHeight;
-              currentPage++;
-            }
+            yOffset += pageHeight;
+            currentPage++;
           }
-
-          // เก็บ PDF ไว้ใน array แทนการดาวน์โหลดทันที
-          const fileName = editAllFormData.fileName || `SUPPLY_REQUEST_ORDER_${userId}_${category.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
-          
-          // สร้าง blob และเก็บไว้
-          const pdfBlob = pdf.output('blob');
-          const pdfUrl = URL.createObjectURL(pdfBlob);
-          
-          // สร้าง link element และคลิกเพื่อดาวน์โหลด
-          const link = document.createElement('a');
-          link.href = pdfUrl;
-          link.download = `${fileName}.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(pdfUrl);
-
-          console.log(`PDF for user ${userId}, category ${category} saved: ${fileName}.pdf`);
         }
+
+        // เก็บ PDF ไว้ใน array แทนการดาวน์โหลดทันที
+        const fileName = editAllFormData.fileName || `SUPPLY_REQUEST_ORDER_${category.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
+        
+        // สร้าง blob และเก็บไว้
+        const pdfBlob = pdf.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        
+        // สร้าง link element และคลิกเพื่อดาวน์โหลด
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = `${fileName}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(pdfUrl);
+
+        console.log(`PDF for category ${category} saved: ${fileName}.pdf`);
       }
 
-      alert(`ไฟล์ PDF ทั้งหมด ${totalPDFs} ไฟล์ถูกสร้างและดาวน์โหลดแล้ว! (แยกตามคนและหมวดหมู่)`);
+      alert(`ไฟล์ PDF ทั้งหมด ${totalPDFs} ไฟล์ถูกสร้างและดาวน์โหลดแล้ว! (แยกตามหมวดหมู่)`);
     } catch (error) {
       console.error('Error generating PDFs by user and category:', error);
       alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + (error as Error).message);
