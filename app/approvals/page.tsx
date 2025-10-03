@@ -134,6 +134,19 @@ export default function ApprovalsPage() {
     taxId: '0215542000264',
     fileName: ''
   });
+
+  const [editAllFormData, setEditAllFormData] = useState({
+    deliveryDate: '',
+    contactPerson: '',
+    category: '',
+    companyName: 'บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)',
+    companyAddress: '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
+    fax: '(038) 623433',
+    phone: '(038) 623126',
+    taxId: '0215542000264',
+    fileName: ''
+  });
+  const [editAllDialogOpen, setEditAllDialogOpen] = useState(false);
   const [editItemsDialogOpen, setEditItemsDialogOpen] = useState(false);
   const [editingItems, setEditingItems] = useState<RequisitionItem[]>([]);
   const [savingItems, setSavingItems] = useState(false);
@@ -559,6 +572,28 @@ export default function ApprovalsPage() {
     if (editingRequisition) {
       generatePDF(editingRequisition);
     }
+  };
+
+  // เพิ่มฟังก์ชันสำหรับแก้ไขข้อมูลการโหลดรวม
+  const handleEditAllData = () => {
+    setEditAllFormData({
+      deliveryDate: '',
+      contactPerson: 'คุณสมชาย ใจดี',
+      category: '',
+      companyName: 'บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)',
+      companyAddress: '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
+      fax: '(038) 623433',
+      phone: '(038) 623126',
+      taxId: '0215542000264',
+      fileName: `SUPPLY_REQUEST_ORDER_${selectedYear}${selectedMonth}_${new Date().toISOString().split('T')[0]}`
+    });
+    setEditAllDialogOpen(true);
+  };
+
+  // เพิ่มฟังก์ชันสำหรับบันทึกการแก้ไขข้อมูลการโหลดรวม
+  const handleSaveAllEdit = () => {
+    setEditAllDialogOpen(false);
+    generateAllPDFsByCategory();
   };
 
   // เพิ่มฟังก์ชันสำหรับแก้ไขรายการสินค้า
@@ -1123,8 +1158,6 @@ export default function ApprovalsPage() {
             <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ORDER_UNIT || 'ชิ้น'}</td>
             <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}</td>
             <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${calculateSafeTotalPrice(item)}</td>
-            <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${requisition.USER_ID}</td>
-            <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">#${requisition.REQUISITION_ID}</td>
           </tr>
         `).join('');
 
@@ -1132,34 +1165,35 @@ export default function ApprovalsPage() {
           <div style="padding: 20px;">
             <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
               <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
-              <h2 style="margin: 10px 0 0 0; font-size: 18px; color: #1976d2; font-weight: bold;">หมวดหมู่: ${category}</h2>
             </div>
             
             <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
               <div style="text-align: left;">
-                <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editFormData.companyName}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;">${editFormData.companyAddress}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editAllFormData.companyName}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">${editAllFormData.companyAddress}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}</p>
               </div>
               <div style="text-align: right;">
                 <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(new Date())}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Category:</strong> ${category}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #REQ001</p>
               </div>
             </div>
             
             <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
               <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">${editFormData.deliveryDate || '_________________________________'}</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ใบสั่งซื้อแบบรวมตามหมวดหมู่</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson || 'N/A'}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">${editAllFormData.deliveryDate || '_________________________________'}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ต้องการสินค้าด่วน</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editAllFormData.contactPerson || 'N/A'}</p>
             </div>
             
             <div style="margin-bottom: 25px;">
               <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
-                <div style="font-size: 14px; font-weight: bold; color: #333;">หมวดหมู่: ${category}</div>
-                <div style="font-size: 11px; color: #666; margin-top: 2px;">จำนวนรายการ: ${items.length} รายการ</div>
-                <div style="font-size: 11px; color: #666; margin-top: 2px;">จำนวนผู้สั่ง: ${new Set(items.map(i => i.requisition.USER_ID)).size} คน</div>
+                <div style="font-size: 12px; color: #333; line-height: 1.4;">
+                  <strong>Cost Center:</strong> ORG001 | 
+                  <strong>ผู้สั่ง:</strong> สมชาย ใจดี - user001 | 
+                  <strong>แผนก:</strong> IT
+                </div>
               </div>
               
               <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
@@ -1171,22 +1205,15 @@ export default function ApprovalsPage() {
                     <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit</th>
                     <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit Price</th>
                     <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Total</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">ผู้สั่ง</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Req ID</th>
                   </tr>
                 </thead>
                 <tbody>
+                  <tr style="background: #f8f9fa;">
+                    <td colspan="6" style="padding: 6px 8px; border: 1px solid #ddd; font-size: 9px; font-weight: bold; color: #495057;">${category}</td>
+                  </tr>
                   ${itemsHTML}
                 </tbody>
               </table>
-            </div>
-            
-            <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
-              <h3 style="margin: 0 0 5px 0; color: #1976d2; font-size: 12px;">สรุปยอดรวม</h3>
-              <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${formatNumberWithCommas(categoryTotals[category])}</div>
-              <p style="margin: 5px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนรายการ: ${items.length} รายการ</p>
-              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนผู้สั่ง: ${new Set(items.map(i => i.requisition.USER_ID)).size} คน</p>
-              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">หมวดหมู่: ${category}</p>
             </div>
           </div>
         `;
@@ -1848,16 +1875,16 @@ export default function ApprovalsPage() {
             >
               {/* Download All PDFs Button - แสดงเฉพาะเมื่อมีข้อมูลและเป็น ADMIN เท่านั้น */}
               {filteredRequisitions.length > 0 && user?.ROLE === 'ADMIN' && (
-                <Button
-                  onClick={generateAllPDFsByCategory}
-                  disabled={loading}
-                  className="px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:shadow-lg bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-md hover:shadow-xl"
-                >
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    ดาวน์โหลด PDF ทั้งหมด ({filteredRequisitions.length})
-                  </div>
-                </Button>
+        <Button
+          onClick={handleEditAllData}
+          disabled={loading}
+          className="px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:shadow-lg bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-md hover:shadow-xl"
+        >
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            ดาวน์โหลด PDF ทั้งหมด ({filteredRequisitions.length})
+          </div>
+        </Button>
               )}
 
               <Button
@@ -3322,6 +3349,177 @@ export default function ApprovalsPage() {
               >
                 <FileText className="h-5 w-5 mr-2" />
                 สร้าง PDF
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog สำหรับแก้ไขข้อมูลการโหลดรวม */}
+        <Dialog open={editAllDialogOpen} onOpenChange={setEditAllDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] bg-white overflow-y-auto">
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <FileText className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-gray-900">
+                    แก้ไขข้อมูล PDF ทั้งหมด
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    ปรับแต่งข้อมูลสำหรับ PDF ทั้งหมด (แยกตามหมวดหมู่)
+                  </div>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              {/* ข้อมูลบริษัท */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                  ข้อมูลบริษัท
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ชื่อบริษัท
+                    </label>
+                    <input
+                      type="text"
+                      value={editAllFormData.companyName}
+                      onChange={(e) =>
+                        setEditAllFormData({
+                          ...editAllFormData,
+                          companyName: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ที่อยู่บริษัท
+                    </label>
+                    <input
+                      type="text"
+                      value={editAllFormData.companyAddress}
+                      onChange={(e) =>
+                        setEditAllFormData({
+                          ...editAllFormData,
+                          companyAddress: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      โทรศัพท์
+                    </label>
+                    <input
+                      type="text"
+                      value={editAllFormData.phone}
+                      onChange={(e) =>
+                        setEditAllFormData({
+                          ...editAllFormData,
+                          phone: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      FAX
+                    </label>
+                    <input
+                      type="text"
+                      value={editAllFormData.fax}
+                      onChange={(e) =>
+                        setEditAllFormData({
+                          ...editAllFormData,
+                          fax: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      เลขประจำตัวผู้เสียภาษี
+                    </label>
+                    <input
+                      type="text"
+                      value={editAllFormData.taxId}
+                      onChange={(e) =>
+                        setEditAllFormData({
+                          ...editAllFormData,
+                          taxId: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ข้อมูลการจัดส่ง */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                  ข้อมูลการจัดส่ง
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      วันที่จัดส่ง
+                    </label>
+                    <input
+                      type="text"
+                      value={editAllFormData.deliveryDate}
+                      onChange={(e) =>
+                        setEditAllFormData({
+                          ...editAllFormData,
+                          deliveryDate: e.target.value
+                        })
+                      }
+                      placeholder="เช่น 15/01/2025 หรือ ภายใน 7 วัน"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ผู้ติดต่อเพิ่มเติม
+                    </label>
+                    <input
+                      type="text"
+                      value={editAllFormData.contactPerson}
+                      onChange={(e) =>
+                        setEditAllFormData({
+                          ...editAllFormData,
+                          contactPerson: e.target.value
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-3 pt-6 border-t border-gray-200">
+              <Button
+                variant="outline"
+                onClick={() => setEditAllDialogOpen(false)}
+                className="flex-1 h-12 text-base font-medium"
+              >
+                ยกเลิก
+              </Button>
+              <Button
+                onClick={handleSaveAllEdit}
+                className="flex-1 h-12 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base font-medium"
+              >
+                <FileText className="h-5 w-5 mr-2" />
+                สร้าง PDF ทั้งหมด
               </Button>
             </DialogFooter>
           </DialogContent>
