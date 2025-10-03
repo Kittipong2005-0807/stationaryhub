@@ -142,8 +142,8 @@ export class NotificationService {
         console.log(`⚠️ Notification already exists for requisition ${requisitionId}`)
       }
 
-      // แจ้งเตือน Manager ที่เกี่ยวข้อง
-      await this.notifyManagers(requisitionId, userId)
+      // ส่งอีเมลหา Manager ตรงๆ (เร็วกว่าและเรียบง่ายกว่า)
+      await this.sendDirectManagerEmail(requisitionId, userId)
 
       if (process.env.NODE_ENV === 'development') {
         console.log(`✅ Requisition creation notification completed for ${requisitionId}`)
@@ -343,6 +343,186 @@ export class NotificationService {
 
     } catch (error) {
       console.error('❌ Error notifying requisition rejected:', error)
+    }
+  }
+
+  /**
+   * ส่งอีเมลหา Manager ตรงๆ โดยไม่ผ่าน logNotification
+   * ใช้สำหรับการส่งอีเมลที่ต้องการความเร็วและความเรียบง่าย
+   */
+  static async sendDirectManagerEmail(requisitionId: number, userId: string) {
+    try {
+      console.log(`📧 Sending direct email to managers for requisition ${requisitionId} from user ${userId}`)
+      
+      // ดึงข้อมูล user เพื่อหา CostCenter
+      const user = await prisma.$queryRaw<{ 
+        costcentercode: string,
+        EmpCode: string 
+      }[]>` 
+        SELECT TOP 1 costcentercode, EmpCode 
+        FROM UserWithRoles 
+        WHERE EmpCode = ${userId}
+      `;
+
+      if (!user || user.length === 0) {
+        console.log(`❌ User ${userId} not found in UserWithRoles`)
+        return;
+      }
+
+      const userCostCenter = user[0].costcentercode;
+      if (!userCostCenter) {
+        console.log(`❌ User ${userId} has no CostCenter assigned`)
+        return;
+      }
+
+      console.log(`🔍 User CostCenter: ${userCostCenter}`)
+
+      // หา managers จาก VS_DivisionMgr
+      const managers = await prisma.$queryRaw<{ 
+        L2: string, 
+        CurrentEmail: string, 
+        FullNameEng: string, 
+        PostNameEng: string,
+        CostCenter: string
+      }[]>` 
+        SELECT TOP 10 L2, CurrentEmail, FullNameEng, PostNameEng, CostCenter
+        FROM VS_DivisionMgr 
+        WHERE CostCenter = ${userCostCenter}
+        AND CurrentEmail IS NOT NULL
+        AND CurrentEmail != ''
+      `;
+
+      console.log(`🔔 Found ${managers.length} managers for CostCenter ${userCostCenter}`)
+
+      if (managers.length === 0) {
+        console.log(`❌ No managers found for CostCenter ${userCostCenter}`)
+        return;
+      }
+
+      // ดึงข้อมูล requisition สำหรับสร้างอีเมล
+      const requisition = await prisma.rEQUISITIONS.findUnique({
+        where: { REQUISITION_ID: requisitionId },
+        include: {
+          USERS: {
+            select: {
+              USERNAME: true,
+              EMAIL: true
+            }
+          },
+          REQUISITION_ITEMS: {
+            take: 20,
+            include: {
+              PRODUCTS: {
+                select: {
+                  PRODUCT_NAME: true,
+                  PRODUCT_ID: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!requisition) {
+        console.log(`❌ Requisition ${requisitionId} not found`)
+        return;
+      }
+
+      // สร้างข้อมูลสำหรับอีเมล
+      const emailData = {
+        requisitionId,
+        requesterName: requisition.USERS?.USERNAME || userId,
+        totalAmount: requisition.TOTAL_AMOUNT || 0,
+        submittedAt: requisition.SUBMITTED_AT || new Date(),
+        items: requisition.REQUISITION_ITEMS?.map((item: any) => ({
+          productName: item.PRODUCTS?.PRODUCT_NAME || 'Unknown Product',
+          quantity: item.QUANTITY || 0,
+          unitPrice: Number(item.UNIT_PRICE || 0),
+          totalPrice: Number(item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0)
+        })) || []
+      };
+
+      // ส่งอีเมลไปยัง managers แต่ละคน
+      for (const manager of managers) {
+        if (manager.CurrentEmail) {
+          try {
+            console.log(`📤 Sending direct email to manager: ${manager.FullNameEng} (${manager.CurrentEmail})`)
+            
+            // สร้าง HTML email template
+            const emailHtml = this.createEmailTemplate('requisition_pending', emailData)
+            
+            // บันทึกลง EMAIL_LOGS ก่อนส่งอีเมล
+            const emailLog = await prisma.$executeRaw`
+              INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, IS_READ, FROM_EMAIL, TO_EMAIL, EMAIL_TYPE, PRIORITY, DELIVERY_STATUS, RETRY_COUNT, CREATED_BY)
+              VALUES (${manager.L2}, ${`มีคำขอเบิกใหม่รอการอนุมัติ - Requisition #${requisitionId}`}, ${emailHtml}, 'PENDING', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${manager.CurrentEmail}, 'requisition_pending', 'medium', 'pending', 0, 'system')
+            `;
+
+            // ส่งอีเมลตรงๆ
+            const emailResult = await this.sendEmail(
+              manager.CurrentEmail,
+              `มีคำขอเบิกใหม่รอการอนุมัติ - Requisition #${requisitionId}`,
+              emailHtml
+            );
+
+            if (emailResult) {
+              console.log(`✅ Direct email sent successfully to manager ${manager.FullNameEng} (${manager.CurrentEmail})`)
+              
+              // อัปเดตสถานะเป็น SENT ใน EMAIL_LOGS
+              await prisma.$executeRaw`
+                UPDATE EMAIL_LOGS 
+                SET STATUS = 'SENT', 
+                    DELIVERY_STATUS = 'sent',
+                    UPDATED_AT = GETDATE()
+                WHERE TO_USER_ID = ${manager.L2} 
+                AND EMAIL_TYPE = 'requisition_pending'
+                AND TO_EMAIL = ${manager.CurrentEmail}
+                AND STATUS = 'PENDING'
+              `;
+            } else {
+              console.log(`❌ Failed to send direct email to manager ${manager.FullNameEng}`)
+              
+              // อัปเดตสถานะเป็น FAILED ใน EMAIL_LOGS
+              await prisma.$executeRaw`
+                UPDATE EMAIL_LOGS 
+                SET STATUS = 'FAILED', 
+                    DELIVERY_STATUS = 'failed',
+                    ERROR_MESSAGE = 'Direct email sending failed',
+                    UPDATED_AT = GETDATE()
+                WHERE TO_USER_ID = ${manager.L2} 
+                AND EMAIL_TYPE = 'requisition_pending'
+                AND TO_EMAIL = ${manager.CurrentEmail}
+                AND STATUS = 'PENDING'
+              `;
+            }
+          } catch (emailError) {
+            console.error(`❌ Error sending direct email to manager ${manager.FullNameEng}:`, emailError)
+            
+            // อัปเดตสถานะเป็น FAILED ใน EMAIL_LOGS
+            try {
+              await prisma.$executeRaw`
+                UPDATE EMAIL_LOGS 
+                SET STATUS = 'FAILED', 
+                    DELIVERY_STATUS = 'failed',
+                    ERROR_MESSAGE = ${emailError instanceof Error ? emailError.message : String(emailError)},
+                    UPDATED_AT = GETDATE()
+                WHERE TO_USER_ID = ${manager.L2} 
+                AND EMAIL_TYPE = 'requisition_pending'
+                AND TO_EMAIL = ${manager.CurrentEmail}
+                AND STATUS = 'PENDING'
+              `;
+            } catch (updateError) {
+              console.error(`❌ Error updating EMAIL_LOGS for manager ${manager.L2}:`, updateError)
+            }
+          }
+        } else {
+          console.log(`⚠️ Manager ${manager.L2} has no email address`)
+        }
+      }
+
+      console.log(`✅ Direct manager email sending completed for requisition ${requisitionId}`)
+
+    } catch (error) {
+      console.error('❌ Error in sendDirectManagerEmail:', error)
     }
   }
 
