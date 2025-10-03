@@ -137,7 +137,6 @@ export default function ApprovalsPage() {
   const [editItemsDialogOpen, setEditItemsDialogOpen] = useState(false);
   const [editingItems, setEditingItems] = useState<RequisitionItem[]>([]);
   const [savingItems, setSavingItems] = useState(false);
-  const [editAllDialogOpen, setEditAllDialogOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
@@ -652,24 +651,9 @@ export default function ApprovalsPage() {
     }, 0);
   };
 
-  // เพิ่มฟังก์ชันเปิด Dialog แก้ไขข้อมูลสำหรับ PDF ทั้งหมด
-  const handleEditAllData = () => {
-    setEditFormData({
-      deliveryDate: '',
-      contactPerson: '',
-      category: '',
-      companyName: 'บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)',
-      companyAddress: '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
-      fax: '(038) 623433',
-      phone: '(038) 623126',
-      taxId: '0215542000264',
-      fileName: `ALL_SUPPLY_REQUEST_ORDERS_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`
-    });
-    setEditAllDialogOpen(true);
-  };
 
-  // เพิ่มฟังก์ชันสร้าง PDF ทั้งหมดทุกรายการ
-  const generateAllPDFs = async () => {
+  // ฟังก์ชันสร้าง PDF ทั้งหมดทุกรายการ (เก่า - ไม่ใช้แล้ว)
+  const _generateAllPDFs = async () => {
     console.log('Starting bulk PDF generation...', {
       filteredRequisitionsCount: filteredRequisitions.length,
       selectedYear,
@@ -752,11 +736,11 @@ export default function ApprovalsPage() {
         tempDiv.style.left = '-9999px';
         tempDiv.style.top = '-9999px';
         tempDiv.style.width = '210mm';
-        tempDiv.style.padding = '20mm';
+        tempDiv.style.padding = '10mm';
         tempDiv.style.backgroundColor = 'white';
         tempDiv.style.fontFamily = 'Arial, sans-serif';
-        tempDiv.style.fontSize = '11px';
-        tempDiv.style.lineHeight = '1.2';
+        tempDiv.style.fontSize = '10px';
+        tempDiv.style.lineHeight = '1.1';
 
         // ตรวจสอบว่าเป็นคำสั่งซื้อสุดท้ายหรือไม่
         const isLastRequisition = i === filteredRequisitions.length - 1;
@@ -806,79 +790,77 @@ export default function ApprovalsPage() {
         const categoryHTML = Object.entries(groupedItems).map(([category, items]) => {
           const categoryRows = items.map((item, index) => `
             <tr>
-              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${index + 1}</td>
-              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px;">${item.PRODUCT_NAME}</td>
-              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.QUANTITY}</td>
-              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ORDER_UNIT || 'ชิ้น'}</td>
-              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}</td>
-              <td style="padding: 8px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${calculateSafeTotalPrice(item)}</td>
+              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${item.ITEM_ID || 'N/A'}</td>
+              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px;">${item.PRODUCT_NAME}</td>
+              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${item.QUANTITY}</td>
+              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${item.ORDER_UNIT || 'ชิ้น'}</td>
+              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: right;">฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}</td>
+              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: right;">฿${calculateSafeTotalPrice(item)}</td>
             </tr>
           `).join('');
 
           return `
             <tr style="background: #f8f9fa;">
-              <td colspan="6" style="padding: 6px 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #495057;">${category}</td>
+              <td colspan="6" style="padding: 6px 8px; border: 1px solid #ddd; font-size: 9px; font-weight: bold; color: #495057;">${category}</td>
             </tr>
             ${categoryRows}
           `;
         }).join('');
 
+        // สร้าง HTML content โดยมีหัวข้อเฉพาะใบแรก และไม่มีกล่องสรุปยอดรวม
+        const showHeader = i === 0; // แสดงหัวข้อเฉพาะใบแรก
         const htmlContent = `
-          <div style="padding: 20px;">
-            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
-              <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
+          <div style="padding: 10px;">
+            ${showHeader ? `
+            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px;">
+              <h1 style="margin: 0; font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
             </div>
             
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
               <div style="text-align: left;">
-                <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editFormData.companyName}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;">${editFormData.companyAddress}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
+                <p style="margin: 0 0 2px 0; font-size: 9px; font-weight: bold;">${editFormData.companyName}</p>
+                <p style="margin: 0 0 2px 0; font-size: 9px;">${editFormData.companyAddress}</p>
+                <p style="margin: 0 0 2px 0; font-size: 9px;">TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
+                <p style="margin: 0 0 2px 0; font-size: 9px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
               </div>
               <div style="text-align: right;">
-                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(requisition.SUBMITTED_AT)}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
+                <p style="margin: 0 0 2px 0; font-size: 9px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(requisition.SUBMITTED_AT)}</p>
+                <p style="margin: 0 0 2px 0; font-size: 9px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
               </div>
             </div>
             
-            <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-              <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">${editFormData.deliveryDate || '_________________________________'}</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson || 'N/A'}</p>
+            <div style="margin-bottom: 15px; padding: 8px; border: 1px solid #ccc; background: #f9f9f9;">
+              <h3 style="margin: 0 0 3px 0; font-size: 10px; font-weight: bold;">Please Delivery on:</h3>
+              <p style="margin: 0 0 2px 0; font-size: 9px;">${editFormData.deliveryDate || '_________________________________'}</p>
+              <p style="margin: 0 0 2px 0; font-size: 9px;"><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
+              <p style="margin: 0 0 2px 0; font-size: 9px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson || 'N/A'}</p>
             </div>
+            ` : ''}
             
-            <div style="margin-bottom: 25px;">
-              <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
-                <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${userOrgCode4}</div>
-                <div style="font-size: 11px; color: #666; margin-top: 2px;">${userFullName} - ${requisition.USER_ID}</div>
-                <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisition.DEPARTMENT || 'N/A'}</div>
+            <div style="margin-bottom: 10px;">
+              <div style="background: #f5f5f5; padding: 6px 10px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 10px;">
+                <div style="font-size: 10px; color: #333; line-height: 1.4;">
+                  <strong>Cost Center:</strong> ${userOrgCode4} | 
+                  <strong>ผู้สั่ง:</strong> ${userFullName} - ${requisition.USER_ID} | 
+                  <strong>แผนก:</strong> ${requisition.DEPARTMENT || 'N/A'}
+                </div>
               </div>
               
               <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
                 <thead>
                   <tr style="background: #e9ecef;">
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">No.</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Description</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Qty</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit Price</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Total</th>
+                    <th style="padding: 6px; border: 1px solid #ddd; font-size: 9px; font-weight: bold;">ITEM_ID</th>
+                    <th style="padding: 6px; border: 1px solid #ddd; font-size: 9px; font-weight: bold;">Description</th>
+                    <th style="padding: 6px; border: 1px solid #ddd; font-size: 9px; font-weight: bold;">Qty</th>
+                    <th style="padding: 6px; border: 1px solid #ddd; font-size: 9px; font-weight: bold;">Unit</th>
+                    <th style="padding: 6px; border: 1px solid #ddd; font-size: 9px; font-weight: bold;">Unit Price</th>
+                    <th style="padding: 6px; border: 1px solid #ddd; font-size: 9px; font-weight: bold;">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${categoryHTML}
                 </tbody>
               </table>
-            </div>
-            
-            <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
-              <h3 style="margin: 0 0 5px 0; color: #1976d2; font-size: 12px;">สรุปยอดรวม</h3>
-              <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${formatNumberWithCommas(Number(requisition.TOTAL_AMOUNT))}</div>
-              <p style="margin: 5px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนรายการ: ${requisition.REQUISITION_ITEMS.length} รายการ</p>
-              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">สถานะ: ${requisition.STATUS}</p>
-              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">แผนก: ${requisition.DEPARTMENT || 'N/A'}</p>
             </div>
           </div>
         `;
@@ -936,7 +918,7 @@ export default function ApprovalsPage() {
           dataPreview: imgData.substring(0, 100) + '...'
         });
         const imgWidth = 210; // A4 width in mm
-        const pageHeight = 275; // A4 height in mm (ลดลงเพื่อให้มี margin)
+        const pageHeight = 290; // A4 height in mm (เพิ่มขึ้นเพื่อให้เหมาะสมกับ A4)
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         
         // ตรวจสอบว่าต้องแบ่งหน้าไหม
@@ -1017,6 +999,309 @@ export default function ApprovalsPage() {
       alert(`ไฟล์ PDF ทั้งหมด ${filteredRequisitions.length} รายการถูกสร้างและดาวน์โหลดแล้ว!`);
     } catch (error) {
       console.error('Error generating all PDFs:', error);
+      alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + (error as Error).message);
+    }
+  };
+
+  // เพิ่มฟังก์ชันสร้าง PDF แบบแยกตามหมวดหมู่
+  const generateAllPDFsByCategory = async () => {
+    console.log('Starting bulk PDF generation by category...', {
+      filteredRequisitionsCount: filteredRequisitions.length,
+      selectedYear,
+      selectedMonth,
+      activeFilter,
+      requisitionsCount: requisitions.length,
+      filteredRequisitions: filteredRequisitions.map(r => ({
+        id: r.REQUISITION_ID,
+        status: r.STATUS,
+        submittedAt: r.SUBMITTED_AT,
+        itemsCount: r.REQUISITION_ITEMS?.length || 0,
+        hasItems: !!(r.REQUISITION_ITEMS && r.REQUISITION_ITEMS.length > 0),
+        totalAmount: r.TOTAL_AMOUNT
+      }))
+    });
+
+    if (filteredRequisitions.length === 0) {
+      alert(`ไม่มีข้อมูลให้สร้าง PDF\n- จำนวน requisitions ทั้งหมด: ${requisitions.length}\n- จำนวนที่ผ่าน filter: ${filteredRequisitions.length}\n- ปีที่เลือก: ${selectedYear}\n- เดือนที่เลือก: ${selectedMonth || 'ไม่เลือก'}\n- Filter: ${activeFilter}`);
+      return;
+    }
+
+    try {
+      // รวบรวมข้อมูลทั้งหมดและจัดกลุ่มตามหมวดหมู่
+      const allItemsByCategory: Record<string, Array<{requisition: Requisition, item: RequisitionItem}>> = {};
+      const categoryTotals: Record<string, number> = {};
+      const categoryCounts: Record<string, number> = {};
+
+      // วนลูปผ่านทุก requisition และจัดกลุ่มตามหมวดหมู่
+      for (const requisition of filteredRequisitions) {
+        if (!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0) {
+          // ลองดึงข้อมูล items ใหม่
+          try {
+            const response = await fetch(getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`));
+            if (response.ok) {
+              const items = await response.json();
+              if (items && items.length > 0) {
+                requisition.REQUISITION_ITEMS = items;
+                console.log(`Fetched ${items.length} items for requisition ${requisition.REQUISITION_ID}`);
+              } else {
+                console.log(`Still no items for requisition ${requisition.REQUISITION_ID} after fetch`);
+                continue;
+              }
+            } else {
+              console.log(`Failed to fetch items for requisition ${requisition.REQUISITION_ID}`);
+              continue;
+            }
+          } catch (error) {
+            console.error(`Error fetching items for requisition ${requisition.REQUISITION_ID}:`, error);
+            continue;
+          }
+        }
+
+        // จัดกลุ่ม items ตามหมวดหมู่
+        for (const item of requisition.REQUISITION_ITEMS) {
+          const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
+          
+          if (!allItemsByCategory[category]) {
+            allItemsByCategory[category] = [];
+            categoryTotals[category] = 0;
+            categoryCounts[category] = 0;
+          }
+          
+          allItemsByCategory[category].push({ requisition, item });
+          categoryTotals[category] += Number(calculateSafeTotalPrice(item)) || 0;
+          categoryCounts[category]++;
+        }
+      }
+
+      console.log('Items grouped by category:', {
+        categories: Object.keys(allItemsByCategory),
+        categoryCounts,
+        categoryTotals
+      });
+
+      // สร้าง PDF สำหรับแต่ละหมวดหมู่
+      let categoryIndex = 0;
+      for (const [category, items] of Object.entries(allItemsByCategory)) {
+        console.log(`Processing category: ${category} with ${items.length} items`);
+        
+        // เพิ่ม delay ระหว่างการดาวน์โหลดแต่ละไฟล์
+        if (categoryIndex > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // รอ 1 วินาที
+        }
+        
+        // สร้าง PDF ใหม่สำหรับหมวดหมู่นี้
+        const pdf = new jsPDF('p', 'mm', 'a4');
+
+        // เรียงลำดับ items ตาม requisition ID และ item order
+        items.sort((a, b) => {
+          const aId = String(a.requisition.REQUISITION_ID);
+          const bId = String(b.requisition.REQUISITION_ID);
+          if (aId !== bId) {
+            return aId.localeCompare(bId);
+          }
+          return 0; // ถ้าเป็น requisition เดียวกัน ให้เรียงตามลำดับเดิม
+        });
+
+        // สร้าง HTML content สำหรับหมวดหมู่นี้
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.top = '-9999px';
+        tempDiv.style.width = '210mm';
+        tempDiv.style.padding = '20mm';
+        tempDiv.style.backgroundColor = 'white';
+        tempDiv.style.fontFamily = 'Arial, sans-serif';
+        tempDiv.style.fontSize = '11px';
+        tempDiv.style.lineHeight = '1.2';
+
+        // สร้างรายการ items สำหรับหมวดหมู่นี้
+        const itemsHTML = items.map(({ requisition, item }, index) => `
+          <tr>
+            <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ITEM_ID || 'N/A'}</td>
+            <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px;">${item.PRODUCT_NAME}</td>
+            <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.QUANTITY}</td>
+            <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ORDER_UNIT || 'ชิ้น'}</td>
+            <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}</td>
+            <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: right;">฿${calculateSafeTotalPrice(item)}</td>
+            <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${requisition.USER_ID}</td>
+            <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">#${requisition.REQUISITION_ID}</td>
+          </tr>
+        `).join('');
+
+        const htmlContent = `
+          <div style="padding: 20px;">
+            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
+              <h2 style="margin: 10px 0 0 0; font-size: 18px; color: #1976d2; font-weight: bold;">หมวดหมู่: ${category}</h2>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+              <div style="text-align: left;">
+                <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editFormData.companyName}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">${editFormData.companyAddress}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
+              </div>
+              <div style="text-align: right;">
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(new Date())}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Category:</strong> ${category}</p>
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+              <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
+              <p style="margin: 0 0 3px 0; font-size: 11px;">${editFormData.deliveryDate || '_________________________________'}</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ใบสั่งซื้อแบบรวมตามหมวดหมู่</p>
+              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson || 'N/A'}</p>
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+              <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
+                <div style="font-size: 14px; font-weight: bold; color: #333;">หมวดหมู่: ${category}</div>
+                <div style="font-size: 11px; color: #666; margin-top: 2px;">จำนวนรายการ: ${items.length} รายการ</div>
+                <div style="font-size: 11px; color: #666; margin-top: 2px;">จำนวนผู้สั่ง: ${new Set(items.map(i => i.requisition.USER_ID)).size} คน</div>
+              </div>
+              
+              <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
+                <thead>
+                  <tr style="background: #e9ecef;">
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">ITEM_ID</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Description</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Qty</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit Price</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Total</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">ผู้สั่ง</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Req ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHTML}
+                </tbody>
+              </table>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
+              <h3 style="margin: 0 0 5px 0; color: #1976d2; font-size: 12px;">สรุปยอดรวม</h3>
+              <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${formatNumberWithCommas(categoryTotals[category])}</div>
+              <p style="margin: 5px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนรายการ: ${items.length} รายการ</p>
+              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนผู้สั่ง: ${new Set(items.map(i => i.requisition.USER_ID)).size} คน</p>
+              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">หมวดหมู่: ${category}</p>
+            </div>
+          </div>
+        `;
+
+        console.log(`HTML content for category ${category}:`, {
+          htmlLength: htmlContent.length,
+          hasContent: htmlContent.length > 1000,
+          itemsCount: items.length,
+          categoryTotal: categoryTotals[category]
+        });
+
+        tempDiv.innerHTML = htmlContent;
+
+        // เพิ่ม element ลงใน DOM
+        document.body.appendChild(tempDiv);
+
+        // รอให้ content render เสร็จ
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // แปลง HTML เป็น canvas
+        const canvas = await html2canvas(tempDiv, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        });
+
+        console.log(`Canvas for category ${category} generated:`, { 
+          width: canvas.width, 
+          height: canvas.height,
+          hasContent: canvas.width > 0 && canvas.height > 0,
+          category,
+          itemsCount: items.length
+        });
+
+        // ลบ element ชั่วคราว
+        document.body.removeChild(tempDiv);
+
+        // ตรวจสอบ canvas ก่อนสร้าง PDF
+        if (canvas.width === 0 || canvas.height === 0) {
+          console.error(`Canvas for category ${category} is empty, skipping...`);
+          continue;
+        }
+
+        // เพิ่มรูปภาพลงใน PDF
+        const imgData = canvas.toDataURL('image/png');
+        console.log(`Image data for category ${category} generated:`, { 
+          dataLength: imgData.length,
+          hasData: imgData.length > 100,
+          category,
+          dataPreview: imgData.substring(0, 100) + '...'
+        });
+        const imgWidth = 210; // A4 width in mm
+        const pageHeight = 275; // A4 height in mm (ลดลงเพื่อให้มี margin)
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        // ตรวจสอบว่าต้องแบ่งหน้าไหม
+        if (imgHeight <= pageHeight) {
+          // เนื้อหาไม่เกินหน้าเดียว
+          pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+          
+          // เพิ่มหมายเลขหน้า
+          pdf.setFontSize(10);
+          pdf.setTextColor(102, 102, 102);
+          pdf.text(`Page 1 of 1`, 105, 290, { align: 'center' });
+        } else {
+          // เนื้อหาเกินหน้าเดียว - แบ่งเป็นหลายหน้า
+          let currentPage = 1;
+          let yOffset = 0;
+          
+          while (yOffset < imgHeight) {
+            if (currentPage > 1) {
+              pdf.addPage();
+            }
+            
+            // คำนวณความสูงของส่วนที่จะแสดงในหน้านี้
+            const remainingHeight = imgHeight - yOffset;
+            const _pageContentHeight = Math.min(pageHeight, remainingHeight);
+            
+            // เพิ่มรูปภาพเฉพาะส่วนที่ต้องการ
+            pdf.addImage(imgData, 'PNG', 0, -yOffset, imgWidth, imgHeight);
+            
+            // เพิ่มหมายเลขหน้า
+            pdf.setFontSize(10);
+            pdf.setTextColor(102, 102, 102);
+            pdf.text(`Page ${currentPage}`, 105, 290, { align: 'center' });
+            
+            yOffset += pageHeight;
+            currentPage++;
+          }
+        }
+
+        // เก็บ PDF ไว้ใน array แทนการดาวน์โหลดทันที
+        const fileName = editFormData.fileName || `SUPPLY_REQUEST_ORDER_${category.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
+        
+        // สร้าง blob และเก็บไว้
+        const pdfBlob = pdf.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        
+        // สร้าง link element และคลิกเพื่อดาวน์โหลด
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = `${fileName}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(pdfUrl);
+
+        console.log(`PDF for category ${category} saved: ${fileName}.pdf`);
+        categoryIndex++;
+      }
+
+      alert(`ไฟล์ PDF ทั้งหมด ${Object.keys(allItemsByCategory).length} หมวดหมู่ถูกสร้างและดาวน์โหลดแล้ว!`);
+    } catch (error) {
+      console.error('Error generating PDFs by category:', error);
       alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + (error as Error).message);
     }
   };
@@ -1119,7 +1404,6 @@ export default function ApprovalsPage() {
         }, {} as Record<string, typeof itemsToUse>);
 
         const sortedCategories = Object.keys(groupedItems).sort();
-        let itemCounter = 1;
 
 
         const categoryHTML = sortedCategories.map(category => {
@@ -1127,7 +1411,7 @@ export default function ApprovalsPage() {
           const categoryItemsHTML = items.map(item => {
             const itemHTML = `
               <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 8px; text-align: center; font-size: 10px;">${itemCounter++}</td>
+                <td style="padding: 8px; text-align: center; font-size: 10px;">${item.ITEM_ID || 'N/A'}</td>
                 <td style="padding: 8px; font-size: 10px;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
                 <td style="padding: 8px; text-align: center; font-size: 10px;">${item.QUANTITY}</td>
                 <td style="padding: 8px; text-align: center; font-size: 10px;">ชิ้น</td>
@@ -1174,15 +1458,17 @@ export default function ApprovalsPage() {
             
             <div style="margin-bottom: 25px;">
               <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
-                <div style="font-size: 14px; font-weight: bold; color: #333;">Cost Center: ${userOrgCode4}</div>
-                <div style="font-size: 11px; color: #666; margin-top: 2px;">${userFullName} - ${requisition.USER_ID}</div>
-                <div style="font-size: 11px; color: #666; margin-top: 2px;">Department: ${requisition.DEPARTMENT || 'N/A'}</div>
+                <div style="font-size: 12px; color: #333; line-height: 1.4;">
+                  <strong>Cost Center:</strong> ${userOrgCode4} | 
+                  <strong>ผู้สั่ง:</strong> ${userFullName} - ${requisition.USER_ID} | 
+                  <strong>แผนก:</strong> ${requisition.DEPARTMENT || 'N/A'}
+                </div>
               </div>
               
               <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
                 <thead>
                   <tr style="background: #e9ecef;">
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">No.</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">ITEM_ID</th>
                     <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Description</th>
                     <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Qty</th>
                     <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit</th>
@@ -1563,13 +1849,13 @@ export default function ApprovalsPage() {
               {/* Download All PDFs Button - แสดงเฉพาะเมื่อมีข้อมูลและเป็น ADMIN เท่านั้น */}
               {filteredRequisitions.length > 0 && user?.ROLE === 'ADMIN' && (
                 <Button
-                  onClick={handleEditAllData}
+                  onClick={generateAllPDFsByCategory}
                   disabled={loading}
                   className="px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:shadow-lg bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-md hover:shadow-xl"
                 >
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
-                    แก้ไข & ดาวน์โหลด PDF ทั้งหมด ({filteredRequisitions.length})
+                    ดาวน์โหลด PDF ทั้งหมด ({filteredRequisitions.length})
                   </div>
                 </Button>
               )}
@@ -3203,224 +3489,6 @@ export default function ApprovalsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Dialog สำหรับแก้ไขข้อมูลก่อนดาวน์โหลด PDF ทั้งหมด */}
-        <Dialog open={editAllDialogOpen} onOpenChange={setEditAllDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] bg-white overflow-y-auto">
-            <DialogHeader>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <FileText className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <div className="text-xl font-bold text-gray-900">
-                    แก้ไขข้อมูลก่อนดาวน์โหลด PDF ทั้งหมด
-                  </div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    {filteredRequisitions.length} รายการ
-                  </div>
-                </div>
-              </div>
-            </DialogHeader>
-
-            <div className="space-y-6 py-4">
-              {/* ข้อมูลบริษัท */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
-                  ข้อมูลบริษัท
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ชื่อบริษัท
-                    </label>
-                    <input
-                      type="text"
-                      value={editFormData.companyName}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          companyName: e.target.value
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ที่อยู่บริษัท
-                    </label>
-                    <input
-                      type="text"
-                      value={editFormData.companyAddress}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          companyAddress: e.target.value
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      โทรศัพท์
-                    </label>
-                    <input
-                      type="text"
-                      value={editFormData.phone}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          phone: e.target.value
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      FAX
-                    </label>
-                    <input
-                      type="text"
-                      value={editFormData.fax}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          fax: e.target.value
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      เลขประจำตัวผู้เสียภาษี
-                    </label>
-                    <input
-                      type="text"
-                      value={editFormData.taxId}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          taxId: e.target.value
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* ข้อมูลการจัดส่ง */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
-                  ข้อมูลการจัดส่ง
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      วันที่จัดส่ง
-                    </label>
-                    <input
-                      type="text"
-                      value={editFormData.deliveryDate}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          deliveryDate: e.target.value
-                        })
-                      }
-                      placeholder="เช่น 15/01/2025 หรือ ภายใน 7 วัน"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ผู้ติดต่อเพิ่มเติม
-                    </label>
-                    <input
-                      type="text"
-                      value={editFormData.contactPerson}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          contactPerson: e.target.value
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              </div>
-
-
-              {/* ชื่อไฟล์ */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
-                  ชื่อไฟล์ PDF
-                </h3>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ชื่อไฟล์
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.fileName}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        fileName: e.target.value
-                      })
-                    }
-                    placeholder="เช่น ALL_SUPPLY_REQUEST_ORDERS_2025_2025-01-15"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    ไฟล์จะถูกบันทึกเป็น: {editFormData.fileName || 'ALL_SUPPLY_REQUEST_ORDERS'}.pdf
-                  </p>
-                </div>
-              </div>
-
-              {/* สรุปข้อมูล */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">สรุปข้อมูลที่จะสร้าง PDF</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600">จำนวนรายการ:</p>
-                    <p className="font-semibold text-blue-600">{filteredRequisitions.length} รายการ</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">ชื่อไฟล์:</p>
-                    <p className="font-semibold text-green-600">
-                      {editFormData.fileName || `ALL_SUPPLY_REQUEST_ORDERS_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`}.pdf
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="gap-3 pt-6 border-t border-gray-200">
-              <Button
-                variant="outline"
-                onClick={() => setEditAllDialogOpen(false)}
-                className="flex-1 h-12 text-base font-medium"
-              >
-                ยกเลิก
-              </Button>
-              <Button
-                onClick={() => {
-                  setEditAllDialogOpen(false);
-                  generateAllPDFs();
-                }}
-                className="flex-1 h-12 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base font-medium"
-              >
-                <FileText className="h-5 w-5 mr-2" />
-                สร้าง PDF ทั้งหมด
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </motion.div>
     </div>
   );

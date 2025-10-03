@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUPPLY REQUEST ORDER - แบบรวม (ปรับปรุงแล้ว)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .company-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .company-left {
+            text-align: left;
+        }
+        .company-right {
+            text-align: right;
+        }
+        .company-info p {
+            margin: 0 0 2px 0;
+            font-size: 9px;
+        }
+        .company-info .company-name {
+            font-weight: bold;
+        }
+        .delivery-info {
+            margin-bottom: 15px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            background: #f9f9f9;
+        }
+        .delivery-info h3 {
+            margin: 0 0 3px 0;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .delivery-info p {
+            margin: 0 0 2px 0;
+            font-size: 9px;
+        }
+        .cost-center {
+            margin-bottom: 10px;
+        }
+        .cost-center-header {
+            background: #f5f5f5;
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 10px;
+        }
+        .cost-center-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+        }
+        .cost-center-details {
+            font-size: 9px;
+            color: #666;
+            margin-top: 1px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #ddd;
+        }
+        th {
+            padding: 8px;
+            border: 1px solid #ddd;
+            font-size: 9px;
+            font-weight: bold;
+            background: #e9ecef;
+        }
+        td {
+            padding: 6px;
+            border: 1px solid #ddd;
+            font-size: 9px;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .category-section {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        .category-header {
+            background: #f8f9fa;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            font-size: 9px;
+            font-weight: bold;
+            color: #495057;
+        }
+        .demo-note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .demo-note h3 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+        .demo-note p {
+            margin: 0 0 5px 0;
+            color: #856404;
+        }
+        .requisition-separator {
+            border-top: 2px solid #333;
+            margin: 20px 0;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="demo-note">
+            <h3>📋 ตัวอย่างใบ SUPPLY REQUEST ORDER แบบรวม (ปรับปรุงแล้ว)</h3>
+            <p>• <strong>ไม่มีกล่องสรุปยอดรวม</strong> - เอากล่องสรุปยอดรวมออกแล้ว</p>
+            <p>• <strong>หัวข้อเฉพาะใบแรก</strong> - มีหัวข้อ SUPPLY REQUEST ORDER เฉพาะใบแรกเท่านั้น</p>
+            <p>• <strong>ขนาด A4</strong> - ปรับขนาดฟอนต์และ padding ให้เหมาะสมกับ A4</p>
+            <p>• <strong>ประหยัดพื้นที่</strong> - ลด padding และ margin เพื่อให้ใส่ข้อมูลได้มากขึ้น</p>
+        </div>
+
+        <!-- ใบแรก - มีหัวข้อ -->
+        <div class="category-section">
+            <div class="header">
+                <h1>SUPPLY REQUEST ORDER</h1>
+            </div>
+            
+            <div class="company-info">
+                <div class="company-left">
+                    <p class="company-name">บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)</p>
+                    <p>1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000</p>
+                    <p>TEL: (038) 623126 FAX: (038) 623433</p>
+                    <p>เลขประจำตัวผู้เสียภาษี 0215542000264</p>
+                </div>
+                <div class="company-right">
+                    <p><strong>Date:</strong> 15/01/2025</p>
+                    <p><strong>Requisition ID:</strong> #REQ001</p>
+                </div>
+            </div>
+            
+            <div class="delivery-info">
+                <h3>Please Delivery on:</h3>
+                <p>20/01/2025</p>
+                <p><strong>หมายเหตุ:</strong> ต้องการสินค้าด่วน</p>
+                <p><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> คุณสมชาย ใจดี</p>
+            </div>
+            
+            <div class="cost-center">
+                <div class="cost-center-header">
+                    <div class="cost-center-details">
+                        <strong>Cost Center:</strong> ORG001 | 
+                        <strong>ผู้สั่ง:</strong> สมชาย ใจดี - user001 | 
+                        <strong>แผนก:</strong> IT
+                    </div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="text-center">ITEM_ID</th>
+                            <th>Description</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-center">Unit</th>
+                            <th class="text-right">Unit Price</th>
+                            <th class="text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="category-header">
+                            <td colspan="6">Stationery</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center">ITM001</td>
+                            <td>ปากกาลูกลื่น สีน้ำเงิน</td>
+                            <td class="text-center">10</td>
+                            <td class="text-center">ด้าม</td>
+                            <td class="text-right">฿15.00</td>
+                            <td class="text-right">฿150.00</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center">ITM002</td>
+                            <td>กระดาษ A4 80 แกรม</td>
+                            <td class="text-center">5</td>
+                            <td class="text-center">รีม</td>
+                            <td class="text-right">฿120.00</td>
+                            <td class="text-right">฿600.00</td>
+                        </tr>
+                        <tr class="category-header">
+                            <td colspan="6">Office Supplies</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center ">ITM003</td>
+                            <td>แฟ้มเอกสาร A4</td>
+                            <td class="text-center ">8</td>
+                            <td class="text-center">เล่ม</td>
+                            <td class="text-right ">฿25.00</td>
+                            <td class="text-right ">฿200.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ใบที่สอง - ไม่มีหัวข้อ -->
+        <div class="requisition-separator"></div>
+        
+        <div class="category-section">
+            <div class="cost-center">
+                <div class="cost-center-header">
+                    <div class="cost-center-title">Cost Center: ORG002</div>
+                    <div class="cost-center-details">สมหญิง ใจงาม - user002</div>
+                    <div class="cost-center-details">Department: HR</div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="text-center">ITEM_ID</th>
+                            <th>Description</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-center">Unit</th>
+                            <th class="text-right">Unit Price</th>
+                            <th class="text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="category-header">
+                            <td colspan="6">Computer Accessories</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center ">ITM004</td>
+                            <td>เมาส์ USB</td>
+                            <td class="text-center ">5</td>
+                            <td class="text-center">ตัว</td>
+                            <td class="text-right ">฿250.00</td>
+                            <td class="text-right ">฿1,250.00</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center ">ITM005</td>
+                            <td>คีย์บอร์ด USB</td>
+                            <td class="text-center ">3</td>
+                            <td class="text-center">ตัว</td>
+                            <td class="text-right ">฿400.00</td>
+                            <td class="text-right ">฿1,200.00</td>
+                        </tr>
+                        <tr class="category-header">
+                            <td colspan="6">Stationery</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center ">ITM006</td>
+                            <td>ดินสอ 2B</td>
+                            <td class="text-center ">20</td>
+                            <td class="text-center">แท่ง</td>
+                            <td class="text-right ">฿8.00</td>
+                            <td class="text-right ">฿160.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ใบที่สาม - ไม่มีหัวข้อ -->
+        <div class="requisition-separator"></div>
+        
+        <div class="category-section">
+            <div class="cost-center">
+                <div class="cost-center-header">
+                    <div class="cost-center-title">Cost Center: ORG003</div>
+                    <div class="cost-center-details">สมศักดิ์ ใจดี - user003</div>
+                    <div class="cost-center-details">Department: Finance</div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="text-center">ITEM_ID</th>
+                            <th>Description</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-center">Unit</th>
+                            <th class="text-right">Unit Price</th>
+                            <th class="text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="category-header">
+                            <td colspan="6">Office Supplies</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center ">ITM007</td>
+                            <td>ที่เย็บกระดาษ</td>
+                            <td class="text-center ">3</td>
+                            <td class="text-center">เครื่อง</td>
+                            <td class="text-right ">฿150.00</td>
+                            <td class="text-right ">฿450.00</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center ">ITM008</td>
+                            <td>ลิ้นชักเก็บเอกสาร</td>
+                            <td class="text-center ">2</td>
+                            <td class="text-center">ชุด</td>
+                            <td class="text-right ">฿300.00</td>
+                            <td class="text-right ">฿600.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="demo-note">
+            <h3>📝 ข้อดีของการปรับปรุง</h3>
+            <p>• <strong>ประหยัดพื้นที่</strong> - ไม่มีกล่องสรุปยอดรวม ทำให้มีพื้นที่สำหรับข้อมูลมากขึ้น</p>
+            <p>• <strong>ไม่ซ้ำซ้อน</strong> - หัวข้อแสดงเฉพาะใบแรก ไม่ซ้ำซ้อนในทุกหน้า</p>
+            <p>• <strong>ขนาดเหมาะสม</strong> - ปรับขนาดฟอนต์และ padding ให้เหมาะสมกับ A4</p>
+            <p>• <strong>อ่านง่าย</strong> - ข้อมูลจัดเรียงอย่างเป็นระเบียบ แยกตาม Cost Center</p>
+        </div>
+    </div>
+</body>
+</html>
