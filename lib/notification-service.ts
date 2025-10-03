@@ -1685,6 +1685,8 @@ export class NotificationService {
       // ทำความสะอาด memory
       this.memoryCleanup()
       
+      return true // ส่งอีเมลสำเร็จ
+      
     } catch (error: any) {
       // แสดง Log เฉพาะใน development
       if (process.env.NODE_ENV !== 'production') {
@@ -1699,6 +1701,8 @@ export class NotificationService {
       
       // ทำความสะอาด memory แม้เกิด error
       this.memoryCleanup()
+      
+      return false // ส่งอีเมลล้มเหลว
     }
   }
 
