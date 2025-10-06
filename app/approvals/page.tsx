@@ -726,7 +726,7 @@ export default function ApprovalsPage() {
       pdf.setFontSize(12);
       pdf.text(`Total Requisitions: ${filteredRequisitions.length}`, 20, 80);
       pdf.text(`Processed: 0`, 20, 90);
-      pdf.text(`Date: ${ThaiDateUtils.formatShortThaiDate(new Date())}`, 20, 100);
+      pdf.text(`Date: ${filteredRequisitions.length > 0 ? ThaiDateUtils.formatShortThaiDate(filteredRequisitions[0].SUBMITTED_AT) : ThaiDateUtils.formatShortThaiDate(new Date())}`, 20, 100);
 
       for (let i = 0; i < filteredRequisitions.length; i++) {
         const requisition = filteredRequisitions[i];
@@ -1216,7 +1216,7 @@ export default function ApprovalsPage() {
                 <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}</p>
               </div>
               <div style="text-align: right;">
-                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(new Date())}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${filteredRequisitions.length > 0 ? ThaiDateUtils.formatShortThaiDate(filteredRequisitions[0].SUBMITTED_AT) : ThaiDateUtils.formatShortThaiDate(new Date())}</p>
               </div>
             </div>
             
@@ -1633,7 +1633,7 @@ export default function ApprovalsPage() {
             pdf.setFontSize(8);
             pdf.setTextColor(102, 102, 102);
             pdf.text('Document created by StationaryHub System', 105, 280, { align: 'center' });
-            pdf.text(`Created: ${ThaiDateUtils.formatShortThaiDate(new Date())}`, 105, 285, { align: 'center' });
+            pdf.text(`Created: ${filteredRequisitions.length > 0 ? ThaiDateUtils.formatShortThaiDate(filteredRequisitions[0].SUBMITTED_AT) : ThaiDateUtils.formatShortThaiDate(new Date())}`, 105, 285, { align: 'center' });
           }
           
           yOffset += pageHeight;
