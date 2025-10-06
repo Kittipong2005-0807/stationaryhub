@@ -828,7 +828,7 @@ export default function ApprovalsPage() {
         const categoryHTML = Object.entries(groupedItems).map(([category, items]) => {
           const categoryRows = items.map((item, index) => `
             <tr>
-              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${(item as any).PRODUCTS?.ITEM_ID || item.ITEM_ID || 'N/A'}</td>
+              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px;">${item.PRODUCT_NAME}</td>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${item.QUANTITY}</td>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${item.ORDER_UNIT || 'ชิ้น'}</td>
@@ -1173,7 +1173,7 @@ export default function ApprovalsPage() {
         const itemsHTML = Object.entries(itemsByUser).map(([userId, { user, items: userItems }]) => {
           const userItemsHTML = userItems.map(({ requisition, item }, index) => `
             <tr>
-              <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${(item as any).PRODUCTS?.ITEM_ID || item.ITEM_ID || 'N/A'}</td>
+              <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px;">${item.PRODUCT_NAME}</td>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.QUANTITY}</td>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.ORDER_UNIT || 'ชิ้น'}</td>
@@ -1474,7 +1474,7 @@ export default function ApprovalsPage() {
           const categoryItemsHTML = items.map(item => {
             const itemHTML = `
               <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 8px; text-align: center; font-size: 10px;">${(item as any).PRODUCTS?.ITEM_ID || item.ITEM_ID || 'N/A'}</td>
+                <td style="padding: 8px; text-align: center; font-size: 10px;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
                 <td style="padding: 8px; font-size: 10px;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
                 <td style="padding: 8px; text-align: center; font-size: 10px;">${item.QUANTITY}</td>
                 <td style="padding: 8px; text-align: center; font-size: 10px;">ชิ้น</td>
@@ -1507,7 +1507,7 @@ export default function ApprovalsPage() {
                 <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
               </div>
               <div style="text-align: right;">
-                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(requisition.SUBMITTED_AT)}</p>
                 <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
               </div>
             </div>

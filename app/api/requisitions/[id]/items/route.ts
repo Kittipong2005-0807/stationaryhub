@@ -40,7 +40,8 @@ export async function GET(
         p.PRODUCT_NAME,
         p.PHOTO_URL,
         pc.CATEGORY_NAME,
-        p.ORDER_UNIT
+        p.ORDER_UNIT,
+        p.ITEM_ID as PRODUCT_ITEM_ID
       FROM REQUISITION_ITEMS ri
       LEFT JOIN PRODUCTS p ON ri.PRODUCT_ID = p.PRODUCT_ID
       LEFT JOIN PRODUCT_CATEGORIES pc ON p.CATEGORY_ID = pc.CATEGORY_ID
