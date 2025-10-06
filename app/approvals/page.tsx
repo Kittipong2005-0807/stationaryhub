@@ -726,7 +726,7 @@ export default function ApprovalsPage() {
       pdf.setFontSize(12);
       pdf.text(`Total Requisitions: ${filteredRequisitions.length}`, 20, 80);
       pdf.text(`Processed: 0`, 20, 90);
-      pdf.text(`Date: ${ThaiDateUtils.formatShortThaiDate(filteredRequisitions[0]?.SUBMITTED_AT || new Date())}`, 20, 100);
+      pdf.text(`Date: ${filteredRequisitions[0]?.SUBMITTED_AT ? ThaiDateUtils.formatShortThaiDate(filteredRequisitions[0].SUBMITTED_AT) : 'N/A'}`, 20, 100);
 
       for (let i = 0; i < filteredRequisitions.length; i++) {
         const requisition = filteredRequisitions[i];
@@ -1216,8 +1216,7 @@ export default function ApprovalsPage() {
                 <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}</p>
               </div>
               <div style="text-align: right;">
-                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(filteredRequisitions[0]?.SUBMITTED_AT || new Date())}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #REQ001</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${filteredRequisitions[0]?.SUBMITTED_AT ? ThaiDateUtils.formatShortThaiDate(filteredRequisitions[0].SUBMITTED_AT) : 'N/A'}</p>
               </div>
             </div>
             
@@ -1231,8 +1230,7 @@ export default function ApprovalsPage() {
             <div style="margin-bottom: 25px;">
               <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
                 <div style="font-size: 12px; color: #333; line-height: 1.4;">
-                  <strong>หมวดหมู่:</strong> ${category} | 
-                  <strong>ผู้สั่ง:</strong> ${usersList}
+                  <strong>หมวดหมู่:</strong> ${category} 
                 </div>
               </div>
               
@@ -1635,7 +1633,7 @@ export default function ApprovalsPage() {
             pdf.setFontSize(8);
             pdf.setTextColor(102, 102, 102);
             pdf.text('Document created by StationaryHub System', 105, 280, { align: 'center' });
-            pdf.text(`Created: ${ThaiDateUtils.formatShortThaiDate(filteredRequisitions[0]?.SUBMITTED_AT || new Date())}`, 105, 285, { align: 'center' });
+            pdf.text(`Created: ${filteredRequisitions[0]?.SUBMITTED_AT ? ThaiDateUtils.formatShortThaiDate(filteredRequisitions[0].SUBMITTED_AT) : 'N/A'}`, 105, 285, { align: 'center' });
           }
           
           yOffset += pageHeight;
