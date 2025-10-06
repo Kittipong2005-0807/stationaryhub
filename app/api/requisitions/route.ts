@@ -237,6 +237,10 @@ export async function POST(request: NextRequest) {
       orderBy: { REQUISITION_ID: 'desc' }
     })
     
+    if (!requisition) {
+      return NextResponse.json({ error: "Failed to create requisition" }, { status: 500 })
+    }
+    
     // สร้าง requisition items
     if (data.REQUISITION_ITEMS && Array.isArray(data.REQUISITION_ITEMS)) {
       for (const item of data.REQUISITION_ITEMS) {
