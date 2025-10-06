@@ -862,7 +862,7 @@ export default function ApprovalsPage() {
                 <p style="margin: 0 0 2px 0; font-size: 9px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
               </div>
               <div style="text-align: right;">
-                <p style="margin: 0 0 2px 0; font-size: 9px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(requisition.SUBMITTED_AT)}</p>
+                <p style="margin: 0 0 2px 0; font-size: 9px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
                 <p style="margin: 0 0 2px 0; font-size: 9px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
               </div>
             </div>
@@ -1507,7 +1507,7 @@ export default function ApprovalsPage() {
                 <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
               </div>
               <div style="text-align: right;">
-                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(requisition.SUBMITTED_AT)}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
                 <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
               </div>
             </div>
