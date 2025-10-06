@@ -726,7 +726,16 @@ export default function ApprovalsPage() {
       pdf.setFontSize(12);
       pdf.text(`Total Requisitions: ${filteredRequisitions.length}`, 20, 80);
       pdf.text(`Processed: 0`, 20, 90);
-      pdf.text(`Date: ${ThaiDateUtils.formatShortThaiDate(new Date())}`, 20, 100);
+      pdf.text(`Date: ${(() => {
+        const now = new Date();
+        const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const dateNum = now.getDate().toString().padStart(2, '0');
+        const month = thaiMonthsShort[now.getMonth()];
+        const year = (now.getFullYear() + 543).toString().slice(-4);
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
+      })()}`, 20, 100);
 
       for (let i = 0; i < filteredRequisitions.length; i++) {
         const requisition = filteredRequisitions[i];
@@ -1216,7 +1225,16 @@ export default function ApprovalsPage() {
                 <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}</p>
               </div>
               <div style="text-align: right;">
-                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${ThaiDateUtils.formatShortThaiDate(new Date())}</p>
+                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${(() => {
+                  const now = new Date();
+                  const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                  const dateNum = now.getDate().toString().padStart(2, '0');
+                  const month = thaiMonthsShort[now.getMonth()];
+                  const year = (now.getFullYear() + 543).toString().slice(-4);
+                  const hours = now.getHours().toString().padStart(2, '0');
+                  const minutes = now.getMinutes().toString().padStart(2, '0');
+                  return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
+                })()}</p>
               </div>
             </div>
             
@@ -1633,7 +1651,16 @@ export default function ApprovalsPage() {
             pdf.setFontSize(8);
             pdf.setTextColor(102, 102, 102);
             pdf.text('Document created by StationaryHub System', 105, 280, { align: 'center' });
-            pdf.text(`Created: ${ThaiDateUtils.formatShortThaiDate(new Date())}`, 105, 285, { align: 'center' });
+            pdf.text(`Created: ${(() => {
+              const now = new Date();
+              const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+              const dateNum = now.getDate().toString().padStart(2, '0');
+              const month = thaiMonthsShort[now.getMonth()];
+              const year = (now.getFullYear() + 543).toString().slice(-4);
+              const hours = now.getHours().toString().padStart(2, '0');
+              const minutes = now.getMinutes().toString().padStart(2, '0');
+              return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
+            })()}`, 105, 285, { align: 'center' });
           }
           
           yOffset += pageHeight;
