@@ -9,13 +9,11 @@ const nextConfig = {
 
   // Development server configuration
   devIndicators: {
-    buildActivity: true,
-    buildActivityPosition: 'bottom-right'
+    position: 'bottom-right'
   },
 
   // Basic optimizations
   reactStrictMode: true,
-  swcMinify: true,
 
   // Experimental features
   experimental: {
