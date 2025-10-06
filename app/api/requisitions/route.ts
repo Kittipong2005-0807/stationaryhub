@@ -225,15 +225,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
     
-    // สร้าง requisition ใหม่
-    const requisition = await prisma.rEQUISITIONS.create({
-      data: {
-        USER_ID: empCode,
-        // ไม่ต้องส่ง SUBMITTED_AT ให้ฐานข้อมูลใช้ GETDATE() อัตโนมัติ
-        STATUS: "PENDING",
-        TOTAL_AMOUNT: data.TOTAL_AMOUNT || 0,
-        ISSUE_NOTE: data.ISSUE_NOTE || null,
-      }
+    // สร้าง requisition ใหม่ ใช้ GETDATE() เพื่อให้ได้เวลาที่ถูกต้อง
+    const result = await prisma.$executeRaw`
+      INSERT INTO REQUISITIONS (USER_ID, STATUS, SUBMITTED_AT, TOTAL_AMOUNT, ISSUE_NOTE)
+      VALUES (${empCode}, 'PENDING', GETDATE(), ${data.TOTAL_AMOUNT || 0}, ${data.ISSUE_NOTE || null})
+    `
+    
+    // ดึงข้อมูล requisition ที่เพิ่งสร้าง
+    const requisition = await prisma.rEQUISITIONS.findFirst({
+      where: { USER_ID: empCode },
+      orderBy: { REQUISITION_ID: 'desc' }
     })
     
     // สร้าง requisition items
