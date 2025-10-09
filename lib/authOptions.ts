@@ -351,17 +351,34 @@ export const authOptions: AuthOptions = {
 
             // Fetch additional data from userWithRoles view
             try {
-              const getUserData = await prisma.$queryRaw`
+              // ลองค้นหาด้วย AdLoginName ก่อน
+              let getUserData = await prisma.$queryRaw`
                 SELECT * FROM userWithRoles 
                 WHERE AdLoginName = ${user.name ?? ''} 
               `;
+
+              // ถ้าไม่เจอ ให้ลองค้นหาด้วย EmpCode
+              if (!getUserData || (Array.isArray(getUserData) && getUserData.length === 0)) {
+                console.log('🔍 AdLoginName not found, trying EmpCode:', user.id);
+                getUserData = await prisma.$queryRaw`
+                  SELECT * FROM userWithRoles 
+                  WHERE EmpCode = ${user.id ?? ''} 
+                `;
+              }
 
               console.log('🔍 UserWithRoles data:', getUserData);
 
               const userData = Array.isArray(getUserData)
                 ? getUserData[0]
                 : getUserData;
+              
               if (userData) {
+                console.log('🔍 Found user data:', {
+                  AdLoginName: userData.AdLoginName,
+                  EmpCode: userData.EmpCode,
+                  CostCenterEng: userData.CostCenterEng,
+                  orgcode3: userData.orgcode3
+                });
                 token.AdLoginName = userData.AdLoginName;
                 token.EmpCode = userData.EmpCode;
                 token.FullNameEng = userData.FullNameEng;
@@ -388,21 +405,41 @@ export const authOptions: AuthOptions = {
                 // Update DEPARTMENT in USERS table from CostCenterEng
                 if (userData.CostCenterEng) {
                   try {
-                    await prisma.$executeRaw`
-                      UPDATE USERS 
-                      SET DEPARTMENT = ${userData.CostCenterEng.toString()}
-                      WHERE USER_ID = ${user.name ?? ''}
-                    `;
-                    console.log(
-                      '✅ Updated DEPARTMENT in USERS table from CostCenterEng:',
-                      userData.CostCenterEng
-                    );
+                    // ใช้ EmpCode เป็น USER_ID ในการอัปเดต
+                    const userIdToUpdate = userData.EmpCode || user.id;
+                    
+                    // ตรวจสอบว่า user มีอยู่ใน USERS table หรือไม่
+                    const existingUser = await prisma.uSERS.findUnique({
+                      where: { USER_ID: userIdToUpdate }
+                    });
+                    
+                    if (existingUser) {
+                      await prisma.$executeRaw`
+                        UPDATE USERS 
+                        SET DEPARTMENT = ${userData.CostCenterEng.toString()}
+                        WHERE USER_ID = ${userIdToUpdate}
+                      `;
+                      console.log(
+                        '✅ Updated DEPARTMENT in USERS table from CostCenterEng:',
+                        userData.CostCenterEng,
+                        'for USER_ID:',
+                        userIdToUpdate
+                      );
+                    } else {
+                      console.log(
+                        '⚠️ User not found in USERS table:',
+                        userIdToUpdate,
+                        'Cannot update DEPARTMENT'
+                      );
+                    }
                   } catch (updateError) {
                     console.error(
                       '❌ Failed to update DEPARTMENT in USERS table:',
                       updateError
                     );
                   }
+                } else {
+                  console.log('⚠️ No CostCenterEng found for user, cannot update DEPARTMENT');
                 }
 
                 // Update ROLE from PostNameEng - temporarily disabled

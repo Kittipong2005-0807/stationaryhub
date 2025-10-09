@@ -1416,8 +1416,9 @@ export default function ApprovalsPage() {
 
     // ดึง OrgCode4 และข้อมูลชื่อพนักงานของ user สำหรับแสดงใน Cost Center
     let userOrgCode4 = requisition.SITE_ID; // fallback to SITE_ID
-    let userOrgTDesc3 = 'UCHA'; // fallback to UCHA
+    let userOrgTDesc3 = 'N/A'; // fallback to UCHA
     let userFullName = requisition.USER_ID; // fallback to USER_ID
+    let userDepartment = requisition.DEPARTMENT || 'N/A'; // fallback to requisition.DEPARTMENT
     try {
       const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`));
       if (response.ok) {
@@ -1426,7 +1427,9 @@ export default function ApprovalsPage() {
         userOrgTDesc3 = data.orgTDesc3 || 'UCHA';
         // ใช้ชื่อไทยก่อน หากไม่มีให้ใช้ชื่ออังกฤษ หากไม่มีให้ใช้ USER_ID
         userFullName = data.fullNameThai || data.fullNameEng || requisition.USER_ID;
-        console.log('PDF Data:', { userOrgCode4, userOrgTDesc3, userFullName, requisition: requisition.REQUISITION_ID });
+        // ใช้ CostCenterEng จาก userWithRoles แทน requisition.DEPARTMENT
+        userDepartment = data.costCenterEng || requisition.DEPARTMENT || 'N/A';
+        console.log('PDF Data:', { userOrgCode4, userOrgTDesc3, userFullName, userDepartment, requisition: requisition.REQUISITION_ID });
       }
     } catch (error) {
       console.error('Error fetching user OrgCode4:', error);
@@ -1540,7 +1543,7 @@ export default function ApprovalsPage() {
                 <div style="font-size: 12px; color: #333; line-height: 1.4;">
                   <strong>Cost Center:</strong> ${userOrgCode4} | 
                   <strong>ผู้สั่ง:</strong> ${userFullName} - ${requisition.USER_ID} | 
-                  <strong>แผนก:</strong> ${requisition.DEPARTMENT || 'N/A'}
+                  <strong>แผนก:</strong> ${userDepartment}
                 </div>
               </div>
               
@@ -1566,7 +1569,7 @@ export default function ApprovalsPage() {
               <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${formatNumberWithCommas(Number(requisition.TOTAL_AMOUNT))}</div>
               <p style="margin: 5px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนรายการ: ${itemsToUse.length} รายการ</p>
               <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">สถานะ: ${requisition.STATUS}</p>
-              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">แผนก: ${requisition.DEPARTMENT || 'N/A'}</p>
+              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">แผนก: ${userDepartment}</p>
             </div>
           </div>
         `;
