@@ -794,14 +794,14 @@ export default function ApprovalsPage() {
 
         // ดึง OrgCode4 และข้อมูลชื่อพนักงานของ user สำหรับแสดงใน Cost Center
         let userOrgCode4 = requisition.SITE_ID; // fallback to SITE_ID
-        let userOrgTDesc3 = 'UCHA'; // fallback to UCHA
+        let userOrgTDesc3 = 'N/A'; // fallback to N/A
         let userFullName = requisition.USER_ID; // fallback to USER_ID
         try {
           const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`));
           if (response.ok) {
             const data = await response.json();
             userOrgCode4 = data.orgCode4 || requisition.SITE_ID;
-            userOrgTDesc3 = data.orgTDesc3 || 'UCHA';
+            userOrgTDesc3 = data.orgTDesc3 || 'N/A';
             // ใช้ชื่อไทยก่อน หากไม่มีให้ใช้ชื่ออังกฤษ หากไม่มีให้ใช้ USER_ID
             userFullName = data.fullNameThai || data.fullNameEng || requisition.USER_ID;
             console.log(`OrgCode data for requisition ${requisition.REQUISITION_ID}:`, {
@@ -821,7 +821,7 @@ export default function ApprovalsPage() {
           userOrgCode4 = requisition.SITE_ID || 'N/A';
         }
         if (!userOrgTDesc3) {
-          userOrgTDesc3 = 'UCHA';
+          userOrgTDesc3 = 'N/A';
         }
 
         // สร้าง HTML content
@@ -1178,8 +1178,35 @@ export default function ApprovalsPage() {
           return acc;
         }, {} as Record<string, { user: Requisition, items: Array<{requisition: Requisition, item: RequisitionItem}> }>);
 
+        // ดึงข้อมูลผู้ใช้จาก userWithRoles สำหรับทุกคน
+        const userDataMap: Record<string, { fullName: string, department: string }> = {};
+        for (const userId of Object.keys(itemsByUser)) {
+          try {
+            const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${userId}`));
+            if (response.ok) {
+              const data = await response.json();
+              userDataMap[userId] = {
+                fullName: data.fullNameThai || data.fullNameEng || userId,
+                department: data.costCenterEng || 'N/A'
+              };
+            } else {
+              userDataMap[userId] = {
+                fullName: userId,
+                department: 'N/A'
+              };
+            }
+          } catch (error) {
+            console.error(`Error fetching user data for ${userId}:`, error);
+            userDataMap[userId] = {
+              fullName: userId,
+              department: 'N/A'
+            };
+          }
+        }
+
         // สร้างรายการ items แยกตามคน
         const itemsHTML = Object.entries(itemsByUser).map(([userId, { user, items: userItems }]) => {
+          const userData = userDataMap[userId] || { fullName: userId, department: 'N/A' };
           const userItemsHTML = userItems.map(({ requisition, item }, index) => `
             <tr>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
@@ -1194,7 +1221,7 @@ export default function ApprovalsPage() {
           return `
             <tr style="background: #f8f9fa;">
               <td colspan="6" style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #495057;">
-                ผู้สั่ง: ${user.USERNAME || user.USER_ID} - ${user.DEPARTMENT || 'N/A'} (${userItems.length} รายการ)
+                ผู้สั่ง: ${userData.fullName} - ${userData.department} (${userItems.length} รายการ)
               </td>
             </tr>
             ${userItemsHTML}
@@ -1207,9 +1234,10 @@ export default function ApprovalsPage() {
           index === self.findIndex(u => u.USER_ID === user.USER_ID)
         );
         
-        const usersList = uniqueUsers.map(user => 
-          `${user.USERNAME || user.USER_ID} (${user.DEPARTMENT || 'N/A'})`
-        ).join(', ');
+        const usersList = uniqueUsers.map(user => {
+          const userData = userDataMap[user.USER_ID] || { fullName: user.USER_ID, department: 'N/A' };
+          return `${userData.fullName} (${userData.department})`;
+        }).join(', ');
 
         const htmlContent = `
           <div style="padding: 20px;">
@@ -1416,7 +1444,7 @@ export default function ApprovalsPage() {
 
     // ดึง OrgCode4 และข้อมูลชื่อพนักงานของ user สำหรับแสดงใน Cost Center
     let userOrgCode4 = requisition.SITE_ID; // fallback to SITE_ID
-    let userOrgTDesc3 = 'N/A'; // fallback to UCHA
+    let userOrgTDesc3 = 'N/A'; // fallback to N/A
     let userFullName = requisition.USER_ID; // fallback to USER_ID
     let userDepartment = requisition.DEPARTMENT || 'N/A'; // fallback to requisition.DEPARTMENT
     try {
@@ -1424,7 +1452,7 @@ export default function ApprovalsPage() {
       if (response.ok) {
         const data = await response.json();
         userOrgCode4 = data.orgCode4 || requisition.SITE_ID;
-        userOrgTDesc3 = data.orgTDesc3 || 'UCHA';
+        userOrgTDesc3 = data.orgTDesc3 || 'N/A';
         // ใช้ชื่อไทยก่อน หากไม่มีให้ใช้ชื่ออังกฤษ หากไม่มีให้ใช้ USER_ID
         userFullName = data.fullNameThai || data.fullNameEng || requisition.USER_ID;
         // ใช้ CostCenterEng จาก userWithRoles แทน requisition.DEPARTMENT
@@ -1440,7 +1468,7 @@ export default function ApprovalsPage() {
       userOrgCode4 = requisition.SITE_ID || 'N/A';
     }
     if (!userOrgTDesc3) {
-      userOrgTDesc3 = 'UCHA';
+      userOrgTDesc3 = 'N/A';
     }
     
     // สร้าง requisition object ที่มี items ที่ถูกต้อง
