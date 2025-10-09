@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/notification-service";
-import { Manager, Requisition } from "@/types";
+import { Requisition } from "@/types";
 import { ThaiTimeUtils } from "@/lib/thai-time-utils";
 
 // ฟังก์ชันหา Manager อัตโนมัติสำหรับคำขอเบิก โดยใช้ CostCenter
-async function findManagersForRequisition(requisition: Requisition): Promise<string[]> {
+async function findManagersForRequisition(requisition: Requisition): Promise<{ userId: string, email: string }[]> {
   try {
     console.log(`🔍 Finding managers for requisition ${requisition.REQUISITION_ID} from user ${requisition.USER_ID}`);
     
@@ -22,16 +22,19 @@ async function findManagersForRequisition(requisition: Requisition): Promise<str
     const costCenter = user[0].costcentercode;
     console.log(`🔔 User CostCenter: ${costCenter}`);
 
-    // หา managers จาก VS_DivisionMgr โดยใช้ CostCenter
-    const managers = await prisma.$queryRaw<{ CurrentEmail: string, FullNameEng: string, PostNameEng: string }[]>`
-      SELECT CurrentEmail, FullNameEng, PostNameEng
+    // หา managers จาก VS_DivisionMgr โดยใช้ CostCenter และดึง L2 (Manager ID) ด้วย
+    const managers = await prisma.$queryRaw<{ L2: string, CurrentEmail: string, FullNameEng: string, PostNameEng: string }[]>`
+      SELECT L2, CurrentEmail, FullNameEng, PostNameEng
       FROM VS_DivisionMgr 
       WHERE CostCenter = ${costCenter}
       AND CurrentEmail IS NOT NULL
       AND CurrentEmail != ''
+      AND L2 IS NOT NULL
+      AND L2 != ''
     `;
 
     console.log(`🔔 Found ${managers.length} managers for CostCenter ${costCenter}:`, managers.map((m: any) => ({
+      ManagerID: m.L2,
       Name: m.FullNameEng,
       Position: m.PostNameEng,
       Email: m.CurrentEmail
@@ -43,7 +46,10 @@ async function findManagersForRequisition(requisition: Requisition): Promise<str
       return [];
     }
 
-    return managers.map((m: any) => m.CurrentEmail).filter((email: string) => email);
+    return managers.map((m: any) => ({
+      userId: m.L2,
+      email: m.CurrentEmail
+    })).filter((manager: any) => manager.userId && manager.email);
 
   } catch (error) {
     console.error('❌ Error finding managers for requisition:', error);
@@ -140,7 +146,7 @@ async function getEmailSettings() {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     console.log('🔔 ===== EMAIL REMINDER SYSTEM START =====');
     console.log('🔔 Starting daily reminder check at:', ThaiTimeUtils.toThaiTimeString(ThaiTimeUtils.getCurrentThaiTime()));
@@ -209,9 +215,9 @@ export async function POST(request: NextRequest) {
         const autoManagers = await findManagersForRequisition(requisition);
         
         // ส่งเฉพาะ Manager ในแผนกเดียวกัน
-        const recipients = [...autoManagers];
+        const recipients = autoManagers;
 
-        console.log(`📧 Sending reminders to ${recipients.length} managers:`, recipients);
+        console.log(`📧 Sending reminders to ${recipients.length} managers:`, recipients.map(r => ({ userId: r.userId, email: r.email })));
 
         // สร้าง Log รายละเอียดการส่งเมล (ปิดการแสดงในโปรดักชั่น)
         const emailLogDetails = {
@@ -220,7 +226,7 @@ export async function POST(request: NextRequest) {
           requesterId: requisition.USER_ID,
           costCenter: requisition.USERS?.DEPARTMENT,
           totalRecipients: recipients.length,
-          recipients: recipients,
+          recipients: recipients.map(r => ({ userId: r.userId, email: r.email })),
           daysPending: daysPending,
           totalAmount: reminderData.totalAmount,
           timestamp: ThaiTimeUtils.getCurrentThaiTimeISO()
@@ -254,7 +260,7 @@ export async function POST(request: NextRequest) {
             if (process.env.NODE_ENV !== 'production') {
               console.log('📧 ===== EMAIL REMINDER ENABLED - SENDING REAL EMAILS =====')
               console.log('📧 Sending reminder email with the following details:')
-              console.log('  - To:', recipient)
+              console.log('  - To:', recipient.email, `(${recipient.userId})`)
               console.log('  - Subject:', `🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`)
               console.log('  - Requisition ID:', requisition.REQUISITION_ID)
               console.log('  - Requester:', reminderData.requesterName)
@@ -267,26 +273,26 @@ export async function POST(request: NextRequest) {
             
             // ส่งอีเมลจริง
             await NotificationService.sendTestEmail(
-              recipient,
+              recipient.email,
               `🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`,
               htmlContent
             );
             remindersSent++;
-            console.log(`✅ Reminder sent to ${recipient} for requisition: ${requisition.REQUISITION_ID}`);
+            console.log(`✅ Reminder sent to ${recipient.email} (${recipient.userId}) for requisition: ${requisition.REQUISITION_ID}`);
             
-            // บันทึก log การส่งอีเมลแจ้งเตือนซ้ำ
+            // บันทึก log การส่งอีเมลแจ้งเตือนซ้ำ - ใช้ USER_ID แทน email
             await prisma.$executeRaw`
-              INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT)
-              VALUES (${recipient}, ${`🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`}, ${htmlContent}, 'sent', GETDATE())
+              INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, TO_EMAIL)
+              VALUES (${recipient.userId}, ${`🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`}, ${htmlContent}, 'sent', GETDATE(), ${recipient.email})
             `;
 
           } catch (emailError) {
-            console.log(`❌ Failed to send reminder to ${recipient} for requisition: ${requisition.REQUISITION_ID}`, emailError);
+            console.log(`❌ Failed to send reminder to ${recipient.email} (${recipient.userId}) for requisition: ${requisition.REQUISITION_ID}`, emailError);
             
-            // บันทึก log การส่งอีเมลล้มเหลว
+            // บันทึก log การส่งอีเมลล้มเหลว - ใช้ USER_ID แทน email
               await prisma.$executeRaw`
-                INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT)
-                VALUES (${recipient}, ${`🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`}, ${htmlContent}, 'failed', GETDATE())
+                INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, TO_EMAIL)
+                VALUES (${recipient.userId}, ${`🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`}, ${htmlContent}, 'failed', GETDATE(), ${recipient.email})
               `;
           }
         }

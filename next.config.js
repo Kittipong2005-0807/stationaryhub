@@ -20,7 +20,9 @@ const nextConfig = {
     // Fix CSS preload warning
     optimizePackageImports: ['@/components'],
     // เพิ่มการตั้งค่าเพื่อลด CSS preload warning
-    optimizeCss: true
+    optimizeCss: true,
+    // เพิ่มการตั้งค่าเพื่อลด connection timeout ระหว่าง build
+    serverComponentsExternalPackages: ['@prisma/client']
   },
 
   // Output configuration for Docker

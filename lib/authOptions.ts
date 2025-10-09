@@ -115,7 +115,7 @@ export const authOptions: AuthOptions = {
               const username = credentials.username;
               const email = `${username}@ube.co.th`;
               const fullName = username; // ใช้ username เป็นชื่อเริ่มต้น
-              const department = 'General';
+              const department = undefined; // จะดึงจาก userWithRoles view แทน
               const title = 'Employee';
 
               console.log('📝 Creating user data:', {
@@ -135,10 +135,11 @@ export const authOptions: AuthOptions = {
                     // ดึงข้อมูลจาก userWithRoles view เพื่อหา EmpCode, orgcode3 และ role
                     let siteId = null; // default value
                     let userRole = 'USER'; // default role
+                    let userDepartment = undefined; // default value
 
                     try {
                       const userData = await prisma.$queryRaw`
-                        SELECT EmpCode, orgcode3, PostNameEng, FullNameEng FROM userWithRoles 
+                        SELECT EmpCode, orgcode3, PostNameEng, FullNameEng, CostCenterEng FROM userWithRoles 
                         WHERE AdLoginName = ${username} 
                       `;
 
@@ -164,6 +165,14 @@ export const authOptions: AuthOptions = {
                           console.log(
                             '✅ Found FullNameEng from userWithRoles:',
                             userFullName
+                          );
+                        }
+
+                        if (userData[0].CostCenterEng) {
+                          userDepartment = userData[0].CostCenterEng.toString();
+                          console.log(
+                            '✅ Found CostCenterEng from userWithRoles:',
+                            userDepartment
                           );
                         }
 
@@ -237,7 +246,7 @@ export const authOptions: AuthOptions = {
                             PASSWORD: 'ldap_authenticated',
                             EMAIL: email,
                             ROLE: userRole,
-                            DEPARTMENT: department,
+                            DEPARTMENT: userDepartment,
                             SITE_ID: siteId
                           }
                         });
@@ -334,7 +343,7 @@ export const authOptions: AuthOptions = {
               // Fallback values
               token.USERNAME = (user as ExtendedUser).fullName || user.name;
               token.EMAIL = user.email;
-              token.DEPARTMENT = (user as ExtendedUser).department || 'General';
+              token.DEPARTMENT = undefined; // จะอัปเดตจาก userWithRoles view แทน
               token.ROLE = 'USER'; // Will be updated from userWithRoles view below
               token.SITE_ID = null; // Will be updated from userWithRoles view below
               token.EmpCode = user.id; // Add EmpCode to token
@@ -360,6 +369,12 @@ export const authOptions: AuthOptions = {
                 token.PostNameEng = userData.PostNameEng;
                 token.CostCenterEng = userData.CostCenterEng;
                 token.orgcode3 = userData.orgcode3;
+                
+                // Update DEPARTMENT in token from CostCenterEng
+                if (userData.CostCenterEng) {
+                  token.DEPARTMENT = userData.CostCenterEng.toString();
+                  console.log('✅ Updated DEPARTMENT in token from CostCenterEng:', token.DEPARTMENT);
+                }
 
                 // Update SITE_ID from orgcode3
                 if (userData.orgcode3) {
@@ -431,7 +446,7 @@ export const authOptions: AuthOptions = {
             // Fallback values
             token.USERNAME = (user as ExtendedUser).fullName || user.name;
             token.EMAIL = user.email;
-            token.DEPARTMENT = (user as ExtendedUser).department || 'General';
+            token.DEPARTMENT = undefined; // จะอัปเดตจาก userWithRoles view แทน
             token.ROLE = 'USER'; // default role when error occurs
             token.SITE_ID = null; // Will be updated from userWithRoles view if found
             token.AdLoginName = user.name;

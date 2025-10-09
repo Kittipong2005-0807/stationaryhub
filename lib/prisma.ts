@@ -12,11 +12,16 @@ const prismaClientSingleton = () => {
       throw new Error("DATABASE_URL is not defined")
     }
 
+    // เพิ่ม connection pool parameters ใน DATABASE_URL
+    const enhancedDatabaseUrl = databaseUrl.includes('connectionTimeout') 
+      ? databaseUrl 
+      : `${databaseUrl};connectionTimeout=30000;requestTimeout=30000;pooling=true;max pool size=20`
+
     const client = new PrismaClient({
       log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
       datasources: {
         db: {
-          url: databaseUrl,
+          url: enhancedDatabaseUrl,
         },
       },
     })
