@@ -2,6 +2,8 @@
 
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
+import { useToast } from '@/components/ui/ToastContainer';
+import { useModal } from '@/components/ui/ModalManager';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -111,6 +113,8 @@ const calculateSafeTotalPrice = (item: any) => {
 };
 
 export default function ApprovalsPage() {
+  const { showSuccess: showToastSuccess, showError: showToastError, showInfo: showToastInfo } = useToast();
+  const { showSuccess, showError, showWarning, showInfo } = useModal();
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequisition, setSelectedRequisition] =
@@ -158,6 +162,7 @@ export default function ApprovalsPage() {
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
   const [notifyMessage, setNotifyMessage] = useState('');
   const [notifying, setNotifying] = useState(false);
+  
   const router = useRouter();
   const { data: session } = useSession();
   const user = session?.user as unknown as {
@@ -211,7 +216,7 @@ export default function ApprovalsPage() {
         })
         .catch((error) => {
           console.error('Error fetching all requisitions for admin:', error);
-          alert('โหลดข้อมูล requisitions ไม่สำเร็จ: ' + error.message);
+          showError('เกิดข้อผิดพลาด', 'โหลดข้อมูล requisitions ไม่สำเร็จ: ' + error.message);
           setRequisitions([]);
           setLoading(false);
         });
@@ -238,11 +243,11 @@ export default function ApprovalsPage() {
         })
         .catch((error) => {
           console.error('Error fetching requisitions:', error);
-          alert('โหลดข้อมูล requisitions ไม่สำเร็จ');
+          showError('เกิดข้อผิดพลาด', 'โหลดข้อมูล requisitions ไม่สำเร็จ');
           setLoading(false);
         });
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, user, router, showError]);
 
   const handleAction = (
     requisition: Requisition,
@@ -259,7 +264,7 @@ export default function ApprovalsPage() {
     
     // Check if rejection note is required for reject action
     if (actionType === 'reject' && (!note || note.trim() === '')) {
-      alert('กรุณากรอกเหตุผลในการปฏิเสธ (Rejection Note)');
+      showWarning('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเหตุผลในการปฏิเสธ (Rejection Note)');
       return;
     }
     
@@ -312,14 +317,14 @@ export default function ApprovalsPage() {
           }
         }
         setDialogOpen(false);
-        alert(
-          `Requisition ${actionType === 'approve' ? 'approved' : 'rejected'} successfully!`
-        );
+        
+        // Show Success Modal
+        showSuccess('Success!', `Requisition ${actionType === 'approve' ? 'ได้รับการอนุมัติ' : 'ถูกปฏิเสธ'} เรียบร้อยแล้ว`);
       } else {
-        alert('Failed to update requisition. Please try again.');
+        showError('เกิดข้อผิดพลาด', 'ไม่สามารถอัปเดต requisition ได้ กรุณาลองใหม่อีกครั้ง');
       }
-    } catch (_error) {
-      alert('Failed to update requisition. Please try again.');
+    } catch {
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถอัปเดต requisition ได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setSubmitting(false);
     }
@@ -359,7 +364,7 @@ export default function ApprovalsPage() {
       }
     } catch (error) {
       console.error('Error refreshing data:', error);
-      alert('Failed to refresh data');
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถรีเฟรชข้อมูลได้');
     } finally {
       setLoading(false);
     }
@@ -368,7 +373,7 @@ export default function ApprovalsPage() {
   // เพิ่มฟังก์ชันดาวน์โหลดไฟล์ Excel/CSV สำหรับ Admin
   const _handleDownload = () => {
     if (!requisitions.length) {
-      alert('ไม่มีข้อมูลให้ดาวน์โหลด');
+      showInfo('ไม่มีข้อมูล', 'ไม่มีข้อมูลให้ดาวน์โหลด');
       return;
     }
 
@@ -455,7 +460,7 @@ export default function ApprovalsPage() {
       !requisition.REQUISITION_ITEMS ||
       requisition.REQUISITION_ITEMS.length === 0
     ) {
-      alert('ไม่มีรายการสินค้าให้ดาวน์โหลด');
+      showInfo('ไม่มีข้อมูล', 'ไม่มีรายการสินค้าให้ดาวน์โหลด');
       return;
     }
 
@@ -553,16 +558,16 @@ export default function ApprovalsPage() {
           )
         );
         
-        alert('ส่งการแจ้งเตือนว่าสินค้ามาแล้วสำเร็จ! สถานะถูกเปลี่ยนเป็น Closed');
+        showSuccess('ส่งการแจ้งเตือนสำเร็จ!', 'สินค้ามาแล้วและสถานะถูกเปลี่ยนเป็น Closed');
         setNotifyDialogOpen(false);
         setNotifyMessage('');
         setSelectedRequisition(null);
       } else {
         const errorData = await response.json();
-        alert(`เกิดข้อผิดพลาด: ${errorData.error}`);
+        showError('เกิดข้อผิดพลาด', errorData.error);
       }
     } catch (error) {
-      alert('เกิดข้อผิดพลาดในการส่งการแจ้งเตือน');
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถส่งการแจ้งเตือนได้');
       console.error('Error sending notification:', error);
     } finally {
       setNotifying(false);
@@ -612,11 +617,11 @@ export default function ApprovalsPage() {
         setEditingItems(items);
         setEditItemsDialogOpen(true);
       } else {
-        alert('ไม่สามารถโหลดรายการสินค้าได้');
+        showError('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายการสินค้าได้');
       }
     } catch (error) {
       console.error('Error loading items:', error);
-      alert('เกิดข้อผิดพลาดในการโหลดรายการสินค้า');
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายการสินค้าได้');
     } finally {
       setSavingItems(false);
     }
@@ -641,18 +646,18 @@ export default function ApprovalsPage() {
 
       if (response.ok) {
         const result = await response.json();
-        alert(`บันทึกรายการสินค้าเรียบร้อยแล้ว! ยอดรวมใหม่: ฿${result.totalAmount.toFixed(2)}`);
+        showSuccess('บันทึกสำเร็จ!', `รายการสินค้าถูกบันทึกเรียบร้อยแล้ว ยอดรวมใหม่: ฿${result.totalAmount.toFixed(2)}`);
         setEditItemsDialogOpen(false);
         
         // รีเฟรชข้อมูล
         await handleRefresh();
       } else {
         const errorData = await response.json();
-        alert(`เกิดข้อผิดพลาด: ${errorData.error}`);
+        showError('เกิดข้อผิดพลาด', errorData.error);
       }
     } catch (error) {
       console.error('Error saving items:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึกรายการสินค้า');
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกรายการสินค้าได้');
     } finally {
       setSavingItems(false);
     }
@@ -709,7 +714,7 @@ export default function ApprovalsPage() {
     });
 
     if (filteredRequisitions.length === 0) {
-      alert(`ไม่มีข้อมูลให้สร้าง PDF\n- จำนวน requisitions ทั้งหมด: ${requisitions.length}\n- จำนวนที่ผ่าน filter: ${filteredRequisitions.length}\n- ปีที่เลือก: ${selectedYear}\n- เดือนที่เลือก: ${selectedMonth || 'ไม่เลือก'}\n- Filter: ${activeFilter}`);
+      showInfo('ไม่มีข้อมูล', `ไม่มีข้อมูลให้สร้าง PDF\n- จำนวน requisitions ทั้งหมด: ${requisitions.length}\n- จำนวนที่ผ่าน filter: ${filteredRequisitions.length}\n- ปีที่เลือก: ${selectedYear}\n- เดือนที่เลือก: ${selectedMonth || 'ไม่เลือก'}\n- Filter: ${activeFilter}`);
       return;
     }
 
@@ -1035,7 +1040,7 @@ export default function ApprovalsPage() {
       });
 
       if (pdfOutput.length < 1000) {
-        alert('เกิดข้อผิดพลาดในการสร้าง PDF: ไฟล์ PDF ไม่มีเนื้อหา');
+        showError('เกิดข้อผิดพลาด', 'ไฟล์ PDF ไม่มีเนื้อหา');
         return;
       }
 
@@ -1043,10 +1048,10 @@ export default function ApprovalsPage() {
       const fileName = editFormData.fileName || `ALL_SUPPLY_REQUEST_ORDERS_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
       pdf.save(`${fileName}.pdf`);
 
-      alert(`ไฟล์ PDF ทั้งหมด ${filteredRequisitions.length} รายการถูกสร้างและดาวน์โหลดแล้ว!`);
+      showSuccess('สร้าง PDF สำเร็จ!', `ไฟล์ PDF ทั้งหมด ${filteredRequisitions.length} รายการถูกสร้างและดาวน์โหลดแล้ว`);
     } catch (error) {
       console.error('Error generating all PDFs:', error);
-      alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + (error as Error).message);
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
     }
   };
 
@@ -1069,7 +1074,7 @@ export default function ApprovalsPage() {
     });
 
     if (filteredRequisitions.length === 0) {
-      alert(`ไม่มีข้อมูลให้สร้าง PDF\n- จำนวน requisitions ทั้งหมด: ${requisitions.length}\n- จำนวนที่ผ่าน filter: ${filteredRequisitions.length}\n- ปีที่เลือก: ${selectedYear}\n- เดือนที่เลือก: ${selectedMonth || 'ไม่เลือก'}\n- Filter: ${activeFilter}`);
+      showInfo('ไม่มีข้อมูล', `ไม่มีข้อมูลให้สร้าง PDF\n- จำนวน requisitions ทั้งหมด: ${requisitions.length}\n- จำนวนที่ผ่าน filter: ${filteredRequisitions.length}\n- ปีที่เลือก: ${selectedYear}\n- เดือนที่เลือก: ${selectedMonth || 'ไม่เลือก'}\n- Filter: ${activeFilter}`);
       return;
     }
 
@@ -1406,10 +1411,10 @@ export default function ApprovalsPage() {
         console.log(`PDF for category ${category} saved: ${fileName}.pdf`);
       }
 
-      alert(`ไฟล์ PDF ทั้งหมด ${totalPDFs} ไฟล์ถูกสร้างและดาวน์โหลดแล้ว! (แยกตามหมวดหมู่)`);
+      showSuccess('สร้าง PDF สำเร็จ!', `ไฟล์ PDF ทั้งหมด ${totalPDFs} ไฟล์ถูกสร้างและดาวน์โหลดแล้ว (แยกตามหมวดหมู่)`);
     } catch (error) {
       console.error('Error generating PDFs by user and category:', error);
-      alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + (error as Error).message);
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
     }
   };
 
@@ -1427,18 +1432,18 @@ export default function ApprovalsPage() {
         if (response.ok) {
           itemsToUse = await response.json();
         } else {
-          alert('ไม่สามารถโหลดรายการสินค้าได้');
+          showError('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายการสินค้าได้');
           return;
         }
       } catch (error) {
         console.error('Error loading items for PDF:', error);
-        alert('เกิดข้อผิดพลาดในการโหลดรายการสินค้า');
+        showError('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายการสินค้าได้');
         return;
       }
     }
     
     if (!itemsToUse || itemsToUse.length === 0) {
-      alert('ไม่มีรายการสินค้าให้สร้าง PDF');
+      showInfo('ไม่มีข้อมูล', 'ไม่มีรายการสินค้าให้สร้าง PDF');
       return;
     }
 
@@ -1630,7 +1635,7 @@ export default function ApprovalsPage() {
 
       // ตรวจสอบ canvas ก่อนสร้าง PDF
       if (canvas.width === 0 || canvas.height === 0) {
-        alert('เกิดข้อผิดพลาดในการสร้าง PDF: ไม่สามารถสร้างภาพได้');
+        showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างภาพได้');
         return;
       }
 
@@ -1707,7 +1712,7 @@ export default function ApprovalsPage() {
       });
 
       if (pdfOutput.length < 1000) {
-        alert('เกิดข้อผิดพลาดในการสร้าง PDF: ไฟล์ PDF ไม่มีเนื้อหา');
+        showError('เกิดข้อผิดพลาด', 'ไฟล์ PDF ไม่มีเนื้อหา');
         return;
       }
 
@@ -1715,10 +1720,10 @@ export default function ApprovalsPage() {
       const fileName = editFormData.fileName || `SUPPLY_REQUEST_ORDER_${requisition.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}`;
       pdf.save(`${fileName}.pdf`);
 
-      alert('ไฟล์ SUPPLY REQUEST ORDER PDF ถูกสร้างและดาวน์โหลดแล้ว!');
+      showSuccess('สร้าง PDF สำเร็จ!', 'ไฟล์ SUPPLY REQUEST ORDER PDF ถูกสร้างและดาวน์โหลดแล้ว');
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + (error as Error).message);
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
     }
   };
 
@@ -1756,7 +1761,7 @@ export default function ApprovalsPage() {
       setEditDialogOpen(true);
     } catch (error) {
       console.error('Error loading requisition items for edit:', error);
-      alert('เกิดข้อผิดพลาดในการโหลดข้อมูลรายการสินค้า');
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลรายการสินค้าได้');
     }
   };
 
@@ -3805,6 +3810,7 @@ export default function ApprovalsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
 
       </motion.div>
     </div>

@@ -32,12 +32,14 @@ import { getApiUrl } from '@/lib/api-utils';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useModal } from '@/components/ui/ModalManager';
 
 export default function ManagerCartPage() {
   const { items, removeFromCart, updateQuantity, getTotalAmount, clearCart } =
     useCart();
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
+  const { showSuccess, showError, showWarning, showInfo } = useModal();
 
   // Debug logs
   console.log('🔍 Manager Cart Debug:');
@@ -100,13 +102,13 @@ export default function ManagerCartPage() {
     // ตรวจสอบว่าข้อมูลครบหรือไม่
     if (!user?.EmpCode) {
       console.error('EmpCode is missing from session');
-      alert('ข้อมูลผู้ใช้ไม่ครบถ้วน กรุณาเข้าสู่ระบบใหม่');
+      showError('ข้อมูลไม่ครบถ้วน', 'ข้อมูลผู้ใช้ไม่ครบถ้วน กรุณาเข้าสู่ระบบใหม่');
       return;
     }
 
     if (getTotalAmount() <= 0) {
       console.error('Total amount is zero or negative');
-      alert('จำนวนเงินรวมต้องมากกว่า 0');
+      showError('ข้อมูลไม่ถูกต้อง', 'จำนวนเงินรวมต้องมากกว่า 0');
       return;
     }
 
@@ -130,12 +132,12 @@ export default function ManagerCartPage() {
 
       // ไม่ต้องเรียก API /api/requisitions อีกครั้ง เพราะ OrgCode3Service สร้าง requisition items ให้แล้ว
 
-      alert('Requisition submitted successfully!');
+      showSuccess('สั่งซื้อสำเร็จ!', 'Requisition submitted successfully!');
       clearCart();
       router.push(getBasePathUrl('/manager/orders'));
     } catch (err) {
       console.error('Error submitting requisition:', err);
-      alert('เกิดข้อผิดพลาดในการส่งใบเบิก กรุณาลองใหม่');
+      showError('เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการส่งใบเบิก กรุณาลองใหม่');
     }
   };
 
