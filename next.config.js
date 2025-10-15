@@ -15,14 +15,15 @@ const nextConfig = {
   // Basic optimizations
   reactStrictMode: true,
 
+  // External packages for server components
+  serverExternalPackages: ['@prisma/client'],
+
   // Experimental features
   experimental: {
     // Fix CSS preload warning
     optimizePackageImports: ['@/components'],
     // เพิ่มการตั้งค่าเพื่อลด CSS preload warning
-    optimizeCss: true,
-    // เพิ่มการตั้งค่าเพื่อลด connection timeout ระหว่าง build
-    serverComponentsExternalPackages: ['@prisma/client']
+    optimizeCss: true
   },
 
   // Output configuration for Docker

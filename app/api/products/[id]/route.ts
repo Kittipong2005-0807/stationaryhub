@@ -149,7 +149,11 @@ export async function PUT(
       }
     }
 
-    return NextResponse.json(updatedProduct)
+    return NextResponse.json({ 
+      success: true, 
+      product: updatedProduct,
+      message: "Product updated successfully"
+    })
   } catch (error) {
     console.error("Error updating product:", error)
     return NextResponse.json(
