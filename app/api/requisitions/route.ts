@@ -232,6 +232,7 @@ export async function POST(request: NextRequest) {
     `
     
     // ดึงข้อมูล requisition ที่เพิ่งสร้าง
+
     const requisition = await prisma.rEQUISITIONS.findFirst({
       where: { USER_ID: empCode },
       orderBy: { REQUISITION_ID: 'desc' }

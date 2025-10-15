@@ -31,7 +31,7 @@ export default function LoginPage() {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
   const searchParams = useSearchParams();
   // ส่วนประกาศ state และตัวแปรสำหรับจัดการข้อมูล login
-  const errorFromQuery = searchParams.get('error');
+  const errorFromQuery = searchParams?.get('error');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

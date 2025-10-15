@@ -6,7 +6,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { filename: string } }
 ) {
-  const { filename } = params;
+  const filename = params.filename;
 
   // ใช้ PATH_FILE_URL แทน process.cwd() + "public"
   const pathFileUrl = process.env.PATH_FILE_URL || 'D:/stationaryhub';

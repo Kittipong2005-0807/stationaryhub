@@ -4,6 +4,7 @@ import { SessionProvider } from 'next-auth/react'
 import { AuthProvider } from '@/src/contexts/AuthContext'
 import { CartProvider } from '@/src/contexts/CartContext'
 import dynamic from 'next/dynamic'
+import { ModalProvider } from './ui/ModalManager'
 
 const ToastProvider = dynamic(
   () =>
@@ -24,9 +25,11 @@ export default function ClientProviders({ children, session }: ClientProvidersPr
     <SessionProvider session={session}>
       <AuthProvider>
         <CartProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <ModalProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </ModalProvider>
         </CartProvider>
       </AuthProvider>
     </SessionProvider>
