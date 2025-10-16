@@ -99,8 +99,10 @@ export default function AdminCartPage() {
     );
   }
 
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
   const handleSubmitRequisition = async () => {
-    if (items.length === 0) return;
+    if (items.length === 0 || isSubmitting) return;
     console.log(' Cart user data: ', user);
 
     // ใช้ OrgCode3Service เพื่อสร้าง requisition พร้อม SITE_ID
@@ -156,8 +158,13 @@ export default function AdminCartPage() {
     }
 
     try {
+      setIsSubmitting(true);
+      const finalUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName;
+      const idempotencyKey = `${finalUserId}-${Date.now()}-${items.length}-${getTotalAmount()}`;
       // ใช้ API orgcode3 เพื่อสร้าง requisition พร้อม orgcode3
-      const result = await apiPost('/api/orgcode3', requisitionData);
+      const result = await apiPost('/api/orgcode3', requisitionData, {
+        headers: { 'Idempotency-Key': idempotencyKey }
+      });
 
       console.log('Requisition created with ID:', result.requisitionId);
 
@@ -169,6 +176,8 @@ export default function AdminCartPage() {
     } catch (err: any) {
       console.error('Error submitting requisition:', err);
       showError('เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการส่งใบเบิก กรุณาลองใหม่');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -437,9 +446,9 @@ export default function AdminCartPage() {
                 onClick={handleSubmitRequisition}
                 className="bg-green-600 hover:bg-green-700"
                 style={{ minWidth: 180 }}
-                disabled={isLoading || items.length === 0}
+                disabled={isLoading || items.length === 0 || isSubmitting}
               >
-                Submit Admin Requisition
+                {isSubmitting ? 'Submitting...' : 'Submit Admin Requisition'}
               </Button>
             </motion.div>
           </Box>

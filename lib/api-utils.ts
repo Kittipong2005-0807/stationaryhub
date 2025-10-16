@@ -87,11 +87,16 @@ export async function apiGet<T = any>(endpoint: string): Promise<T> {
  */
 export async function apiPost<T = any>(
   endpoint: string,
-  data: any
+  data: any,
+  options: RequestInit = {}
 ): Promise<T> {
   return apiFetch<T>(endpoint, {
     method: 'POST',
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
+    headers: {
+      ...(options.headers || {})
+    },
+    ...options
   });
 }
 

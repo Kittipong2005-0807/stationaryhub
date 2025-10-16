@@ -59,7 +59,6 @@ export default function ManagerCartPage() {
 
   const handleSubmitRequisition = async () => {
     if (items.length === 0 || isSubmitting) return;
-    setIsSubmitting(true);
     console.log('Manager Cart user data: ', user);
 
     // ใช้ OrgCode3Service เพื่อสร้าง requisition พร้อม SITE_ID
@@ -115,10 +114,12 @@ export default function ManagerCartPage() {
     }
 
     try {
+      setIsSubmitting(true);
+      const idempotencyKey = `${finalUserId}-${Date.now()}-${items.length}-${getTotalAmount()}`;
       // ใช้ API orgcode3 เพื่อสร้าง requisition พร้อม orgcode3
       const res = await fetch('/api/orgcode3', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
         body: JSON.stringify(requisitionData)
       });
 

@@ -7,6 +7,7 @@ export class MemoryManager {
   private static memoryThreshold = 100 * 1024 * 1024; // 100MB
   private static lastCleanup = Date.now();
   private static cleanupInterval = 30000; // 30 seconds
+  private static idempotencyStore: Map<string, { createdAt: number; response: any } > = new Map();
 
   /**
    * ตรวจสอบ memory usage และทำความสะอาดถ้าจำเป็น
@@ -37,6 +38,15 @@ export class MemoryManager {
       global.gc();
       if (process.env.NODE_ENV === 'development') {
         console.log('🧹 Memory cleanup performed');
+      }
+    }
+
+    // Cleanup idempotency store entries older than 2 minutes
+    const now = Date.now();
+    const ttlMs = 2 * 60 * 1000;
+    for (const [key, value] of this.idempotencyStore.entries()) {
+      if (now - value.createdAt > ttlMs) {
+        this.idempotencyStore.delete(key);
       }
     }
   }
@@ -95,6 +105,24 @@ export class MemoryManager {
    */
   static setCleanupInterval(intervalMs: number): void {
     this.cleanupInterval = intervalMs;
+  }
+
+  /**
+   * Idempotency helpers: store and retrieve responses by key (short TTL)
+   */
+  static getIdempotentResponse(key: string) {
+    const entry = this.idempotencyStore.get(key);
+    if (!entry) return null;
+    // TTL 2 minutes
+    if (Date.now() - entry.createdAt > 2 * 60 * 1000) {
+      this.idempotencyStore.delete(key);
+      return null;
+    }
+    return entry.response;
+  }
+
+  static setIdempotentResponse(key: string, response: any) {
+    this.idempotencyStore.set(key, { createdAt: Date.now(), response });
   }
 }
 

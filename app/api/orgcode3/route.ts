@@ -3,6 +3,7 @@ import { OrgCode3Service } from "@/lib/orgcode3-service"
 import { authOptions } from "@/lib/authOptions"
 import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
+import { MemoryManager } from "@/lib/memory-manager"
 
 export async function GET(request: NextRequest) {
   try {
@@ -165,6 +166,15 @@ export async function POST(request: NextRequest) {
     console.log("✅ Session user found:", session.user)
 
     const { action, userId, siteId, totalAmount, issueNote, REQUISITION_ITEMS } = await request.json()
+
+    // Idempotency: if header present, short-circuit duplicates
+    const idemKey = request.headers.get('idempotency-key') || request.headers.get('Idempotency-Key')
+    if (idemKey) {
+      const cached = MemoryManager.getIdempotentResponse(idemKey)
+      if (cached) {
+        return NextResponse.json(cached)
+      }
+    }
     
     console.log("=== API ORGCODE3 POST REQUEST ===")
     console.log("Request data:", { 
@@ -224,7 +234,11 @@ export async function POST(request: NextRequest) {
             }, { status: 500 })
           }
           
-          return NextResponse.json({ requisitionId })
+          const responseBody = { requisitionId }
+          if (idemKey) {
+            MemoryManager.setIdempotentResponse(idemKey, responseBody)
+          }
+          return NextResponse.json(responseBody)
         } catch (error) {
           console.error("Error in createRequisition:", error)
           const errorMessage = error instanceof Error ? error.message : "Internal server error"
