@@ -412,13 +412,16 @@ export class NotificationService {
         try {
           console.log(`📤 Sending immediate email to manager: ${manager.FullNameEng} (${manager.CurrentEmail})`)
           
-          // สร้าง HTML email template
-          const emailHtml = this.createEmailTemplate('requisition_pending', emailData)
+          // สร้าง HTML email template พร้อมระบุชื่อผู้จัดการ
+          const emailHtml = this.createEmailTemplate('requisition_pending', {
+            ...emailData,
+            managerName: manager.FullNameEng
+          })
           
           // บันทึกลง EMAIL_LOGS ก่อนส่งอีเมล (ใช้ userId แทน manager.L2 เพื่อหลีกเลี่ยง Foreign Key constraint)
-          const emailLog = await prisma.$executeRaw`
+          await prisma.$executeRaw`
             INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, IS_READ, FROM_EMAIL, TO_EMAIL, EMAIL_TYPE, PRIORITY, DELIVERY_STATUS, RETRY_COUNT, CREATED_BY)
-            VALUES (${userId}, ${`มีคำขอเบิกใหม่รอการอนุมัติ - Requisition #${requisitionId}`}, ${emailHtml}, 'PENDING', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${manager.CurrentEmail}, 'requisition_pending', 'medium', 'pending', 0, 'system')
+            VALUES (${userId}, ${`มีคำขอเบิกใหม่รอการอนุมัติ - Requisition #${requisitionId}`}, ${`มีคำขอเบิกใหม่รอการอนุมัติ - Requisition #${requisitionId}`}, 'PENDING', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${manager.CurrentEmail}, 'requisition_pending', 'medium', 'pending', 0, 'system')
           `;
           
           // ส่งอีเมลตรงๆ (ไม่มีเงื่อนไข)
@@ -683,10 +686,10 @@ export class NotificationService {
             
             // บันทึก error log
             try {
-              await prisma.$executeRaw`
-                INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, IS_READ, FROM_EMAIL, TO_EMAIL, EMAIL_TYPE, PRIORITY, DELIVERY_STATUS, ERROR_MESSAGE, RETRY_COUNT, CREATED_BY)
-                VALUES (${manager.L2}, ${'มีคำขอเบิกใหม่รอการอนุมัติ'}, ${`มีคำขอเบิกใหม่ (เลขที่ ${requisitionId}) จาก ${userId} รอการอนุมัติ`}, 'FAILED', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${manager.CurrentEmail}, 'requisition_pending', 'medium', 'failed', ${error instanceof Error ? error.message : String(error)}, 1, 'system')
-              `
+            await prisma.$executeRaw`
+              INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, IS_READ, FROM_EMAIL, TO_EMAIL, EMAIL_TYPE, PRIORITY, DELIVERY_STATUS, ERROR_MESSAGE, RETRY_COUNT, CREATED_BY)
+              VALUES (${manager.L2}, ${'มีคำขอเบิกใหม่รอการอนุมัติ'}, ${'มีคำขอเบิกใหม่รอการอนุมัติ'}, 'FAILED', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${manager.CurrentEmail}, 'requisition_pending', 'medium', 'failed', ${error instanceof Error ? error.message : String(error)}, 1, 'system')
+            `
               console.log(`📝 Error log created for manager ${manager.L2}`)
             } catch (logError) {
               console.error(`❌ Error creating error log for manager ${manager.L2}:`, logError)
@@ -1048,13 +1051,13 @@ export class NotificationService {
         timestamp: ThaiTimeUtils.getCurrentThaiTimeISO()
       }
       
-      // รวมข้อความหลักกับข้อมูลเพิ่มเติม
-      const fullMessage = `${data.message}\n\n---\nข้อมูลเพิ่มเติม: ${JSON.stringify(additionalData, null, 2)}`
+      // รวมข้อความหลักกับข้อมูลเพิ่มเติม (ไม่ใช้เก็บใน BODY อีกต่อไป)
+      const _fullMessage = `${data.message}\n\n---\nข้อมูลเพิ่มเติม: ${JSON.stringify(additionalData, null, 2)}`
       
       // บันทึกการแจ้งเตือนในฐานข้อมูล EMAIL_LOGS พร้อมข้อมูลอีเมลครบถ้วน
-      const emailLog = await prisma.$executeRaw`
+      await prisma.$executeRaw`
         INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, IS_READ, FROM_EMAIL, TO_EMAIL, EMAIL_TYPE, PRIORITY, DELIVERY_STATUS, RETRY_COUNT, CREATED_BY)
-        VALUES (${data.userId}, ${`Notification: ${data.type}`}, ${fullMessage}, 'PENDING', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${data.email || null}, ${data.type || 'notification'}, ${data.priority || 'medium'}, 'pending', 0, ${data.actorId || 'system'})
+        VALUES (${data.userId}, ${`Notification: ${data.type}`}, ${`Notification: ${data.type}`}, 'PENDING', GETDATE(), 0, ${process.env.SMTP_FROM || 'stationaryhub@ube.co.th'}, ${data.email || null}, ${data.type || 'notification'}, ${data.priority || 'medium'}, 'pending', 0, ${data.actorId || 'system'})
       `
       
       // ถ้าเป็น email หรือ both ให้ส่ง email (ยกเว้น requisition_created ที่ส่งแล้ว)
@@ -1097,7 +1100,7 @@ export class NotificationService {
       // ทำความสะอาด memory
       this.memoryCleanup()
       
-      return emailLog
+      return true
     } catch (error) {
       console.error('❌ Error logging notification:', error)
       // ทำความสะอาด memory แม้เกิด error

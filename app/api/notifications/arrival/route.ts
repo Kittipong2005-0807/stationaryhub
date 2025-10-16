@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
       // บันทึกลง EMAIL_LOGS หลังจากส่งเมลสำเร็จ
       const notification = await prisma.$executeRaw`
         INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, TO_EMAIL)
-        VALUES (${toUserId}, ${emailSubject}, ${emailMessage}, 'SENT', GETDATE(), ${userEmail})
+        VALUES (${toUserId}, ${emailSubject}, ${emailSubject}, 'SENT', GETDATE(), ${userEmail})
       `
 
       console.log("🔔 Created notification with GETDATE()")
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       // บันทึก error ลง EMAIL_LOGS
       const notification = await prisma.$executeRaw`
         INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, TO_EMAIL, ERROR_MESSAGE)
-        VALUES (${toUserId}, ${emailSubject}, ${emailMessage}, 'FAILED', GETDATE(), ${userEmail}, ${emailError instanceof Error ? emailError.message : String(emailError)})
+        VALUES (${toUserId}, ${emailSubject}, ${emailSubject}, 'FAILED', GETDATE(), ${userEmail}, ${emailError instanceof Error ? emailError.message : String(emailError)})
       `
 
       return NextResponse.json({ 

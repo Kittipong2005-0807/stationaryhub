@@ -206,33 +206,20 @@ export class OrgCode3Service {
         SITE_ID: userSiteId || siteId || 'HQ'
       })
       
+      let finalRequisitionId: number | null = null
       try {
-        const result = await prisma.$executeRaw`
+        // ใช้ OUTPUT INSERTED เพื่อได้ ID โดยตรง ป้องกัน race
+        const inserted = await prisma.$queryRaw<{ REQUISITION_ID: number }[]>`
           INSERT INTO REQUISITIONS (USER_ID, STATUS, SUBMITTED_AT, TOTAL_AMOUNT, ISSUE_NOTE, SITE_ID)
+          OUTPUT INSERTED.REQUISITION_ID
           VALUES (${userId}, 'PENDING', GETDATE(), ${totalAmount}, ${issueNote || ''}, ${userSiteId || siteId || 'HQ'})
         `
-        console.log("✅ INSERT result:", result)
+        finalRequisitionId = Array.isArray(inserted) && inserted.length > 0 ? inserted[0].REQUISITION_ID : null
+        console.log("✅ INSERTED REQUISITION_ID:", finalRequisitionId)
       } catch (insertError) {
         console.error("❌ INSERT error:", insertError)
         throw insertError
       }
-      
-      // ดึง ID ของ requisition ที่เพิ่งสร้าง
-      let requisitionId: { REQUISITION_ID: number }[] = []
-      try {
-        requisitionId = await prisma.$queryRaw<{ REQUISITION_ID: number }[]>`
-          SELECT TOP 1 REQUISITION_ID 
-          FROM REQUISITIONS 
-          WHERE USER_ID = ${userId} 
-          ORDER BY SUBMITTED_AT DESC
-        `
-        console.log("✅ Retrieved requisition ID:", requisitionId)
-      } catch (selectError) {
-        console.error("❌ SELECT error:", selectError)
-        throw selectError
-      }
-      
-      const finalRequisitionId = requisitionId && requisitionId.length > 0 ? requisitionId[0].REQUISITION_ID : null
       
       if (!finalRequisitionId) {
         console.error("❌ Failed to retrieve requisition ID after creation")

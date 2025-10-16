@@ -40,6 +40,7 @@ export default function ManagerCartPage() {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const { showSuccess, showError, showWarning, showInfo } = useModal();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Debug logs
   console.log('🔍 Manager Cart Debug:');
@@ -57,7 +58,8 @@ export default function ManagerCartPage() {
   }, [isAuthenticated, user, router]);
 
   const handleSubmitRequisition = async () => {
-    if (items.length === 0) return;
+    if (items.length === 0 || isSubmitting) return;
+    setIsSubmitting(true);
     console.log('Manager Cart user data: ', user);
 
     // ใช้ OrgCode3Service เพื่อสร้าง requisition พร้อม SITE_ID
@@ -138,6 +140,8 @@ export default function ManagerCartPage() {
     } catch (err) {
       console.error('Error submitting requisition:', err);
       showError('เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการส่งใบเบิก กรุณาลองใหม่');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -353,8 +357,9 @@ export default function ManagerCartPage() {
                   onClick={handleSubmitRequisition}
                   className="btn-gradient-success"
                   style={{ minWidth: 180 }}
+                  disabled={isSubmitting}
                 >
-                  Submit Requisition
+                  {isSubmitting ? 'Submitting...' : 'Submit Requisition'}
                 </Button>
               </motion.div>
             </Box>

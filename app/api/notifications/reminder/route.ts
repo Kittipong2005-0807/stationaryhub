@@ -283,7 +283,7 @@ export async function POST(_request: NextRequest) {
             // บันทึก log การส่งอีเมลแจ้งเตือนซ้ำ - ใช้ USER_ID แทน email
             await prisma.$executeRaw`
               INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, TO_EMAIL)
-              VALUES (${recipient.userId}, ${`🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`}, ${htmlContent}, 'sent', GETDATE(), ${recipient.email})
+              VALUES (${recipient.userId}, ${`🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`}, ${`🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`}, 'sent', GETDATE(), ${recipient.email})
             `;
 
           } catch (emailError) {
@@ -292,7 +292,7 @@ export async function POST(_request: NextRequest) {
             // บันทึก log การส่งอีเมลล้มเหลว - ใช้ USER_ID แทน email
               await prisma.$executeRaw`
                 INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, TO_EMAIL)
-                VALUES (${recipient.userId}, ${`🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`}, ${htmlContent}, 'failed', GETDATE(), ${recipient.email})
+                VALUES (${recipient.userId}, ${`🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`}, ${`🔔 แจ้งเตือนซ้ำ - มีคำขอเบิกรอการอนุมัติ #${requisition.REQUISITION_ID}`}, 'failed', GETDATE(), ${recipient.email})
               `;
           }
         }
