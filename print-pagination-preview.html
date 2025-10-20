@@ -138,6 +138,32 @@
       margin: var(--margin-mm);
     }
 
+    /* Ensure content respects page margins in print */
+    @media print {
+      .page-inner {
+        padding: 0 !important; /* Remove padding since @page margin handles it */
+      }
+      
+      .header {
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--header-height);
+      }
+      
+      .footer {
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: var(--footer-height);
+      }
+      
+      .content {
+        margin-top: var(--header-height);
+        margin-bottom: var(--footer-height);
+      }
+    }
+
     @media print {
       body { background: white; }
       .preview-toolbar { display: none; }

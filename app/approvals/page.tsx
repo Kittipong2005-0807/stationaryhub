@@ -1648,12 +1648,13 @@ export default function ApprovalsPage() {
       const pdf = new jsPDF('p', 'mm', 'a4');
       // Margins (mm)
       const margin = 10;
+      const bottomMargin = 15; // เพิ่ม margin ล่างให้มากขึ้น
       // A4 dimensions (mm)
       const pageWidth = 210;
       const pageHeightFull = 297;
       // Usable drawing area
       const imgWidth = pageWidth - margin * 2; // 190mm width inside margins
-      const usablePageHeight = pageHeightFull - margin * 2; // 277mm height inside margins
+      const usablePageHeight = pageHeightFull - margin - bottomMargin; // 272mm height (เหลือ margin ล่าง 15mm)
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
       // ตรวจสอบว่าต้องแบ่งหน้าไหม
@@ -1664,7 +1665,7 @@ export default function ApprovalsPage() {
         // เพิ่มหมายเลขหน้า
         pdf.setFontSize(10);
         pdf.setTextColor(102, 102, 102);
-        pdf.text(`Page 1 of 1`, 105, pageHeightFull - margin / 2, { align: 'center' });
+        pdf.text(`Page 1 of 1`, 105, pageHeightFull - bottomMargin / 2, { align: 'center' });
       } else {
         // เนื้อหาเกินหน้าเดียว - แบ่งเป็นหลายหน้า
         let currentPage = 1;
@@ -1686,13 +1687,13 @@ export default function ApprovalsPage() {
           // เพิ่มหมายเลขหน้า
           pdf.setFontSize(10);
           pdf.setTextColor(102, 102, 102);
-          pdf.text(`Page ${currentPage} of ${totalPages}`, 105, pageHeightFull - margin / 2, { align: 'center' });
+          pdf.text(`Page ${currentPage} of ${totalPages}`, 105, pageHeightFull - bottomMargin / 2, { align: 'center' });
           
           // เพิ่ม footer เฉพาะหน้าสุดท้าย
           if (currentPage === totalPages) {
             pdf.setFontSize(8);
             pdf.setTextColor(102, 102, 102);
-            pdf.text('Document created by StationaryHub System', 105, pageHeightFull - margin - 2, { align: 'center' });
+            pdf.text('Document created by StationaryHub System', 105, pageHeightFull - bottomMargin - 2, { align: 'center' });
             pdf.text(`Created: ${(() => {
               const now = new Date();
               const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -1702,7 +1703,7 @@ export default function ApprovalsPage() {
               const hours = now.getHours().toString().padStart(2, '0');
               const minutes = now.getMinutes().toString().padStart(2, '0');
               return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
-            })()}`, 105, pageHeightFull - margin - 7, { align: 'center' });
+            })()}`, 105, pageHeightFull - bottomMargin - 7, { align: 'center' });
           }
           
           yOffset += usablePageHeight;
