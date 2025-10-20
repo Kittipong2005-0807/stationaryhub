@@ -1661,6 +1661,16 @@ export default function ApprovalsPage() {
       if (imgHeight <= usablePageHeight) {
         // เนื้อหาไม่เกินหน้าเดียว
         pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
+        // เคลียร์พื้นที่ margin ด้านบน/ล่างให้เป็นสีขาว เพื่อไม่ให้ภาพชนขอบเมื่อพิมพ์หลายหน้า
+        pdf.setFillColor(255, 255, 255);
+        // top margin (full width)
+        pdf.rect(0, 0, pageWidth, margin, 'F');
+        // bottom margin (full width)
+        pdf.rect(0, pageHeightFull - bottomMargin, pageWidth, bottomMargin, 'F');
+        // left margin (full height)
+        pdf.rect(0, 0, margin, pageHeightFull, 'F');
+        // right margin (full height)
+        pdf.rect(pageWidth - margin, 0, margin, pageHeightFull, 'F');
         
         // เพิ่มหมายเลขหน้า
         pdf.setFontSize(10);
@@ -1683,6 +1693,16 @@ export default function ApprovalsPage() {
           
           // เพิ่มรูปภาพเฉพาะส่วนที่ต้องการ
           pdf.addImage(imgData, 'PNG', margin, margin - yOffset, imgWidth, imgHeight);
+          // เคลียร์พื้นที่ margin ด้านบน/ล่างของหน้านี้
+          pdf.setFillColor(255, 255, 255);
+          // top margin (full width)
+          pdf.rect(0, 0, pageWidth, margin, 'F');
+          // bottom margin (full width)
+          pdf.rect(0, pageHeightFull - bottomMargin, pageWidth, bottomMargin, 'F');
+          // left margin (full height)
+          pdf.rect(0, 0, margin, pageHeightFull, 'F');
+          // right margin (full height)
+          pdf.rect(pageWidth - margin, 0, margin, pageHeightFull, 'F');
           
           // เพิ่มหมายเลขหน้า
           pdf.setFontSize(10);
