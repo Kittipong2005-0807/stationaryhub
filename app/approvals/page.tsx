@@ -113,6 +113,69 @@ const calculateSafeTotalPrice = (item: any) => {
 };
 
 export default function ApprovalsPage() {
+  // Helper to render a canvas image into the PDF with consistent margins and page breaks
+  const renderImageWithMargins = (
+    pdfInstance: jsPDF,
+    imageData: string,
+    canvasWidth: number,
+    canvasHeight: number,
+  ) => {
+    const margin = 10;
+    const bottomMargin = 15;
+    const pageW = 210;
+    const pageH = 297;
+    const innerW = pageW - margin * 2;
+    const usableH = pageH - margin - bottomMargin;
+    const calculatedImageHeight = (canvasHeight * innerW) / canvasWidth;
+
+    const drawFrame = () => {
+      pdfInstance.setFillColor(255, 255, 255);
+      pdfInstance.rect(0, 0, pageW, margin, 'F');
+      pdfInstance.rect(0, pageH - bottomMargin, pageW, bottomMargin, 'F');
+      pdfInstance.rect(0, 0, margin, pageH, 'F');
+      pdfInstance.rect(pageW - margin, 0, margin, pageH, 'F');
+    };
+
+    if (calculatedImageHeight <= usableH) {
+      pdfInstance.addImage(imageData, 'PNG', margin, margin, innerW, calculatedImageHeight);
+      drawFrame();
+      pdfInstance.setFontSize(10);
+      pdfInstance.setTextColor(102, 102, 102);
+      pdfInstance.text(`Page 1 of 1`, 105, pageH - bottomMargin / 2, { align: 'center' });
+      return;
+    }
+
+    let currentPage = 1;
+    let offsetY = 0;
+    const totalPages = Math.ceil(calculatedImageHeight / usableH);
+    while (offsetY < calculatedImageHeight) {
+      if (currentPage > 1) {
+        pdfInstance.addPage();
+      }
+      pdfInstance.addImage(imageData, 'PNG', margin, margin - offsetY, innerW, calculatedImageHeight);
+      drawFrame();
+      pdfInstance.setFontSize(10);
+      pdfInstance.setTextColor(102, 102, 102);
+      pdfInstance.text(`Page ${currentPage} of ${totalPages}`, 105, pageH - bottomMargin / 2, { align: 'center' });
+      if (currentPage === totalPages) {
+        pdfInstance.setFontSize(8);
+        pdfInstance.setTextColor(102, 102, 102);
+        pdfInstance.text('Document created by StationaryHub System', 105, pageH - bottomMargin - 2, { align: 'center' });
+        pdfInstance.text(`Created: ${(() => {
+          const now = new Date();
+          const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+          const dateNum = now.getDate().toString().padStart(2, '0');
+          const month = thaiMonthsShort[now.getMonth()];
+          const year = (now.getFullYear() + 543).toString().slice(-4);
+          const hours = now.getHours().toString().padStart(2, '0');
+          const minutes = now.getMinutes().toString().padStart(2, '0');
+          return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
+        })()}`, 105, pageH - bottomMargin - 7, { align: 'center' });
+      }
+      offsetY += usableH;
+      currentPage++;
+    }
+  };
   const { showSuccess: showToastSuccess, showError: showToastError, showInfo: showToastInfo } = useToast();
   const { showSuccess, showError, showWarning, showInfo } = useModal();
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
@@ -721,6 +784,63 @@ export default function ApprovalsPage() {
     try {
       // สร้าง PDF หลัก
       const pdf = new jsPDF('p', 'mm', 'a4');
+      // Helper to render a canvas image into the PDF with consistent margins and page breaks
+      const renderImageWithMargins = (pdfInstance: jsPDF, imageData: string, canvasWidth: number, canvasHeight: number) => {
+        const marginLocal = 10;
+        const bottomMarginLocal = 15;
+        const pageW = 210;
+        const pageH = 297;
+        const innerW = pageW - marginLocal * 2;
+        const usableH = pageH - marginLocal - bottomMarginLocal;
+        const calculatedImageHeight = (canvasHeight * innerW) / canvasWidth;
+
+        const drawFrame = () => {
+          pdfInstance.setFillColor(255, 255, 255);
+          pdfInstance.rect(0, 0, pageW, marginLocal, 'F');
+          pdfInstance.rect(0, pageH - bottomMarginLocal, pageW, bottomMarginLocal, 'F');
+          pdfInstance.rect(0, 0, marginLocal, pageH, 'F');
+          pdfInstance.rect(pageW - marginLocal, 0, marginLocal, pageH, 'F');
+        };
+
+        if (calculatedImageHeight <= usableH) {
+          pdfInstance.addImage(imageData, 'PNG', marginLocal, marginLocal, innerW, calculatedImageHeight);
+          drawFrame();
+          pdfInstance.setFontSize(10);
+          pdfInstance.setTextColor(102, 102, 102);
+          pdfInstance.text(`Page 1 of 1`, 105, pageH - bottomMarginLocal / 2, { align: 'center' });
+        } else {
+          let currentPageLocal = 1;
+          let offsetY = 0;
+          const totalPagesLocal = Math.ceil(calculatedImageHeight / usableH);
+          while (offsetY < calculatedImageHeight) {
+            if (currentPageLocal > 1) {
+              pdfInstance.addPage();
+            }
+            pdfInstance.addImage(imageData, 'PNG', marginLocal, marginLocal - offsetY, innerW, calculatedImageHeight);
+            drawFrame();
+            pdfInstance.setFontSize(10);
+            pdfInstance.setTextColor(102, 102, 102);
+            pdfInstance.text(`Page ${currentPageLocal} of ${totalPagesLocal}`, 105, pageH - bottomMarginLocal / 2, { align: 'center' });
+            if (currentPageLocal === totalPagesLocal) {
+              pdfInstance.setFontSize(8);
+              pdfInstance.setTextColor(102, 102, 102);
+              pdfInstance.text('Document created by StationaryHub System', 105, pageH - bottomMarginLocal - 2, { align: 'center' });
+              pdfInstance.text(`Created: ${(() => {
+                const now = new Date();
+                const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                const dateNum = now.getDate().toString().padStart(2, '0');
+                const month = thaiMonthsShort[now.getMonth()];
+                const year = (now.getFullYear() + 543).toString().slice(-4);
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
+              })()}`, 105, pageH - bottomMarginLocal - 7, { align: 'center' });
+            }
+            offsetY += usableH;
+            currentPageLocal++;
+          }
+        }
+      };
       let isFirstPage = true;
       let processedCount = 0;
 
@@ -969,45 +1089,8 @@ export default function ApprovalsPage() {
           requisitionId: requisition.REQUISITION_ID,
           dataPreview: imgData.substring(0, 100) + '...'
         });
-        const imgWidth = 210; // A4 width in mm
-        const pageHeight = 290; // A4 height in mm (เพิ่มขึ้นเพื่อให้เหมาะสมกับ A4)
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        
-        // ตรวจสอบว่าต้องแบ่งหน้าไหม
-        if (imgHeight <= pageHeight) {
-          // เนื้อหาไม่เกินหน้าเดียว
-          pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-          
-          // เพิ่มหมายเลขหน้า
-          pdf.setFontSize(10);
-          pdf.setTextColor(102, 102, 102);
-          pdf.text(`Page ${i + 1} of ${filteredRequisitions.length}`, 105, 290, { align: 'center' });
-        } else {
-          // เนื้อหาเกินหน้าเดียว - แบ่งเป็นหลายหน้า
-          let currentPage = 1;
-          let yOffset = 0;
-          
-          while (yOffset < imgHeight) {
-            if (currentPage > 1) {
-              pdf.addPage();
-            }
-            
-            // คำนวณความสูงของส่วนที่จะแสดงในหน้านี้
-            const remainingHeight = imgHeight - yOffset;
-            const _pageContentHeight = Math.min(pageHeight, remainingHeight);
-            
-            // เพิ่มรูปภาพเฉพาะส่วนที่ต้องการ
-            pdf.addImage(imgData, 'PNG', 0, -yOffset, imgWidth, imgHeight);
-            
-            // เพิ่มหมายเลขหน้า
-            pdf.setFontSize(10);
-            pdf.setTextColor(102, 102, 102);
-            pdf.text(`Page ${i + 1} of ${filteredRequisitions.length}`, 105, 290, { align: 'center' });
-            
-            yOffset += pageHeight;
-            currentPage++;
-          }
-        }
+        // ใช้ helper เดียวกันในการวาดภาพพร้อม margins และการตัดหน้า
+        renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
       }
 
       // ตรวจสอบ PDF ก่อนดาวน์โหลด
@@ -1352,45 +1435,8 @@ export default function ApprovalsPage() {
           category,
           dataPreview: imgData.substring(0, 100) + '...'
         });
-        const imgWidth = 210; // A4 width in mm
-        const pageHeight = 275; // A4 height in mm (ลดลงเพื่อให้มี margin)
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        
-        // ตรวจสอบว่าต้องแบ่งหน้าไหม
-        if (imgHeight <= pageHeight) {
-          // เนื้อหาไม่เกินหน้าเดียว
-          pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-          
-          // เพิ่มหมายเลขหน้า
-          pdf.setFontSize(10);
-          pdf.setTextColor(102, 102, 102);
-          pdf.text(`Page 1 of 1`, 105, 290, { align: 'center' });
-        } else {
-          // เนื้อหาเกินหน้าเดียว - แบ่งเป็นหลายหน้า
-          let currentPage = 1;
-          let yOffset = 0;
-          
-          while (yOffset < imgHeight) {
-            if (currentPage > 1) {
-              pdf.addPage();
-            }
-            
-            // คำนวณความสูงของส่วนที่จะแสดงในหน้านี้
-            const remainingHeight = imgHeight - yOffset;
-            const _pageContentHeight = Math.min(pageHeight, remainingHeight);
-            
-            // เพิ่มรูปภาพเฉพาะส่วนที่ต้องการ
-            pdf.addImage(imgData, 'PNG', 0, -yOffset, imgWidth, imgHeight);
-            
-            // เพิ่มหมายเลขหน้า
-            pdf.setFontSize(10);
-            pdf.setTextColor(102, 102, 102);
-            pdf.text(`Page ${currentPage}`, 105, 290, { align: 'center' });
-            
-            yOffset += pageHeight;
-            currentPage++;
-          }
-        }
+        // ใช้ helper เดียวกันในการวาดภาพพร้อม margins และการตัดหน้า
+        renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
 
         // เก็บ PDF ไว้ใน array แทนการดาวน์โหลดทันที
         const fileName = editAllFormData.fileName || `SUPPLY_REQUEST_ORDER_${category.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
@@ -1646,31 +1692,19 @@ export default function ApprovalsPage() {
         hasData: imgData.length > 100
       });
       const pdf = new jsPDF('p', 'mm', 'a4');
-      // Margins (mm)
+      // Shared pagination/margin config
       const margin = 10;
-      const bottomMargin = 15; // เพิ่ม margin ล่างให้มากขึ้น
-      // A4 dimensions (mm)
+      const bottomMargin = 15;
       const pageWidth = 210;
       const pageHeightFull = 297;
-      // Usable drawing area
-      const imgWidth = pageWidth - margin * 2; // 190mm width inside margins
-      const usablePageHeight = pageHeightFull - margin - bottomMargin; // 272mm height (เหลือ margin ล่าง 15mm)
+      const imgWidth = pageWidth - margin * 2;
+      const usablePageHeight = pageHeightFull - margin - bottomMargin;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
       // ตรวจสอบว่าต้องแบ่งหน้าไหม
       if (imgHeight <= usablePageHeight) {
         // เนื้อหาไม่เกินหน้าเดียว
-        pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
-        // เคลียร์พื้นที่ margin ด้านบน/ล่างให้เป็นสีขาว เพื่อไม่ให้ภาพชนขอบเมื่อพิมพ์หลายหน้า
-        pdf.setFillColor(255, 255, 255);
-        // top margin (full width)
-        pdf.rect(0, 0, pageWidth, margin, 'F');
-        // bottom margin (full width)
-        pdf.rect(0, pageHeightFull - bottomMargin, pageWidth, bottomMargin, 'F');
-        // left margin (full height)
-        pdf.rect(0, 0, margin, pageHeightFull, 'F');
-        // right margin (full height)
-        pdf.rect(pageWidth - margin, 0, margin, pageHeightFull, 'F');
+        renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
         
         // เพิ่มหมายเลขหน้า
         pdf.setFontSize(10);
@@ -1692,17 +1726,7 @@ export default function ApprovalsPage() {
           const _pageContentHeight = Math.min(usablePageHeight, remainingHeight);
           
           // เพิ่มรูปภาพเฉพาะส่วนที่ต้องการ
-          pdf.addImage(imgData, 'PNG', margin, margin - yOffset, imgWidth, imgHeight);
-          // เคลียร์พื้นที่ margin ด้านบน/ล่างของหน้านี้
-          pdf.setFillColor(255, 255, 255);
-          // top margin (full width)
-          pdf.rect(0, 0, pageWidth, margin, 'F');
-          // bottom margin (full width)
-          pdf.rect(0, pageHeightFull - bottomMargin, pageWidth, bottomMargin, 'F');
-          // left margin (full height)
-          pdf.rect(0, 0, margin, pageHeightFull, 'F');
-          // right margin (full height)
-          pdf.rect(pageWidth - margin, 0, margin, pageHeightFull, 'F');
+          renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
           
           // เพิ่มหมายเลขหน้า
           pdf.setFontSize(10);
