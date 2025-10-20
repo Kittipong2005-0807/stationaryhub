@@ -251,13 +251,13 @@ export class ApprovalService {
         // สร้าง record ในตาราง APPROVALS ใช้ GETDATE() เพื่อให้ได้เวลาที่ถูกต้อง
         const approval = await tx.$executeRaw`
           INSERT INTO APPROVALS (REQUISITION_ID, APPROVED_BY, STATUS, NOTE, APPROVED_AT)
-          VALUES (${approvalData.REQUISITION_ID}, ${approvalData.APPROVED_BY}, ${approvalData.STATUS}, ${approvalData.NOTE || `${approvalData.STATUS} by ${approvalData.APPROVED_BY}`}, GETDATE())
+          VALUES (${approvalData.REQUISITION_ID}, ${String(approvalData.APPROVED_BY)}, ${approvalData.STATUS}, ${approvalData.NOTE || `${approvalData.STATUS} by ${approvalData.APPROVED_BY}`}, GETDATE())
         `
 
         // สร้าง record ในตาราง STATUS_HISTORY ใช้ GETDATE() เพื่อให้ได้เวลาที่ถูกต้อง
         const statusHistory = await tx.$executeRaw`
           INSERT INTO STATUS_HISTORY (REQUISITION_ID, STATUS, CHANGED_BY, COMMENT, CHANGED_AT)
-          VALUES (${approvalData.REQUISITION_ID}, ${approvalData.STATUS}, ${approvalData.APPROVED_BY}, ${approvalData.NOTE || `${approvalData.STATUS} by ${approvalData.APPROVED_BY}`}, GETDATE())
+          VALUES (${approvalData.REQUISITION_ID}, ${approvalData.STATUS}, ${String(approvalData.APPROVED_BY)}, ${approvalData.NOTE || `${approvalData.STATUS} by ${approvalData.APPROVED_BY}`}, GETDATE())
         `
 
         return {

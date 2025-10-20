@@ -1646,24 +1646,30 @@ export default function ApprovalsPage() {
         hasData: imgData.length > 100
       });
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 275; // A4 height in mm (ลดลงเพื่อให้มี margin)
+      // Margins (mm)
+      const margin = 10;
+      // A4 dimensions (mm)
+      const pageWidth = 210;
+      const pageHeightFull = 297;
+      // Usable drawing area
+      const imgWidth = pageWidth - margin * 2; // 190mm width inside margins
+      const usablePageHeight = pageHeightFull - margin * 2; // 277mm height inside margins
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
       // ตรวจสอบว่าต้องแบ่งหน้าไหม
-      if (imgHeight <= pageHeight) {
+      if (imgHeight <= usablePageHeight) {
         // เนื้อหาไม่เกินหน้าเดียว
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+        pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
         
         // เพิ่มหมายเลขหน้า
         pdf.setFontSize(10);
         pdf.setTextColor(102, 102, 102);
-        pdf.text(`Page 1 of 1`, 105, 290, { align: 'center' });
+        pdf.text(`Page 1 of 1`, 105, pageHeightFull - margin / 2, { align: 'center' });
       } else {
         // เนื้อหาเกินหน้าเดียว - แบ่งเป็นหลายหน้า
         let currentPage = 1;
         let yOffset = 0;
-        const totalPages = Math.ceil(imgHeight / pageHeight);
+        const totalPages = Math.ceil(imgHeight / usablePageHeight);
         
         while (yOffset < imgHeight) {
           if (currentPage > 1) {
@@ -1672,21 +1678,21 @@ export default function ApprovalsPage() {
           
           // คำนวณความสูงของส่วนที่จะแสดงในหน้านี้
           const remainingHeight = imgHeight - yOffset;
-          const _pageContentHeight = Math.min(pageHeight, remainingHeight);
+          const _pageContentHeight = Math.min(usablePageHeight, remainingHeight);
           
           // เพิ่มรูปภาพเฉพาะส่วนที่ต้องการ
-          pdf.addImage(imgData, 'PNG', 0, -yOffset, imgWidth, imgHeight);
+          pdf.addImage(imgData, 'PNG', margin, margin - yOffset, imgWidth, imgHeight);
           
           // เพิ่มหมายเลขหน้า
           pdf.setFontSize(10);
           pdf.setTextColor(102, 102, 102);
-          pdf.text(`Page ${currentPage} of ${totalPages}`, 105, 290, { align: 'center' });
+          pdf.text(`Page ${currentPage} of ${totalPages}`, 105, pageHeightFull - margin / 2, { align: 'center' });
           
           // เพิ่ม footer เฉพาะหน้าสุดท้าย
           if (currentPage === totalPages) {
             pdf.setFontSize(8);
             pdf.setTextColor(102, 102, 102);
-            pdf.text('Document created by StationaryHub System', 105, 280, { align: 'center' });
+            pdf.text('Document created by StationaryHub System', 105, pageHeightFull - margin - 2, { align: 'center' });
             pdf.text(`Created: ${(() => {
               const now = new Date();
               const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -1696,10 +1702,10 @@ export default function ApprovalsPage() {
               const hours = now.getHours().toString().padStart(2, '0');
               const minutes = now.getMinutes().toString().padStart(2, '0');
               return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
-            })()}`, 105, 285, { align: 'center' });
+            })()}`, 105, pageHeightFull - margin - 7, { align: 'center' });
           }
           
-          yOffset += pageHeight;
+          yOffset += usablePageHeight;
           currentPage++;
         }
       }

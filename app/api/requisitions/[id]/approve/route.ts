@@ -21,7 +21,7 @@ export async function POST(
     }
 
     const user = session.user as any
-    const userId = user.USER_ID // ใช้ USER_ID จาก session (ซึ่งมาจาก token.EmpCode)
+    const userId = String(user.USER_ID) // แปลงเป็น string เพื่อให้แน่ใจ
     console.log("🔍 User data:", { 
       AdLoginName: user.AdLoginName, 
       USER_ID: user.USER_ID, 
@@ -29,6 +29,16 @@ export async function POST(
       ROLE: user.ROLE,
       userId 
     })
+
+    // ตรวจสอบว่า user มีอยู่ใน USERS table หรือไม่
+    const userExists = await prisma.uSERS.findUnique({
+      where: { USER_ID: userId }
+    })
+    
+    if (!userExists) {
+      console.log("❌ User not found in USERS table:", userId)
+      return NextResponse.json({ error: "User not found in database" }, { status: 404 })
+    }
 
     // ตรวจสอบ Permission แทนการตรวจสอบ Role
     console.log("🔍 Checking approval permission for userId:", userId)
@@ -57,6 +67,19 @@ export async function POST(
     if (!requisition) {
       console.log("❌ Requisition not found")
       return NextResponse.json({ error: "Requisition not found" }, { status: 404 })
+    }
+
+    // ตรวจสอบสถานะปัจจุบันของ requisition
+    const latestStatus = await ApprovalService.getLatestStatus(requisitionId)
+    console.log("🔍 Current requisition status:", latestStatus)
+    
+    if (latestStatus === "APPROVED") {
+      console.log("❌ Requisition already approved")
+      return NextResponse.json({ error: "Requisition already approved" }, { status: 400 })
+    }
+    if (latestStatus === "REJECTED") {
+      console.log("❌ Requisition already rejected")
+      return NextResponse.json({ error: "Requisition already rejected" }, { status: 400 })
     }
     
     // ตรวจสอบว่า Manager สามารถอนุมัติ requisition นี้ได้หรือไม่ (มี orgcode3 เดียวกัน)
@@ -108,7 +131,7 @@ export async function POST(
       statusHistoryId: result.statusHistoryId
     })
   } catch (error) {
-    console.error("❌ Error updating requisition:", error)
+    console.error("❌ Error in approval API:", error)
     if (error instanceof Error) {
       console.error("❌ Error details:", {
         message: error.message,

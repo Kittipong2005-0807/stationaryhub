@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Preview: A4 Pagination with Margins</title>
+  <style>
+    :root {
+      --margin-mm: 10mm; /* match app PDF margins */
+      --content-padding: 8px;
+      --header-height: 28mm;
+      --footer-height: 20mm;
+      --brand: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      color: #0f172a;
+      background: #f8fafc;
+    }
+
+    .preview-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .preview-toolbar button {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .sheet {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 16px auto;
+      background: white;
+      box-shadow: 0 10px 20px rgba(2, 6, 23, 0.08);
+      outline: 1px dashed #e5e7eb;
+      outline-offset: -8px; /* visualizes paper edge in screen */
+      position: relative;
+      display: block;
+    }
+
+    .page-inner {
+      position: relative;
+      box-sizing: border-box;
+      padding: var(--margin-mm);
+      min-height: 297mm;
+    }
+
+    .header {
+      position: fixed;
+      top: var(--margin-mm);
+      left: var(--margin-mm);
+      right: var(--margin-mm);
+      height: calc(var(--header-height) - var(--content-padding));
+      display: flex;
+      align-items: flex-end;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      background: transparent;
+    }
+
+    .footer {
+      position: fixed;
+      bottom: var(--margin-mm);
+      left: var(--margin-mm);
+      right: var(--margin-mm);
+      height: var(--footer-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      background: transparent;
+    }
+
+    .content {
+      margin-top: calc(var(--header-height));
+      margin-bottom: calc(var(--footer-height));
+      box-sizing: border-box;
+    }
+
+    .title {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--brand);
+    }
+
+    .meta {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    thead th {
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 6px;
+      background: #f8fafc;
+      position: -webkit-sticky; /* Safari */
+      position: sticky;
+      top: calc(var(--margin-mm) + var(--header-height));
+      z-index: 10; /* ensure above rows on page */
+    }
+
+    tbody td {
+      border-bottom: 1px solid #f1f5f9;
+      padding: 6px;
+    }
+
+    tr { break-inside: avoid; }
+
+    /* Page numbering for print */
+    @page {
+      size: A4;
+      margin: var(--margin-mm);
+    }
+
+    @media print {
+      body { background: white; }
+      .preview-toolbar { display: none; }
+      .sheet { box-shadow: none; margin: 0; outline: none; }
+
+      /* Force header/footer per page */
+      .header, .footer { position: fixed; }
+
+      /* Automatic page numbers where supported */
+      .page-number::after { content: counter(page) " / " counter(pages); }
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-toolbar">
+    <button onclick="window.print()">พิมพ์ / เปิด Print Preview</button>
+    <button id="btn-more">เพิ่มจำนวนรายการ (x2)</button>
+    <span class="meta" id="count"></span>
+  </div>
+
+  <div class="sheet">
+    <div class="page-inner">
+      <div class="header">
+        <div style="display:flex; gap:16px; align-items: flex-end; width:100%">
+          <div class="title">Supply Request Order - Preview</div>
+          <div class="meta" style="margin-left:auto">
+            ตัวอย่างการแบ่งหน้า A4 พร้อมขอบ 10 มม.
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px">#</th>
+              <th>รหัสสินค้า</th>
+              <th>ชื่อรายการ</th>
+              <th style="width:80px; text-align:right">จำนวน</th>
+              <th style="width:100px; text-align:right">ราคา/หน่วย</th>
+              <th style="width:120px; text-align:right">ราคารวม</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+
+      <div class="footer">
+        <div>Document created by StationaryHub System</div>
+        <div class="page-number">หน้า </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const tbody = document.getElementById('rows');
+      const countEl = document.getElementById('count');
+      const btnMore = document.getElementById('btn-more');
+
+      let total = 120; // initial rows to force multi-page
+
+      function currency(n) {
+        return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+      }
+
+      function genRow(idx) {
+        const qty = Math.ceil(Math.random() * 9) + 1;
+        const price = Math.ceil(Math.random() * 95) + 5;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="text-align:right;color:#334155">${idx + 1}</td>
+          <td style="color:#334155">SKU-${String(100000 + idx)}</td>
+          <td>ตัวอย่างรายการเครื่องเขียนหมายเลข ${idx + 1}</td>
+          <td style="text-align:right">${qty}</td>
+          <td style="text-align:right">${currency(price)}</td>
+          <td style="text-align:right;font-weight:600">${currency(qty * price)}</td>
+        `;
+        return tr;
+      }
+
+      function render() {
+        tbody.innerHTML = '';
+        for (let i = 0; i < total; i++) {
+          tbody.appendChild(genRow(i));
+        }
+        countEl.textContent = `รายการทั้งหมด: ${total.toLocaleString('th-TH')} แถว (ลองพิมพ์เพื่อดูการแบ่งหน้า)`;
+      }
+
+      btnMore.addEventListener('click', () => {
+        total *= 2; // double rows to force more pages
+        render();
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
+
+
+
