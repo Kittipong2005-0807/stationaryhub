@@ -796,7 +796,7 @@ function createRequisitionPendingTemplate(data: any): string {
             </table>
             <p>กรุณาเข้าสู่ระบบเพื่อตรวจสอบและดำเนินการ</p>
             <div style="text-align: center;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/approvals" class="button">ดูคำขอเบิก</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th'}/approvals" class="button">ดูคำขอเบิก</a>
             </div>
           </div>
         </div>
