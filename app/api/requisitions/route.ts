@@ -75,52 +75,43 @@ export async function GET(request: NextRequest) {
       console.log("Fetching requisitions for User ID:", userId)
       
       // ดึงข้อมูล requisitions โดยตรงจาก database
-      const requisitions = await prisma.rEQUISITIONS.findMany({
-        where: { USER_ID: userId },
-        orderBy: { SUBMITTED_AT: "desc" },
-        include: {
-          USERS: {
-            select: {
-              USERNAME: true,
-              DEPARTMENT: true,
-              ROLE: true
-            }
-          },
-          REQUISITION_ITEMS: {
-            include: {
-              PRODUCTS: {
-                select: {
-                  PRODUCT_NAME: true
-                }
-              }
-            }
-          }
-        }
-      })
+      const requisitions = await prisma.$queryRaw`
+        SELECT 
+          r.REQUISITION_ID,
+          r.USER_ID,
+          r.STATUS,
+          r.SUBMITTED_AT,
+          r.TOTAL_AMOUNT,
+          r.SITE_ID,
+          r.ISSUE_NOTE,
+          u.USERNAME,
+          uwr.CostCenterEng as DEPARTMENT,
+          uwr.costcentercode as SITE_ID,
+          u.ROLE
+        FROM REQUISITIONS r
+        LEFT JOIN USERS u ON r.USER_ID = u.USER_ID
+        LEFT JOIN UserWithRoles uwr ON r.USER_ID = uwr.EmpCode
+        WHERE r.USER_ID = ${userId}
+        ORDER BY r.SUBMITTED_AT DESC
+      `
       
       // แปลงข้อมูลให้ตรงกับ interface และดึงสถานะล่าสุด
-      const result = await Promise.all(requisitions.map(async (requisition: any) => {
+      const result = await Promise.all((requisitions as any[]).map(async (requisition: any) => {
         // ดึงสถานะล่าสุดจาก ApprovalService
         const latestStatus = await ApprovalService.getLatestStatus(requisition.REQUISITION_ID)
         
         return {
           REQUISITION_ID: requisition.REQUISITION_ID,
           USER_ID: requisition.USER_ID,
-          USERNAME: requisition.USERS?.USERNAME || requisition.USER_ID,
-          DEPARTMENT: requisition.USERS?.DEPARTMENT,
-          USER_ROLE: requisition.USERS?.ROLE,
+          USERNAME: requisition.USERNAME || requisition.USER_ID,
+          DEPARTMENT: requisition.DEPARTMENT,
+          USER_ROLE: requisition.ROLE,
           SUBMITTED_AT: requisition.SUBMITTED_AT || null,
           STATUS: latestStatus || requisition.STATUS || "PENDING",
           TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
           ISSUE_NOTE: requisition.ISSUE_NOTE,
-          REQUISITION_ITEMS: requisition.REQUISITION_ITEMS?.map((item: any) => ({
-            REQUISITION_ITEM_ID: item.ITEM_ID,
-            PRODUCT_ID: item.PRODUCT_ID,
-            PRODUCT_NAME: item.PRODUCTS?.PRODUCT_NAME || "Unknown Product",
-            QUANTITY: item.QUANTITY || 0,
-            UNIT_PRICE: Number(item.UNIT_PRICE) || 0,
-            TOTAL_PRICE: ((item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0)) || 0
-          })) || []
+          SITE_ID: requisition.SITE_ID,
+          REQUISITION_ITEMS: [] // จะต้องดึงแยกหากต้องการรายละเอียด items
         }
       }))
       
@@ -128,46 +119,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(result)
     } else {
       // ดึงข้อมูล requisitions ทั้งหมด
-      const requisitions = await prisma.rEQUISITIONS.findMany({
-        orderBy: { SUBMITTED_AT: "desc" },
-        include: {
-          USERS: {
-            select: {
-              USERNAME: true,
-              DEPARTMENT: true,
-              ROLE: true
-            }
-          },
-          REQUISITION_ITEMS: {
-            include: {
-              PRODUCTS: {
-                select: {
-                  PRODUCT_NAME: true
-                }
-              }
-            }
-          }
-        }
-      })
+      const requisitions = await prisma.$queryRaw`
+        SELECT 
+          r.REQUISITION_ID,
+          r.USER_ID,
+          r.STATUS,
+          r.SUBMITTED_AT,
+          r.TOTAL_AMOUNT,
+          r.SITE_ID,
+          r.ISSUE_NOTE,
+          u.USERNAME,
+          uwr.CostCenterEng as DEPARTMENT,
+          uwr.costcentercode as SITE_ID,
+          u.ROLE
+        FROM REQUISITIONS r
+        LEFT JOIN USERS u ON r.USER_ID = u.USER_ID
+        LEFT JOIN UserWithRoles uwr ON r.USER_ID = uwr.EmpCode
+        ORDER BY r.SUBMITTED_AT DESC
+      `
       
-      const result = requisitions.map((requisition: any) => ({
+      const result = (requisitions as any[]).map((requisition: any) => ({
         REQUISITION_ID: requisition.REQUISITION_ID,
         USER_ID: requisition.USER_ID,
-        USERNAME: requisition.USERS?.USERNAME || requisition.USER_ID,
-        DEPARTMENT: requisition.USERS?.DEPARTMENT,
-        USER_ROLE: requisition.USERS?.ROLE,
+        USERNAME: requisition.USERNAME || requisition.USER_ID,
+        DEPARTMENT: requisition.DEPARTMENT,
+        USER_ROLE: requisition.ROLE,
         SUBMITTED_AT: requisition.SUBMITTED_AT || null,
         STATUS: requisition.STATUS || "PENDING",
         TOTAL_AMOUNT: requisition.TOTAL_AMOUNT || 0,
         ISSUE_NOTE: requisition.ISSUE_NOTE,
-        REQUISITION_ITEMS: requisition.REQUISITION_ITEMS?.map((item: any) => ({
-          REQUISITION_ITEM_ID: item.ITEM_ID,
-          PRODUCT_ID: item.PRODUCT_ID,
-          PRODUCT_NAME: item.PRODUCTS?.PRODUCT_NAME || "Unknown Product",
-          QUANTITY: item.QUANTITY || 0,
-          UNIT_PRICE: Number(item.UNIT_PRICE) || 0,
-          TOTAL_PRICE: ((item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0)) || 0
-        })) || []
+        SITE_ID: requisition.SITE_ID,
+        REQUISITION_ITEMS: [] // จะต้องดึงแยกหากต้องการรายละเอียด items
       }))
       
       return NextResponse.json(result)

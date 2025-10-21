@@ -440,10 +440,12 @@ export class OrgCode3Service {
           r.SITE_ID, 
           r.ISSUE_NOTE, 
           u.USERNAME, 
-          u.DEPARTMENT,
+          uwr.CostCenterEng as DEPARTMENT,
+          uwr.costcentercode as SITE_ID,
           u.ROLE
         FROM REQUISITIONS r
-        JOIN USERS u ON r.USER_ID = u.USER_ID
+        LEFT JOIN USERS u ON r.USER_ID = u.USER_ID
+        LEFT JOIN UserWithRoles uwr ON r.USER_ID = uwr.EmpCode
         ORDER BY r.SUBMITTED_AT DESC
       `
       
