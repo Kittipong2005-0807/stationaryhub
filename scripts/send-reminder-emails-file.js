@@ -11,7 +11,7 @@ import fs from 'fs';
 import path from 'path';
 
 // ตั้งค่า URL ของ API
-const API_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th';
+const API_URL = 'https://ugtweb.ube.co.th/stationaryhub';
 const REMINDER_ENDPOINT = '/stationaryhub/api/notifications/reminder';
 
 // ตั้งค่า path ของไฟล์ config

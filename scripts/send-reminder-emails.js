@@ -9,7 +9,7 @@ import https from 'https';
 import http from 'http';
 
 // ตั้งค่า URL ของ API
-const API_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th';
+const API_URL ='https://ugtweb.ube.co.th/stationaryhub';
 const REMINDER_ENDPOINT = '/stationaryhub/api/notifications/reminder';
 const SETTINGS_ENDPOINT = '/stationaryhub/api/email-settings';
 

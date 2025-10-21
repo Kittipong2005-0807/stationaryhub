@@ -23,7 +23,7 @@ export function getApiUrl(endpoint: string): string {
   }
 
   // Server-side: use NEXTAUTH_URL with BASE_PATH
-  const baseUrl = process.env.NEXTAUTH_URL || 'https://stationaryhub.ube.co.th';
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
   return `${baseUrl}${BASE_PATH}/${cleanEndpoint}`.replace(/\/+/g, '/');
 }
 
@@ -133,5 +133,5 @@ export function getBaseUrl(): string {
   }
 
   // Server environment
-  return process.env.NEXTAUTH_URL || 'https://stationaryhub.ube.co.th';
+  return process.env.NEXTAUTH_URL || 'http://localhost:3000';
 }

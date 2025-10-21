@@ -1713,7 +1713,7 @@ export class NotificationService {
    * สร้าง HTML template แบบง่ายเพื่อประหยัด memory
    */
   private static createSimpleEmailTemplate(type: string, data: any): string {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     
     switch (type) {
       case 'requisition_created':
@@ -2059,7 +2059,7 @@ export class NotificationService {
               <li>คุณสามารถติดตามสถานะได้ในระบบ</li>
             </ul>
             <div style="text-align: center; margin-top: 20px;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th'}/orders" class="button">ดูรายการคำขอเบิก</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/orders" class="button">ดูรายการคำขอเบิก</a>
             </div>
           </div>
         `
@@ -2133,7 +2133,7 @@ export class NotificationService {
               <li>คุณจะได้รับการแจ้งเตือนเมื่อสินค้ามาถึง</li>
             </ul>
             <div style="text-align: center; margin-top: 20px;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th'}/orders" class="button">ดูรายการคำขอเบิก</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/orders" class="button">ดูรายการคำขอเบิก</a>
             </div>
           </div>
         `
@@ -2213,7 +2213,7 @@ export class NotificationService {
               <li>คุณสามารถสร้างคำขอเบิกใหม่ได้</li>
             </ul>
             <div style="text-align: center; margin-top: 20px;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th'}/orders" class="button">ดูรายการคำขอเบิก</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/orders" class="button">ดูรายการคำขอเบิก</a>
             </div>
           </div>
         `
@@ -2287,7 +2287,7 @@ export class NotificationService {
               <li>ระบบจะแจ้งเตือนผู้ขอเบิกเมื่อมีการดำเนินการ</li>
             </ul>
             <div style="text-align: center;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th'}/approvals" class="button">ดูคำขอเบิก</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/approvals" class="button">ดูคำขอเบิก</a>
             </div>
           </div>
         `
@@ -2355,7 +2355,7 @@ export class NotificationService {
               '<p>กรุณาติดตามการจัดซื้อและจัดส่งสินค้า</p>'
             }
             <div style="text-align: center;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th'}/admin" class="button">ดูรายการคำขอเบิก</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin" class="button">ดูรายการคำขอเบิก</a>
             </div>
           </div>
         `
@@ -2396,7 +2396,7 @@ export class NotificationService {
               </ul>
             </div>
             <div style="text-align: center;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th'}/admin" class="button">จัดการคำขอเบิก</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin" class="button">จัดการคำขอเบิก</a>
             </div>
           </div>
         `
@@ -2679,7 +2679,7 @@ export class NotificationService {
               </div>
               
               <div style="text-align: center;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th'}/orders" class="button">ดูรายละเอียดสินค้า</a>
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/orders" class="button">ดูรายละเอียดสินค้า</a>
               </div>
             </div>
           </div>
