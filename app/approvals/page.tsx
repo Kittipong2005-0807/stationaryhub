@@ -743,6 +743,23 @@ export default function ApprovalsPage() {
     );
   };
 
+  // เพิ่มฟังก์ชันสำหรับอัปเดตราคาต่อหน่วย
+  const handleUpdateItemPrice = (itemId: number, unitPrice: number) => {
+    if (unitPrice < 0) return;
+    
+    setEditingItems(prev => 
+      prev.map(item => 
+        item.ITEM_ID === itemId 
+          ? { 
+              ...item, 
+              UNIT_PRICE: unitPrice,
+              TOTAL_PRICE: item.QUANTITY * unitPrice
+            }
+          : item
+      )
+    );
+  };
+
   // เพิ่มฟังก์ชันสำหรับลบรายการสินค้า
   const handleRemoveItem = (itemId: number) => {
     setEditingItems(prev => prev.filter(item => item.ITEM_ID !== itemId));
@@ -3777,13 +3794,31 @@ export default function ApprovalsPage() {
                             {item.PRODUCT_NAME || 'Unknown Product'}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            ราคาต่อหน่วย: ฿{Number(item.UNIT_PRICE || 0).toFixed(2)}
+                            หมวดหมู่: {item.CATEGORY_NAME || 'ไม่ระบุ'}
                           </p>
+                        </div>
+
+                        {/* ราคาต่อหน่วย */}
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                            ราคาต่อหน่วย:
+                          </label>
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm text-gray-500">฿</span>
+                            <input
+                              type="number"
+                              value={item.UNIT_PRICE}
+                              onChange={(e) => handleUpdateItemPrice(item.ITEM_ID, Math.max(0, parseFloat(e.target.value) || 0))}
+                              className="w-20 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              min="0"
+                              step="0.01"
+                            />
+                          </div>
                         </div>
 
                         {/* จำนวนสินค้า */}
                         <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium text-gray-700">
+                          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                             จำนวน:
                           </label>
                           <div className="flex items-center gap-1">
