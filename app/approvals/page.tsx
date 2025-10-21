@@ -677,7 +677,12 @@ export default function ApprovalsPage() {
       
       if (response.ok) {
         const items = await response.json();
-        setEditingItems(items);
+        // คำนวณ TOTAL_PRICE สำหรับรายการที่ไม่มี
+        const itemsWithCalculatedTotal = items.map((item: any) => ({
+          ...item,
+          TOTAL_PRICE: item.TOTAL_PRICE || (Number(item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0))
+        }));
+        setEditingItems(itemsWithCalculatedTotal);
         setEditItemsDialogOpen(true);
       } else {
         showError('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายการสินค้าได้');
@@ -769,8 +774,9 @@ export default function ApprovalsPage() {
   const calculateTotalAmount = (items: RequisitionItem[] | undefined | null): number => {
     if (!items || !Array.isArray(items)) return 0;
     return items.reduce((sum, item) => {
-      const price = Number(item.TOTAL_PRICE) || 0;
-      return sum + price;
+      // ใช้ TOTAL_PRICE ถ้ามี หรือคำนวณจาก QUANTITY * UNIT_PRICE
+      const totalPrice = Number(item.TOTAL_PRICE) || (Number(item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0));
+      return sum + totalPrice;
     }, 0);
   };
 
@@ -3719,7 +3725,7 @@ export default function ApprovalsPage() {
 
         {/* Dialog สำหรับแก้ไขรายการสินค้า */}
         <Dialog open={editItemsDialogOpen} onOpenChange={setEditItemsDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] bg-white overflow-y-auto">
+          <DialogContent className="max-w-6xl max-h-[95vh] w-[95vw] bg-white overflow-y-auto">
             <DialogHeader>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -3738,15 +3744,15 @@ export default function ApprovalsPage() {
 
             <div className="space-y-6 py-4">
               {/* สรุปยอดรวม */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-center sm:text-left">
                     <h3 className="text-lg font-semibold text-gray-800">ยอดรวมปัจจุบัน</h3>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-2xl sm:text-3xl font-bold text-green-600">
                       ฿{calculateTotalAmount(editingItems).toFixed(2)}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-center sm:text-right">
                     <p className="text-sm text-gray-600">จำนวนรายการ</p>
                     <p className="text-xl font-semibold text-blue-600">
                       {(editingItems || []).length} รายการ
@@ -3767,99 +3773,194 @@ export default function ApprovalsPage() {
                     <p>ไม่มีรายการสินค้า</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {(editingItems || []).map((item, _index) => (
                       <div
                         key={item.ITEM_ID}
-                        className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                        className="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow overflow-hidden"
                       >
-                        {/* รูปภาพสินค้า */}
-                        <div className="flex-shrink-0">
-                          <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                            {item.PHOTO_URL ? (
-                              <img
-                                src={getImageUrl(item.PHOTO_URL)}
-                                alt={item.PRODUCT_NAME}
-                                className="w-full h-full object-cover rounded-lg"
+                        {/* Desktop Layout */}
+                        <div className="hidden lg:flex items-center gap-4 p-4">
+                          {/* รูปภาพสินค้า */}
+                          <div className="flex-shrink-0">
+                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                              {item.PHOTO_URL ? (
+                                <img
+                                  src={getImageUrl(item.PHOTO_URL)}
+                                  alt={item.PRODUCT_NAME}
+                                  className="w-full h-full object-cover rounded-lg"
+                                />
+                              ) : (
+                                <Category className="h-8 w-8 text-gray-400" />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* ข้อมูลสินค้า */}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-gray-800 truncate">
+                              {item.PRODUCT_NAME || 'Unknown Product'}
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              หมวดหมู่: {item.CATEGORY_NAME || 'ไม่ระบุ'}
+                            </p>
+                          </div>
+
+                          {/* ราคาต่อหน่วย */}
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                              ราคาต่อหน่วย:
+                            </label>
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm text-gray-500">฿</span>
+                              <input
+                                type="number"
+                                value={item.UNIT_PRICE}
+                                onChange={(e) => handleUpdateItemPrice(item.ITEM_ID, Math.max(0, parseFloat(e.target.value) || 0))}
+                                className="w-24 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                min="0"
+                                step="0.01"
                               />
-                            ) : (
-                              <Category className="h-8 w-8 text-gray-400" />
-                            )}
+                            </div>
                           </div>
-                        </div>
 
-                        {/* ข้อมูลสินค้า */}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-gray-800 truncate">
-                            {item.PRODUCT_NAME || 'Unknown Product'}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            หมวดหมู่: {item.CATEGORY_NAME || 'ไม่ระบุ'}
-                          </p>
-                        </div>
-
-                        {/* ราคาต่อหน่วย */}
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                            ราคาต่อหน่วย:
-                          </label>
-                          <div className="flex items-center gap-1">
-                            <span className="text-sm text-gray-500">฿</span>
-                            <input
-                              type="number"
-                              value={item.UNIT_PRICE}
-                              onChange={(e) => handleUpdateItemPrice(item.ITEM_ID, Math.max(0, parseFloat(e.target.value) || 0))}
-                              className="w-20 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              min="0"
-                              step="0.01"
-                            />
+                          {/* จำนวนสินค้า */}
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                              จำนวน:
+                            </label>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleUpdateItemQuantity(item.ITEM_ID, Math.max(0, item.QUANTITY - 1))}
+                                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                              >
+                                -
+                              </button>
+                              <input
+                                type="number"
+                                value={item.QUANTITY}
+                                onChange={(e) => handleUpdateItemQuantity(item.ITEM_ID, Math.max(0, parseFloat(e.target.value) || 0))}
+                                className="w-16 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                min="0"
+                              />
+                              <button
+                                onClick={() => handleUpdateItemQuantity(item.ITEM_ID, item.QUANTITY + 1)}
+                                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                              >
+                                +
+                              </button>
+                            </div>
                           </div>
+
+                          {/* ยอดรวม */}
+                          <div className="text-right min-w-[100px]">
+                            <p className="text-sm text-gray-600">ยอดรวม</p>
+                            <p className="text-lg font-bold text-green-600">
+                              ฿{calculateSafeTotalPrice(item)}
+                            </p>
+                          </div>
+
+                          {/* ปุ่มลบ */}
+                          <button
+                            onClick={() => handleRemoveItem(item.ITEM_ID)}
+                            className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition-colors"
+                            title="ลบรายการนี้"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </button>
                         </div>
 
-                        {/* จำนวนสินค้า */}
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                            จำนวน:
-                          </label>
-                          <div className="flex items-center gap-1">
+                        {/* Mobile/Tablet Layout */}
+                        <div className="lg:hidden p-4 space-y-4">
+                          {/* Header with image and product info */}
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                              <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                                {item.PHOTO_URL ? (
+                                  <img
+                                    src={getImageUrl(item.PHOTO_URL)}
+                                    alt={item.PRODUCT_NAME}
+                                    className="w-full h-full object-cover rounded-lg"
+                                  />
+                                ) : (
+                                  <Category className="h-6 w-6 text-gray-400" />
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-800 text-sm">
+                                {item.PRODUCT_NAME || 'Unknown Product'}
+                              </h4>
+                              <p className="text-xs text-gray-600">
+                                หมวดหมู่: {item.CATEGORY_NAME || 'ไม่ระบุ'}
+                              </p>
+                            </div>
                             <button
-                              onClick={() => handleUpdateItemQuantity(item.ITEM_ID, Math.max(0, item.QUANTITY - 1))}
-                              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                              onClick={() => handleRemoveItem(item.ITEM_ID)}
+                              className="w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition-colors"
+                              title="ลบรายการนี้"
                             >
-                              -
-                            </button>
-                            <input
-                              type="number"
-                              value={item.QUANTITY}
-                              onChange={(e) => handleUpdateItemQuantity(item.ITEM_ID, Math.max(0, parseFloat(e.target.value) || 0))}
-                              className="w-16 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              min="0"
-                            />
-                            <button
-                              onClick={() => handleUpdateItemQuantity(item.ITEM_ID, item.QUANTITY + 1)}
-                              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-                            >
-                              +
+                              <XCircle className="h-3 w-3" />
                             </button>
                           </div>
-                        </div>
 
-                        {/* ยอดรวม */}
-                        <div className="text-right">
-                          <p className="text-sm text-gray-600">ยอดรวม</p>
-                          <p className="text-lg font-bold text-green-600">
-                            ฿{calculateSafeTotalPrice(item)}
-                          </p>
-                        </div>
+                          {/* Controls */}
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* ราคาต่อหน่วย */}
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-gray-700">
+                                ราคาต่อหน่วย
+                              </label>
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-gray-500">฿</span>
+                                <input
+                                  type="number"
+                                  value={item.UNIT_PRICE}
+                                  onChange={(e) => handleUpdateItemPrice(item.ITEM_ID, Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="w-full px-2 py-1 text-sm text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  min="0"
+                                  step="0.01"
+                                />
+                              </div>
+                            </div>
 
-                        {/* ปุ่มลบ */}
-                        <button
-                          onClick={() => handleRemoveItem(item.ITEM_ID)}
-                          className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition-colors"
-                          title="ลบรายการนี้"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </button>
+                            {/* จำนวนสินค้า */}
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-gray-700">
+                                จำนวน
+                              </label>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleUpdateItemQuantity(item.ITEM_ID, Math.max(0, item.QUANTITY - 1))}
+                                  className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors text-sm"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  value={item.QUANTITY}
+                                  onChange={(e) => handleUpdateItemQuantity(item.ITEM_ID, Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="flex-1 px-2 py-1 text-sm text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  min="0"
+                                />
+                                <button
+                                  onClick={() => handleUpdateItemQuantity(item.ITEM_ID, item.QUANTITY + 1)}
+                                  className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors text-sm"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* ยอดรวม */}
+                          <div className="text-center pt-2 border-t border-gray-100">
+                            <p className="text-xs text-gray-600">ยอดรวม</p>
+                            <p className="text-lg font-bold text-green-600">
+                              ฿{calculateSafeTotalPrice(item)}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -3868,31 +3969,33 @@ export default function ApprovalsPage() {
             </div>
 
             <DialogFooter className="gap-3 pt-6 border-t border-gray-200">
-              <Button
-                variant="outline"
-                onClick={() => setEditItemsDialogOpen(false)}
-                className="flex-1 h-12 text-base font-medium"
-                disabled={savingItems}
-              >
-                ยกเลิก
-              </Button>
-              <Button
-                onClick={handleSaveItems}
-                disabled={savingItems || (editingItems || []).length === 0}
-                className="flex-1 h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base font-medium"
-              >
-                {savingItems ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    กำลังบันทึก...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Inventory className="h-5 w-5" />
-                    บันทึกการแก้ไข
-                  </div>
-                )}
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => setEditItemsDialogOpen(false)}
+                  className="flex-1 h-12 text-base font-medium order-2 sm:order-1"
+                  disabled={savingItems}
+                >
+                  ยกเลิก
+                </Button>
+                <Button
+                  onClick={handleSaveItems}
+                  disabled={savingItems || (editingItems || []).length === 0}
+                  className="flex-1 h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 text-base font-medium order-1 sm:order-2"
+                >
+                  {savingItems ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      กำลังบันทึก...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Inventory className="h-5 w-5" />
+                      บันทึกการแก้ไข
+                    </div>
+                  )}
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
