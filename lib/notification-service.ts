@@ -2355,7 +2355,7 @@ export class NotificationService {
               '<p>กรุณาติดตามการจัดซื้อและจัดส่งสินค้า</p>'
             }
             <div style="text-align: center;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin" class="button">ดูรายการคำขอเบิก</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th'}/admin" class="button">ดูรายการคำขอเบิก</a>
             </div>
           </div>
         `
@@ -2396,7 +2396,7 @@ export class NotificationService {
               </ul>
             </div>
             <div style="text-align: center;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin" class="button">จัดการคำขอเบิก</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://stationaryhub.ube.co.th'}/admin" class="button">จัดการคำขอเบิก</a>
             </div>
           </div>
         `
