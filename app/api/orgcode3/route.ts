@@ -117,8 +117,8 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({ error: "User ID is required" }, { status: 400 })
         }
         try {
-          const userData = await prisma.$queryRaw<{ OrgCode4: string, OrgTDesc3: string, FullNameEng: string, FullNameThai: string, CostCenterEng: string }[]>`
-            SELECT OrgCode4, OrgTDesc3, FullNameEng, FullNameThai, CostCenterEng 
+          const userData = await prisma.$queryRaw<{ OrgCode4: string, OrgTDesc3: string, FullNameEng: string, FullNameThai: string, CostCenterEng: string, costcentercode: string }[]>`
+            SELECT OrgCode4, OrgTDesc3, FullNameEng, FullNameThai, CostCenterEng, costcentercode 
             FROM userWithRoles 
             WHERE EmpCode = ${userId}
           `
@@ -127,7 +127,8 @@ export async function GET(request: NextRequest) {
           const fullNameEng = userData && userData.length > 0 ? userData[0].FullNameEng : null
           const fullNameThai = userData && userData.length > 0 ? userData[0].FullNameThai : null
           const costCenterEng = userData && userData.length > 0 ? userData[0].CostCenterEng : null
-          return NextResponse.json({ orgCode4, orgTDesc3, fullNameEng, fullNameThai, costCenterEng })
+          const costCenterCode = userData && userData.length > 0 ? userData[0].costcentercode : null
+          return NextResponse.json({ orgCode4, orgTDesc3, fullNameEng, fullNameThai, costCenterEng, costcentercode: costCenterCode })
         } catch (error) {
           console.error("Error fetching user OrgCode4:", error)
           return NextResponse.json({ error: "Failed to fetch OrgCode4" }, { status: 500 })

@@ -126,6 +126,7 @@ export default function ApprovalsPage() {
     const pageH = 297;
     const innerW = pageW - margin * 2;
     const usableH = pageH - margin - bottomMargin;
+    const pageOverlap = 3; // small overlap to prevent clipping at page breaks
     const calculatedImageHeight = (canvasHeight * innerW) / canvasWidth;
 
     const drawFrame = () => {
@@ -147,8 +148,9 @@ export default function ApprovalsPage() {
 
     let currentPage = 1;
     let offsetY = 0;
-    const totalPages = Math.ceil(calculatedImageHeight / usableH);
-    while (offsetY < calculatedImageHeight) {
+    const step = Math.max(1, usableH - pageOverlap);
+    const totalPages = Math.ceil(Math.max(0, calculatedImageHeight - pageOverlap) / step);
+    while (offsetY < calculatedImageHeight - pageOverlap) {
       if (currentPage > 1) {
         pdfInstance.addPage();
       }
@@ -172,7 +174,7 @@ export default function ApprovalsPage() {
           return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
         })()}`, 105, pageH - bottomMargin - 7, { align: 'center' });
       }
-      offsetY += usableH;
+      offsetY += step;
       currentPage++;
     }
   };
@@ -815,6 +817,7 @@ export default function ApprovalsPage() {
         const pageH = 297;
         const innerW = pageW - marginLocal * 2;
         const usableH = pageH - marginLocal - bottomMarginLocal;
+        const pageOverlapLocal = 3; // small overlap to prevent clipping at page breaks
         const calculatedImageHeight = (canvasHeight * innerW) / canvasWidth;
 
         const drawFrame = () => {
@@ -834,8 +837,9 @@ export default function ApprovalsPage() {
         } else {
           let currentPageLocal = 1;
           let offsetY = 0;
-          const totalPagesLocal = Math.ceil(calculatedImageHeight / usableH);
-          while (offsetY < calculatedImageHeight) {
+          const stepLocal = Math.max(1, usableH - pageOverlapLocal);
+          const totalPagesLocal = Math.ceil(Math.max(0, calculatedImageHeight - pageOverlapLocal) / stepLocal);
+          while (offsetY < calculatedImageHeight - pageOverlapLocal) {
             if (currentPageLocal > 1) {
               pdfInstance.addPage();
             }
@@ -859,7 +863,7 @@ export default function ApprovalsPage() {
                 return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
               })()}`, 105, pageH - bottomMarginLocal - 7, { align: 'center' });
             }
-            offsetY += usableH;
+            offsetY += stepLocal;
             currentPageLocal++;
           }
         }
@@ -944,6 +948,7 @@ export default function ApprovalsPage() {
         let userOrgCode4 = requisition.SITE_ID; // fallback to SITE_ID
         let userOrgTDesc3 = 'N/A'; // fallback to N/A
         let userFullName = requisition.USER_ID; // fallback to USER_ID
+        let userCostCenterCode = requisition.SITE_ID || ''; // default
         try {
           const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`));
           if (response.ok) {
@@ -952,6 +957,7 @@ export default function ApprovalsPage() {
             userOrgTDesc3 = data.orgTDesc3 || 'N/A';
             // ใช้ชื่อไทยก่อน หากไม่มีให้ใช้ชื่ออังกฤษ หากไม่มีให้ใช้ USER_ID
             userFullName = data.fullNameThai || data.fullNameEng || requisition.USER_ID;
+            userCostCenterCode = data.costcentercode || requisition.SITE_ID || '';
             console.log(`OrgCode data for requisition ${requisition.REQUISITION_ID}:`, {
               userId: requisition.USER_ID,
               orgCode4: userOrgCode4,
@@ -970,6 +976,9 @@ export default function ApprovalsPage() {
         }
         if (!userOrgTDesc3) {
           userOrgTDesc3 = 'N/A';
+        }
+        if (!userCostCenterCode) {
+          userCostCenterCode = 'N/A';
         }
 
         // สร้าง HTML content
@@ -1036,7 +1045,7 @@ export default function ApprovalsPage() {
               <div style="background: #f5f5f5; padding: 6px 10px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 10px;">
                 <div style="font-size: 10px; color: #333; line-height: 1.4;">
                   <strong>Cost Center:</strong> ${userOrgCode4} | 
-                  <strong>ผู้สั่ง:</strong> ${userFullName} - ${requisition.USER_ID} | 
+                  <strong>ผู้สั่ง:</strong> ${userFullName} - ${requisition.USER_ID} (${userCostCenterCode}) | 
                   <strong>แผนก:</strong> ${requisition.DEPARTMENT || 'N/A'}
                 </div>
               </div>
@@ -1521,6 +1530,7 @@ export default function ApprovalsPage() {
     let userOrgTDesc3 = 'N/A'; // fallback to N/A
     let userFullName = requisition.USER_ID; // fallback to USER_ID
     let userDepartment = requisition.DEPARTMENT || 'N/A'; // fallback to requisition.DEPARTMENT
+    let userCostCenterCode = requisition.SITE_ID || '';
     try {
       const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`));
       if (response.ok) {
@@ -1531,6 +1541,7 @@ export default function ApprovalsPage() {
         userFullName = data.fullNameThai || data.fullNameEng || requisition.USER_ID;
         // ใช้ CostCenterEng จาก userWithRoles แทน requisition.DEPARTMENT
         userDepartment = data.costCenterEng || requisition.DEPARTMENT || 'N/A';
+        userCostCenterCode = data.costcentercode || requisition.SITE_ID || '';
         console.log('PDF Data:', { userOrgCode4, userOrgTDesc3, userFullName, userDepartment, requisition: requisition.REQUISITION_ID });
       }
     } catch (error) {
@@ -1543,6 +1554,9 @@ export default function ApprovalsPage() {
     }
     if (!userOrgTDesc3) {
       userOrgTDesc3 = 'N/A';
+    }
+    if (!userCostCenterCode) {
+      userCostCenterCode = 'N/A';
     }
     
     // สร้าง requisition object ที่มี items ที่ถูกต้อง
@@ -1644,7 +1658,7 @@ export default function ApprovalsPage() {
               <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
                 <div style="font-size: 12px; color: #333; line-height: 1.4;">
                   <strong>Cost Center:</strong> ${userOrgCode4} | 
-                  <strong>ผู้สั่ง:</strong> ${userFullName} - ${requisition.USER_ID} | 
+                  <strong>ผู้สั่ง:</strong> ${userFullName} - ${requisition.USER_ID} (${userCostCenterCode}) | 
                   <strong>แผนก:</strong> ${userDepartment}
                 </div>
               </div>
