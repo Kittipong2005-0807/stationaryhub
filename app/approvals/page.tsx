@@ -126,7 +126,7 @@ export default function ApprovalsPage() {
     const pageH = 297;
     const innerW = pageW - margin * 2;
     const usableH = pageH - margin - bottomMargin;
-    const pageOverlap = 3; // small overlap to prevent clipping at page breaks
+    const pageOverlap = 8; // increased overlap to prevent clipping at page breaks
     const calculatedImageHeight = (canvasHeight * innerW) / canvasWidth;
 
     const drawFrame = () => {
@@ -817,7 +817,7 @@ export default function ApprovalsPage() {
         const pageH = 297;
         const innerW = pageW - marginLocal * 2;
         const usableH = pageH - marginLocal - bottomMarginLocal;
-        const pageOverlapLocal = 3; // small overlap to prevent clipping at page breaks
+        const pageOverlapLocal = 8; // increased overlap to prevent clipping at page breaks
         const calculatedImageHeight = (canvasHeight * innerW) / canvasWidth;
 
         const drawFrame = () => {
@@ -993,7 +993,7 @@ export default function ApprovalsPage() {
 
         const categoryHTML = Object.entries(groupedItems).map(([category, items]) => {
           const categoryRows = items.map((item, index) => `
-            <tr>
+            <tr style="page-break-inside: avoid; break-inside: avoid;">
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px;">${item.PRODUCT_NAME}</td>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${item.QUANTITY}</td>
@@ -1004,7 +1004,7 @@ export default function ApprovalsPage() {
           `).join('');
 
           return `
-            <tr style="background: #f8f9fa;">
+            <tr style="background: #f8f9fa; page-break-inside: avoid; break-inside: avoid;">
               <td colspan="6" style="padding: 6px 8px; border: 1px solid #ddd; font-size: 9px; font-weight: bold; color: #495057;">${category}</td>
             </tr>
             ${categoryRows}
@@ -1331,7 +1331,7 @@ export default function ApprovalsPage() {
         const itemsHTML = Object.entries(itemsByUser).map(([userId, { user, items: userItems }]) => {
           const userData = userDataMap[userId] || { fullName: userId, department: 'N/A', costCenterCode: 'N/A' };
           const userItemsHTML = userItems.map(({ requisition, item }, index) => `
-            <tr>
+            <tr style="page-break-inside: avoid; break-inside: avoid;">
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px;">${item.PRODUCT_NAME}</td>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${item.QUANTITY}</td>
@@ -1342,7 +1342,7 @@ export default function ApprovalsPage() {
           `).join('');
 
           return `
-            <tr style="background: #f8f9fa;">
+            <tr style="background: #f8f9fa; page-break-inside: avoid; break-inside: avoid;">
               <td colspan="6" style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #495057;">
                 ผู้สั่ง: ${userData.fullName} - ${userData.department} - ${userData.costCenterCode} - (${userItems.length} รายการ)
               </td>
@@ -1611,7 +1611,7 @@ export default function ApprovalsPage() {
           const items = groupedItems[category];
           const categoryItemsHTML = items.map(item => {
             const itemHTML = `
-              <tr style="border-bottom: 1px solid #eee;">
+              <tr style="border-bottom: 1px solid #eee; page-break-inside: avoid; break-inside: avoid;">
                 <td style="padding: 8px; text-align: center; font-size: 10px;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
                 <td style="padding: 8px; font-size: 10px;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
                 <td style="padding: 8px; text-align: center; font-size: 10px;">${item.QUANTITY}</td>
@@ -1624,7 +1624,7 @@ export default function ApprovalsPage() {
           }).join('');
 
           return `
-            <tr style="background: #f8f9fa;">
+            <tr style="background: #f8f9fa; page-break-inside: avoid; break-inside: avoid;">
               <td colspan="6" style="padding: 8px; font-weight: bold; font-size: 11px; color: #333;">${category}</td>
             </tr>
             ${categoryItemsHTML}
