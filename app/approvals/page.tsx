@@ -1299,7 +1299,7 @@ export default function ApprovalsPage() {
         }, {} as Record<string, { user: Requisition, items: Array<{requisition: Requisition, item: RequisitionItem}> }>);
 
         // ดึงข้อมูลผู้ใช้จาก userWithRoles สำหรับทุกคน
-        const userDataMap: Record<string, { fullName: string, department: string }> = {};
+        const userDataMap: Record<string, { fullName: string, department: string, costCenterCode: string }> = {};
         for (const userId of Object.keys(itemsByUser)) {
           try {
             const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${userId}`));
@@ -1307,26 +1307,29 @@ export default function ApprovalsPage() {
               const data = await response.json();
               userDataMap[userId] = {
                 fullName: data.fullNameThai || data.fullNameEng || userId,
-                department: data.costCenterEng || 'N/A'
+                department: data.costCenterEng || 'N/A',
+                costCenterCode: data.costcentercode || 'N/A'
               };
             } else {
               userDataMap[userId] = {
                 fullName: userId,
-                department: 'N/A'
+                department: 'N/A',
+                costCenterCode: 'N/A'
               };
             }
           } catch (error) {
             console.error(`Error fetching user data for ${userId}:`, error);
             userDataMap[userId] = {
               fullName: userId,
-              department: 'N/A'
+              department: 'N/A',
+              costCenterCode: 'N/A'
             };
           }
         }
 
         // สร้างรายการ items แยกตามคน
         const itemsHTML = Object.entries(itemsByUser).map(([userId, { user, items: userItems }]) => {
-          const userData = userDataMap[userId] || { fullName: userId, department: 'N/A' };
+          const userData = userDataMap[userId] || { fullName: userId, department: 'N/A', costCenterCode: 'N/A' };
           const userItemsHTML = userItems.map(({ requisition, item }, index) => `
             <tr>
               <td style="padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
@@ -1341,7 +1344,7 @@ export default function ApprovalsPage() {
           return `
             <tr style="background: #f8f9fa;">
               <td colspan="6" style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold; color: #495057;">
-                ผู้สั่ง: ${userData.fullName} - ${userData.department} (${userItems.length} รายการ)
+                ผู้สั่ง: ${userData.fullName} - ${userData.department} - ${userData.costCenterCode} - (${userItems.length} รายการ)
               </td>
             </tr>
             ${userItemsHTML}
