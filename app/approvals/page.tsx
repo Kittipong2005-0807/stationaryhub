@@ -128,6 +128,14 @@ export default function ApprovalsPage() {
       // ตั้งค่า font size เริ่มต้น
       pdf.setFontSize(10);
       
+      // ตั้งค่า text encoding
+      pdf.setProperties({
+        title: 'Supply Request Order',
+        subject: 'PDF Document',
+        author: 'Stationary Hub System',
+        creator: 'Stationary Hub System'
+      });
+      
       console.log('Thai font setup completed');
     } catch (error) {
       console.warn('Could not set Thai font, using default:', error);
