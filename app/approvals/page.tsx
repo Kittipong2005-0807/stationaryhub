@@ -127,13 +127,20 @@ export default function ApprovalsPage() {
   const setupThaiFont = (pdf: jsPDF) => {
     try {
       // ตรวจสอบว่า PDF object ถูกต้อง
-      if (!pdf || typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
-        console.error('Invalid PDF object provided to setupThaiFont', {
-          pdfExists: !!pdf,
-          pdfType: typeof pdf,
-          setFontExists: typeof pdf?.setFont,
-          setFontSizeExists: typeof pdf?.setFontSize
-        });
+      if (!pdf || typeof pdf !== 'object') {
+        console.error('Invalid PDF object provided to setupThaiFont');
+        return;
+      }
+
+      // ตรวจสอบว่า PDF object มี methods ที่จำเป็น
+      if (typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
+        console.error('PDF object is missing required methods');
+        return;
+      }
+
+      // ตรวจสอบว่า PDF object มี properties ที่จำเป็น
+      if (!pdf.internal || !pdf.internal.pageSize) {
+        console.error('PDF object is missing internal properties');
         return;
       }
 
@@ -170,18 +177,33 @@ export default function ApprovalsPage() {
 
   // ฟังก์ชันสำหรับจัดการ font ใน autoTable
   const setupAutoTableThaiFont = () => {
-    return {
-      font: 'helvetica',
-      fontStyle: 'normal',
-      fontSize: 9,
-      // เพิ่มการตั้งค่าสำหรับภาษาไทย
-      textColor: [0, 0, 0],
-      halign: 'left',
-      valign: 'middle',
-      cellPadding: 3,
-      overflow: 'linebreak',
-      minCellHeight: 8,
-    };
+    try {
+      return {
+        font: 'helvetica',
+        fontStyle: 'normal',
+        fontSize: 9,
+        // เพิ่มการตั้งค่าสำหรับภาษาไทย
+        textColor: [0, 0, 0],
+        halign: 'left',
+        valign: 'middle',
+        cellPadding: 3,
+        overflow: 'linebreak',
+        minCellHeight: 8,
+      };
+    } catch (error) {
+      console.error('Error in setupAutoTableThaiFont:', error);
+      return {
+        font: 'helvetica',
+        fontStyle: 'normal',
+        fontSize: 9,
+        textColor: [0, 0, 0],
+        halign: 'left',
+        valign: 'middle',
+        cellPadding: 3,
+        overflow: 'linebreak',
+        minCellHeight: 8,
+      };
+    }
   };
 
   // ฟังก์ชันสำหรับแปลงข้อความไทยให้แสดงผลได้
@@ -337,11 +359,13 @@ export default function ApprovalsPage() {
 
         // ตรวจสอบว่า pdf object มี methods ที่จำเป็น
         if (typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
+          console.error('PDF object is missing required methods');
           throw new Error('PDF object is missing required methods');
         }
 
         // ตรวจสอบว่า autoTable พร้อมใช้งาน
         if (!(pdf as any).autoTable) {
+          console.error('autoTable is not available');
           throw new Error('autoTable is not available');
         }
 
@@ -352,8 +376,29 @@ export default function ApprovalsPage() {
           tableDataLength: tableData.length
         });
 
+        // ตรวจสอบอีกครั้งก่อนใช้งาน autoTable
+        if (!pdf || typeof pdf !== 'object') {
+          throw new Error('PDF object is invalid');
+        }
+
+        // ตรวจสอบว่า autoTable function พร้อมใช้งาน
+        const autoTableFunc = (pdf as any).autoTable;
+        if (typeof autoTableFunc !== 'function') {
+          throw new Error('autoTable function is not available');
+        }
+
+        // ทดสอบ PDF object ก่อนใช้งาน autoTable
+        try {
+          pdf.setFont('helvetica');
+          pdf.setFontSize(10);
+          console.log('PDF object is working correctly for requisition');
+        } catch (testError) {
+          console.error('PDF object test failed:', testError);
+          throw new Error('PDF object is not working correctly');
+        }
+
         // ใช้ (pdf as any).autoTable เพื่อให้แน่ใจว่าใช้งานได้
-        (pdf as any).autoTable({
+        autoTableFunc({
         head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
         body: tableData,
         startY: i === 0 ? 90 : 30,
@@ -1426,11 +1471,11 @@ export default function ApprovalsPage() {
         // สร้างตารางด้วย autoTable
         try {
           // ตรวจสอบว่า pdf object ยังคงถูกต้อง
-          if (!pdf) {
-            console.error(`PDF object is null or undefined for category ${category}`);
+          if (!pdf || typeof pdf !== 'object') {
+            console.error(`PDF object is null or undefined for category ${category}:`, pdf);
             showError('เกิดข้อผิดพลาด', `PDF object ไม่ถูกต้องสำหรับหมวดหมู่ ${category}`);
-          continue;
-        }
+            continue;
+          }
 
           // ตรวจสอบว่า pdf object มี methods ที่จำเป็น
           if (typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
@@ -1453,8 +1498,34 @@ export default function ApprovalsPage() {
             tableDataLength: tableData.length
           });
 
+          // ตรวจสอบอีกครั้งก่อนใช้งาน autoTable
+          if (!pdf || typeof pdf !== 'object') {
+            console.error(`PDF object is invalid for category ${category}:`, pdf);
+            showError('เกิดข้อผิดพลาด', `PDF object ไม่ถูกต้องสำหรับหมวดหมู่ ${category}`);
+            continue;
+          }
+
+          // ตรวจสอบว่า autoTable function พร้อมใช้งาน
+          const autoTableFunc = (pdf as any).autoTable;
+          if (typeof autoTableFunc !== 'function') {
+            console.error(`autoTable function is not available for category ${category}:`, autoTableFunc);
+            showError('เกิดข้อผิดพลาด', `autoTable function ไม่พร้อมใช้งานสำหรับหมวดหมู่ ${category}`);
+            continue;
+          }
+
+          // ทดสอบ PDF object ก่อนใช้งาน autoTable
+          try {
+            pdf.setFont('helvetica');
+            pdf.setFontSize(10);
+            console.log('PDF object is working correctly for category:', category);
+          } catch (testError) {
+            console.error(`PDF object test failed for category ${category}:`, testError);
+            showError('เกิดข้อผิดพลาด', `PDF object ไม่ทำงานถูกต้องสำหรับหมวดหมู่ ${category}`);
+            continue;
+          }
+
           // ใช้ (pdf as any).autoTable เพื่อให้แน่ใจว่าใช้งานได้
-          (pdf as any).autoTable({
+          autoTableFunc({
           head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
           body: tableData,
           startY: 90,
