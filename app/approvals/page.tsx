@@ -204,6 +204,9 @@ export default function ApprovalsPage() {
           cellPadding: 3,
           overflow: 'linebreak',
           halign: 'left',
+          // ป้องกันการตัดแถว
+          minCellHeight: 8,
+          valign: 'middle',
         },
         headStyles: {
           fillColor: [233, 236, 239],
@@ -225,9 +228,11 @@ export default function ApprovalsPage() {
         // ตั้งค่า pagination ที่เหมาะสม
         tableWidth: 'wrap',
         showHead: 'everyPage',
-        // จัดการการแบ่งหน้าให้ดีขึ้น
-        pageBreak: 'auto',
-        rowPageBreak: 'auto',
+        // ป้องกันการตัดแถวตาราง
+        pageBreak: 'avoid',
+        rowPageBreak: 'avoid',
+        // ตั้งค่าให้แถวไม่ถูกตัดครึ่ง
+        keepWithHeaderRows: 1,
         didDrawPage: (data: any) => {
           // Page numbering
           const pageCount = pdf.getNumberOfPages();
@@ -246,6 +251,24 @@ export default function ApprovalsPage() {
             data.cell.styles.halign = 'left';
             data.cell.styles.valign = 'middle';
             data.cell.styles.cellPadding = { top: 4, right: 3, bottom: 4, left: 6 };
+            // ป้องกันการตัด category header
+            data.cell.styles.pageBreak = 'avoid';
+          } else {
+            // สำหรับแถวข้อมูลสินค้า ป้องกันการตัดแถว
+            data.cell.styles.pageBreak = 'avoid';
+            data.cell.styles.minCellHeight = 8;
+          }
+        },
+        // เพิ่มการจัดการการแบ่งหน้า
+        willDrawCell: (data: any) => {
+          // ตรวจสอบว่ามีพื้นที่เพียงพอสำหรับแถวนี้หรือไม่
+          const remainingHeight = pdf.internal.pageSize.height - data.cursor.y;
+          const rowHeight = 12; // ความสูงของแถว
+          
+          if (remainingHeight < rowHeight && data.row.index > 0) {
+            // ถ้าไม่มีพื้นที่เพียงพอ ให้ขึ้นหน้าใหม่
+            pdf.addPage();
+            data.cursor.y = 20; // เริ่มต้นที่ตำแหน่งใหม่
           }
         }
       });

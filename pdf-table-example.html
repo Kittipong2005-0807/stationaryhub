@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตัวอย่าง PDF Table Layout</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .company-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .delivery-info {
+            background: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+        .cost-center {
+            background: #f5f5f5;
+            padding: 8px;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #e9ecef;
+            font-weight: bold;
+            text-align: center;
+        }
+        .category-header {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            font-size: 11px;
+        }
+        .item-row {
+            background-color: #fafafa;
+        }
+        .item-row:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .page-break {
+            page-break-before: always;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #333;
+        }
+        .page-number {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 10px;
+            color: #666;
+        }
+        .requisition-header {
+            background: #e3f2fd;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Requisition 1 -->
+        <div class="header">
+            <h1>SUPPLY REQUEST ORDER</h1>
+        </div>
+        
+        <div class="company-info">
+            <div>
+                <p><strong>บริษัท ตัวอย่าง จำกัด</strong></p>
+                <p>123 ถนนสุขุมวิท กรุงเทพฯ 10110</p>
+                <p>TEL: 02-123-4567 FAX: 02-123-4568</p>
+                <p>เลขประจำตัวผู้เสียภาษี 0123456789012</p>
+            </div>
+            <div>
+                <p><strong>Date:</strong> 15/01/2025</p>
+                <p><strong>Requisition ID:</strong> #REQ001</p>
+            </div>
+        </div>
+        
+        <div class="delivery-info">
+            <h3>Please Delivery on:</h3>
+            <p>20/01/2025</p>
+            <p><strong>หมายเหตุ:</strong> ส่งด่วน</p>
+            <p><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> คุณสมชาย</p>
+        </div>
+        
+        <div class="cost-center">
+            <strong>Cost Center:</strong> CC001 | <strong>ผู้สั่ง:</strong> สมชาย ใจดี - EMP001 (CC001) | <strong>แผนก:</strong> IT
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 15%;">ITEM_ID</th>
+                    <th style="width: 40%;">Description</th>
+                    <th style="width: 10%;">Qty</th>
+                    <th style="width: 10%;">Unit</th>
+                    <th style="width: 12%;">Unit Price</th>
+                    <th style="width: 13%;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="category-header">
+                    <td colspan="6">เครื่องเขียน</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PEN001</td>
+                    <td>ปากกาลูกลื่น สีน้ำเงิน</td>
+                    <td>50</td>
+                    <td>ด้าม</td>
+                    <td>฿15.00</td>
+                    <td>฿750.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PEN002</td>
+                    <td>ปากกาลูกลื่น สีแดง</td>
+                    <td>30</td>
+                    <td>ด้าม</td>
+                    <td>฿15.00</td>
+                    <td>฿450.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PEN003</td>
+                    <td>ปากกาลูกลื่น สีดำ</td>
+                    <td>40</td>
+                    <td>ด้าม</td>
+                    <td>฿15.00</td>
+                    <td>฿600.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PEN004</td>
+                    <td>ปากกาลูกลื่น สีเขียว</td>
+                    <td>25</td>
+                    <td>ด้าม</td>
+                    <td>฿15.00</td>
+                    <td>฿375.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PEN005</td>
+                    <td>ปากกาลูกลื่น สีม่วง</td>
+                    <td>20</td>
+                    <td>ด้าม</td>
+                    <td>฿15.00</td>
+                    <td>฿300.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PEN006</td>
+                    <td>ปากกาลูกลื่น สีส้ม</td>
+                    <td>35</td>
+                    <td>ด้าม</td>
+                    <td>฿15.00</td>
+                    <td>฿525.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PEN007</td>
+                    <td>ปากกาลูกลื่น สีเหลือง</td>
+                    <td>15</td>
+                    <td>ด้าม</td>
+                    <td>฿15.00</td>
+                    <td>฿225.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PEN008</td>
+                    <td>ปากกาลูกลื่น สีชมพู</td>
+                    <td>28</td>
+                    <td>ด้าม</td>
+                    <td>฿15.00</td>
+                    <td>฿420.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PEN009</td>
+                    <td>ปากกาลูกลื่น สีเทา</td>
+                    <td>22</td>
+                    <td>ด้าม</td>
+                    <td>฿15.00</td>
+                    <td>฿330.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PEN010</td>
+                    <td>ปากกาลูกลื่น สีน้ำตาล</td>
+                    <td>18</td>
+                    <td>ด้าม</td>
+                    <td>฿15.00</td>
+                    <td>฿270.00</td>
+                </tr>
+                
+                <tr class="category-header">
+                    <td colspan="6">กระดาษ</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PAPER001</td>
+                    <td>กระดาษ A4 80 แกรม</td>
+                    <td>10</td>
+                    <td>รีม</td>
+                    <td>฿120.00</td>
+                    <td>฿1,200.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PAPER002</td>
+                    <td>กระดาษ A4 70 แกรม</td>
+                    <td>15</td>
+                    <td>รีม</td>
+                    <td>฿100.00</td>
+                    <td>฿1,500.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PAPER003</td>
+                    <td>กระดาษ A3 80 แกรม</td>
+                    <td>5</td>
+                    <td>รีม</td>
+                    <td>฿200.00</td>
+                    <td>฿1,000.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PAPER004</td>
+                    <td>กระดาษ A3 70 แกรม</td>
+                    <td>8</td>
+                    <td>รีม</td>
+                    <td>฿180.00</td>
+                    <td>฿1,440.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PAPER005</td>
+                    <td>กระดาษ A5 80 แกรม</td>
+                    <td>12</td>
+                    <td>รีม</td>
+                    <td>฿80.00</td>
+                    <td>฿960.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PAPER006</td>
+                    <td>กระดาษ A5 70 แกรม</td>
+                    <td>20</td>
+                    <td>รีม</td>
+                    <td>฿70.00</td>
+                    <td>฿1,400.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PAPER007</td>
+                    <td>กระดาษ B4 80 แกรม</td>
+                    <td>6</td>
+                    <td>รีม</td>
+                    <td>฿150.00</td>
+                    <td>฿900.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PAPER008</td>
+                    <td>กระดาษ B4 70 แกรม</td>
+                    <td>9</td>
+                    <td>รีม</td>
+                    <td>฿130.00</td>
+                    <td>฿1,170.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PAPER009</td>
+                    <td>กระดาษ B5 80 แกรม</td>
+                    <td>14</td>
+                    <td>รีม</td>
+                    <td>฿90.00</td>
+                    <td>฿1,260.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>PAPER010</td>
+                    <td>กระดาษ B5 70 แกรม</td>
+                    <td>18</td>
+                    <td>รีม</td>
+                    <td>฿75.00</td>
+                    <td>฿1,350.00</td>
+                </tr>
+                
+                <tr class="category-header">
+                    <td colspan="6">อุปกรณ์สำนักงาน</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE001</td>
+                    <td>ที่เย็บกระดาษ ขนาดใหญ่</td>
+                    <td>3</td>
+                    <td>ตัว</td>
+                    <td>฿250.00</td>
+                    <td>฿750.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE002</td>
+                    <td>ที่เย็บกระดาษ ขนาดเล็ก</td>
+                    <td>5</td>
+                    <td>ตัว</td>
+                    <td>฿150.00</td>
+                    <td>฿750.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE003</td>
+                    <td>ลวดเย็บกระดาษ ขนาด 26/6</td>
+                    <td>20</td>
+                    <td>กล่อง</td>
+                    <td>฿45.00</td>
+                    <td>฿900.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE004</td>
+                    <td>ลวดเย็บกระดาษ ขนาด 24/6</td>
+                    <td>15</td>
+                    <td>กล่อง</td>
+                    <td>฿40.00</td>
+                    <td>฿600.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE005</td>
+                    <td>คลิปหนีบกระดาษ ขนาดใหญ่</td>
+                    <td>10</td>
+                    <td>กล่อง</td>
+                    <td>฿35.00</td>
+                    <td>฿350.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE006</td>
+                    <td>คลิปหนีบกระดาษ ขนาดกลาง</td>
+                    <td>12</td>
+                    <td>กล่อง</td>
+                    <td>฿30.00</td>
+                    <td>฿360.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE007</td>
+                    <td>คลิปหนีบกระดาษ ขนาดเล็ก</td>
+                    <td>8</td>
+                    <td>กล่อง</td>
+                    <td>฿25.00</td>
+                    <td>฿200.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE008</td>
+                    <td>เทปกาวใส 1 นิ้ว</td>
+                    <td>25</td>
+                    <td>ม้วน</td>
+                    <td>฿20.00</td>
+                    <td>฿500.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE009</td>
+                    <td>เทปกาวใส 2 นิ้ว</td>
+                    <td>20</td>
+                    <td>ม้วน</td>
+                    <td>฿35.00</td>
+                    <td>฿700.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE010</td>
+                    <td>เทปกาวใส 0.5 นิ้ว</td>
+                    <td>30</td>
+                    <td>ม้วน</td>
+                    <td>฿15.00</td>
+                    <td>฿450.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE011</td>
+                    <td>เทปกาวสองหน้า</td>
+                    <td>15</td>
+                    <td>ม้วน</td>
+                    <td>฿50.00</td>
+                    <td>฿750.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE012</td>
+                    <td>เทปกาวสองหน้าแบบแถบ</td>
+                    <td>10</td>
+                    <td>ม้วน</td>
+                    <td>฿40.00</td>
+                    <td>฿400.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE013</td>
+                    <td>เทปกาวสองหน้าแบบจุด</td>
+                    <td>8</td>
+                    <td>ม้วน</td>
+                    <td>฿45.00</td>
+                    <td>฿360.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE014</td>
+                    <td>เทปกาวสองหน้าแบบสี่เหลี่ยม</td>
+                    <td>12</td>
+                    <td>ม้วน</td>
+                    <td>฿55.00</td>
+                    <td>฿660.00</td>
+                </tr>
+                <tr class="item-row">
+                    <td>OFFICE015</td>
+                    <td>เทปกาวสองหน้าแบบวงกลม</td>
+                    <td>6</td>
+                    <td>ม้วน</td>
+                    <td>฿60.00</td>
+                    <td>฿360.00</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="page-number">Page 1 of 2</div>
+        
+        <!-- ตัวอย่างการแบ่งหน้า -->
+        <div class="page-break">
+            <div class="requisition-header">
+                <h3>Requisition #REQ002 - หน้า 2</h3>
+                <p><strong>Cost Center:</strong> CC002 | <strong>ผู้สั่ง:</strong> สมหญิง ใจงาม - EMP002 (CC002) | <strong>แผนก:</strong> HR</p>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">ITEM_ID</th>
+                        <th style="width: 40%;">Description</th>
+                        <th style="width: 10%;">Qty</th>
+                        <th style="width: 10%;">Unit</th>
+                        <th style="width: 12%;">Unit Price</th>
+                        <th style="width: 13%;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="category-header">
+                        <td colspan="6">อุปกรณ์คอมพิวเตอร์</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP001</td>
+                        <td>เมาส์ไร้สาย</td>
+                        <td>5</td>
+                        <td>ตัว</td>
+                        <td>฿450.00</td>
+                        <td>฿2,250.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP002</td>
+                        <td>คีย์บอร์ดไร้สาย</td>
+                        <td>5</td>
+                        <td>ตัว</td>
+                        <td>฿650.00</td>
+                        <td>฿3,250.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP003</td>
+                        <td>สาย USB-C</td>
+                        <td>20</td>
+                        <td>เส้น</td>
+                        <td>฿120.00</td>
+                        <td>฿2,400.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP004</td>
+                        <td>สาย HDMI</td>
+                        <td>15</td>
+                        <td>เส้น</td>
+                        <td>฿180.00</td>
+                        <td>฿2,700.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP005</td>
+                        <td>สาย VGA</td>
+                        <td>10</td>
+                        <td>เส้น</td>
+                        <td>฿150.00</td>
+                        <td>฿1,500.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP006</td>
+                        <td>สาย LAN</td>
+                        <td>25</td>
+                        <td>เส้น</td>
+                        <td>฿80.00</td>
+                        <td>฿2,000.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP007</td>
+                        <td>สายไฟคอมพิวเตอร์</td>
+                        <td>12</td>
+                        <td>เส้น</td>
+                        <td>฿200.00</td>
+                        <td>฿2,400.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP008</td>
+                        <td>สายไฟจอภาพ</td>
+                        <td>8</td>
+                        <td>เส้น</td>
+                        <td>฿180.00</td>
+                        <td>฿1,440.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP009</td>
+                        <td>สายไฟเครื่องพิมพ์</td>
+                        <td>6</td>
+                        <td>เส้น</td>
+                        <td>฿160.00</td>
+                        <td>฿960.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP010</td>
+                        <td>สายไฟสแกนเนอร์</td>
+                        <td>4</td>
+                        <td>เส้น</td>
+                        <td>฿140.00</td>
+                        <td>฿560.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP011</td>
+                        <td>สายไฟลำโพง</td>
+                        <td>10</td>
+                        <td>เส้น</td>
+                        <td>฿100.00</td>
+                        <td>฿1,000.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP012</td>
+                        <td>สายไฟไมโครโฟน</td>
+                        <td>8</td>
+                        <td>เส้น</td>
+                        <td>฿90.00</td>
+                        <td>฿720.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP013</td>
+                        <td>สายไฟเว็บแคม</td>
+                        <td>5</td>
+                        <td>เส้น</td>
+                        <td>฿110.00</td>
+                        <td>฿550.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP014</td>
+                        <td>สายไฟกล้อง</td>
+                        <td>3</td>
+                        <td>เส้น</td>
+                        <td>฿130.00</td>
+                        <td>฿390.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>COMP015</td>
+                        <td>สายไฟเครื่องสแกน</td>
+                        <td>2</td>
+                        <td>เส้น</td>
+                        <td>฿120.00</td>
+                        <td>฿240.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="page-number">Page 2 of 2</div>
+        </div>
+        
+        <!-- ตัวอย่างการแบ่งหน้าแบบ Requisition ใหม่ -->
+        <div class="page-break">
+            <div class="header">
+                <h1>SUPPLY REQUEST ORDER</h1>
+            </div>
+            
+            <div class="company-info">
+                <div>
+                    <p><strong>บริษัท ตัวอย่าง จำกัด</strong></p>
+                    <p>123 ถนนสุขุมวิท กรุงเทพฯ 10110</p>
+                    <p>TEL: 02-123-4567 FAX: 02-123-4568</p>
+                    <p>เลขประจำตัวผู้เสียภาษี 0123456789012</p>
+                </div>
+                <div>
+                    <p><strong>Date:</strong> 16/01/2025</p>
+                    <p><strong>Requisition ID:</strong> #REQ003</p>
+                </div>
+            </div>
+            
+            <div class="delivery-info">
+                <h3>Please Delivery on:</h3>
+                <p>22/01/2025</p>
+                <p><strong>หมายเหตุ:</strong> ส่งปกติ</p>
+                <p><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> คุณสมศักดิ์</p>
+            </div>
+            
+            <div class="cost-center">
+                <strong>Cost Center:</strong> CC003 | <strong>ผู้สั่ง:</strong> สมศักดิ์ ใจดี - EMP003 (CC003) | <strong>แผนก:</strong> Finance
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">ITEM_ID</th>
+                        <th style="width: 40%;">Description</th>
+                        <th style="width: 10%;">Qty</th>
+                        <th style="width: 10%;">Unit</th>
+                        <th style="width: 12%;">Unit Price</th>
+                        <th style="width: 13%;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="category-header">
+                        <td colspan="6">เครื่องใช้ไฟฟ้า</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>ELEC001</td>
+                        <td>พัดลมตั้งพื้น</td>
+                        <td>3</td>
+                        <td>ตัว</td>
+                        <td>฿1,200.00</td>
+                        <td>฿3,600.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>ELEC002</td>
+                        <td>พัดลมตั้งโต๊ะ</td>
+                        <td>5</td>
+                        <td>ตัว</td>
+                        <td>฿800.00</td>
+                        <td>฿4,000.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>ELEC003</td>
+                        <td>พัดลมเพดาน</td>
+                        <td>2</td>
+                        <td>ตัว</td>
+                        <td>฿2,500.00</td>
+                        <td>฿5,000.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>ELEC004</td>
+                        <td>เครื่องปรับอากาศ</td>
+                        <td>1</td>
+                        <td>ตัว</td>
+                        <td>฿25,000.00</td>
+                        <td>฿25,000.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>ELEC005</td>
+                        <td>เครื่องทำน้ำอุ่น</td>
+                        <td>2</td>
+                        <td>ตัว</td>
+                        <td>฿3,500.00</td>
+                        <td>฿7,000.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>ELEC006</td>
+                        <td>เครื่องทำน้ำเย็น</td>
+                        <td>1</td>
+                        <td>ตัว</td>
+                        <td>฿8,000.00</td>
+                        <td>฿8,000.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>ELEC007</td>
+                        <td>เครื่องทำน้ำร้อน</td>
+                        <td>3</td>
+                        <td>ตัว</td>
+                        <td>฿1,500.00</td>
+                        <td>฿4,500.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>ELEC008</td>
+                        <td>เครื่องทำน้ำเย็นแบบพกพา</td>
+                        <td>4</td>
+                        <td>ตัว</td>
+                        <td>฿2,000.00</td>
+                        <td>฿8,000.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>ELEC009</td>
+                        <td>เครื่องทำน้ำอุ่นแบบพกพา</td>
+                        <td>2</td>
+                        <td>ตัว</td>
+                        <td>฿1,800.00</td>
+                        <td>฿3,600.00</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td>ELEC010</td>
+                        <td>เครื่องทำน้ำร้อนแบบพกพา</td>
+                        <td>3</td>
+                        <td>ตัว</td>
+                        <td>฿1,200.00</td>
+                        <td>฿3,600.00</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="page-number">Page 1 of 1</div>
+        </div>
+    </div>
+</body>
+</html>
