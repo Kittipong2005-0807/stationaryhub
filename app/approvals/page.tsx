@@ -126,6 +126,12 @@ export default function ApprovalsPage() {
   // ฟังก์ชันสำหรับจัดการ font ภาษาไทย
   const setupThaiFont = (pdf: jsPDF) => {
     try {
+      // ตรวจสอบว่า PDF object ถูกต้อง
+      if (!pdf || typeof pdf.setFont !== 'function') {
+        console.error('Invalid PDF object provided to setupThaiFont');
+        return;
+      }
+
       // ตรวจสอบว่า autoTable plugin ถูกโหลดแล้วหรือไม่
       if (!pdf.autoTable) {
         console.warn('autoTable plugin not loaded, attempting to load...');
@@ -1213,6 +1219,12 @@ export default function ApprovalsPage() {
         const pageWidth = 210;
         const pageHeight = 297;
         
+        // ตรวจสอบว่า PDF object ถูกสร้างขึ้นอย่างถูกต้อง
+        if (!pdf) {
+          console.error(`Failed to create PDF for category ${category}`);
+          continue;
+        }
+        
         // ตั้งค่า font สำหรับภาษาไทย
         setupThaiFont(pdf);
 
@@ -1356,6 +1368,13 @@ export default function ApprovalsPage() {
         // ตรวจสอบและเพิ่ม autoTable plugin หากจำเป็น
         if (!pdf.autoTable) {
           (pdf as any).autoTable = autoTable;
+        }
+
+        // ตรวจสอบอีกครั้งว่า autoTable พร้อมใช้งาน
+        if (!pdf.autoTable) {
+          console.error(`autoTable plugin not available for category ${category}`);
+          showError('เกิดข้อผิดพลาด', `ไม่สามารถใช้ autoTable สำหรับหมวดหมู่ ${category} ได้`);
+          continue;
         }
 
         // สร้างตารางด้วย autoTable
