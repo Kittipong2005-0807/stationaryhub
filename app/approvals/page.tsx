@@ -177,7 +177,7 @@ export default function ApprovalsPage() {
       }, {});
       
       Object.entries(groupedItems).forEach(([category, items]: [string, any]) => {
-        // Category header
+        // Category header with special styling
         tableData.push([category, '', '', '', '', '']);
         
         // Items in category
@@ -193,29 +193,60 @@ export default function ApprovalsPage() {
         });
       });
       
-      // Create table
+      // Create table with proper pagination settings
       (pdf as any).autoTable({
         head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
         body: tableData,
         startY: i === 0 ? 90 : 30,
-        margin: { left: margin, right: margin },
+        margin: { left: margin, right: margin, top: 10, bottom: 20 },
         styles: {
           fontSize: 9,
           cellPadding: 3,
+          overflow: 'linebreak',
+          halign: 'left',
         },
         headStyles: {
           fillColor: [233, 236, 239],
           textColor: [0, 0, 0],
           fontStyle: 'bold',
+          halign: 'center',
         },
         alternateRowStyles: {
           fillColor: [248, 249, 250],
         },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 20 }, // ITEM_ID
+          1: { halign: 'left', cellWidth: 60 },   // Description
+          2: { halign: 'center', cellWidth: 15 }, // Qty
+          3: { halign: 'center', cellWidth: 15 }, // Unit
+          4: { halign: 'right', cellWidth: 25 },  // Unit Price
+          5: { halign: 'right', cellWidth: 25 },  // Total
+        },
+        // ตั้งค่า pagination ที่เหมาะสม
+        tableWidth: 'wrap',
+        showHead: 'everyPage',
+        // จัดการการแบ่งหน้าให้ดีขึ้น
+        pageBreak: 'auto',
+        rowPageBreak: 'auto',
         didDrawPage: (data: any) => {
           // Page numbering
           const pageCount = pdf.getNumberOfPages();
           pdf.setFontSize(10);
           pdf.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        },
+        // จัดการการแบ่งหน้าให้ดีขึ้น
+        didParseCell: (data: any) => {
+          // จัดการ category header rows
+          const rowData = data.row.raw;
+          if (rowData && rowData[1] === '' && rowData[2] === '' && rowData[3] === '' && rowData[4] === '' && rowData[5] === '') {
+            // Category header row
+            data.cell.styles.fillColor = [240, 240, 240];
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fontSize = 10;
+            data.cell.styles.halign = 'left';
+            data.cell.styles.valign = 'middle';
+            data.cell.styles.cellPadding = { top: 4, right: 3, bottom: 4, left: 6 };
+          }
         }
       });
     }
