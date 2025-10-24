@@ -45,8 +45,8 @@ export class OrgCode3Service {
       
       // Search by EmpCode only (according to authOptions that uses empCode as USER_ID)
       console.log("Querying userWithRoles view with EmpCode:", userId)
-      const userData = await prisma.$queryRaw<{ orgcode3: string }[]>`
-        SELECT orgcode3 
+      const userData = await prisma.$queryRaw<{ costcentercode: string, orgcode3: string }[]>`
+        SELECT costcentercode, orgcode3 
         FROM userWithRoles 
         WHERE EmpCode = ${userId}
       `
@@ -72,9 +72,15 @@ export class OrgCode3Service {
         return 'HQ'
       }
       
+      // ใช้ costcentercode เป็นหลัก เพื่อให้สอดคล้องกับการหา manager
+      const costcentercode = userData[0].costcentercode
       const orgcode3 = userData[0].orgcode3
+      
+      console.log("Found costcentercode:", costcentercode)
       console.log("Found orgcode3:", orgcode3)
-      return orgcode3 || 'HQ' // Fallback to 'HQ' if orgcode3 is null
+      
+      // ใช้ costcentercode เป็นหลัก หากไม่มีให้ใช้ orgcode3
+      return costcentercode || orgcode3 || 'HQ'
     } catch (error: unknown) {
       console.error('Error fetching user SITE_ID:', error)
       if (error instanceof Error) {
