@@ -180,27 +180,27 @@ export default function ApprovalsPage() {
     try {
       return {
         font: 'helvetica',
-        fontStyle: 'normal',
+        fontStyle: 'normal' as const,
         fontSize: 9,
         // เพิ่มการตั้งค่าสำหรับภาษาไทย
-        textColor: [0, 0, 0],
-        halign: 'left',
-        valign: 'middle',
+        textColor: [0, 0, 0] as [number, number, number],
+        halign: 'left' as const,
+        valign: 'middle' as const,
         cellPadding: 3,
-        overflow: 'linebreak',
+        overflow: 'linebreak' as const,
         minCellHeight: 8,
       };
     } catch (error) {
       console.error('Error in setupAutoTableThaiFont:', error);
       return {
         font: 'helvetica',
-        fontStyle: 'normal',
+        fontStyle: 'normal' as const,
         fontSize: 9,
-        textColor: [0, 0, 0],
-        halign: 'left',
-        valign: 'middle',
+        textColor: [0, 0, 0] as [number, number, number],
+        halign: 'left' as const,
+        valign: 'middle' as const,
         cellPadding: 3,
-        overflow: 'linebreak',
+        overflow: 'linebreak' as const,
         minCellHeight: 8,
       };
     }
@@ -409,10 +409,8 @@ export default function ApprovalsPage() {
             throw new Error('PDF object is invalid');
           }
           
-          // ใช้ pdf.autoTable โดยตรงและ bind pdf object
-          const autoTableWithContext = (pdf as any).autoTable.bind(pdf);
-          
-          autoTableWithContext({
+          // ใช้ pdf.autoTable โดยตรง
+          autoTable(pdf, {
         head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
         body: tableData,
         startY: i === 0 ? 90 : 30,
@@ -450,7 +448,6 @@ export default function ApprovalsPage() {
         pageBreak: 'avoid',
         rowPageBreak: 'avoid',
         // ตั้งค่าให้แถวไม่ถูกตัดครึ่ง
-        keepWithHeaderRows: 1,
         didDrawPage: (data: any) => {
           // Page numbering
           const pageCount = pdf.getNumberOfPages();
@@ -1554,10 +1551,8 @@ export default function ApprovalsPage() {
               throw new Error('PDF object is invalid');
             }
             
-            // ใช้ pdf.autoTable โดยตรงและ bind pdf object
-            const autoTableWithContext = (pdf as any).autoTable.bind(pdf);
-            
-            autoTableWithContext({
+            // ใช้ pdf.autoTable โดยตรง
+            autoTable(pdf, {
           head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
           body: tableData,
           startY: 90,
@@ -1595,7 +1590,6 @@ export default function ApprovalsPage() {
           pageBreak: 'avoid',
           rowPageBreak: 'avoid',
           // ตั้งค่าให้แถวไม่ถูกตัดครึ่ง
-          keepWithHeaderRows: 1,
           didDrawPage: (data: any) => {
             // Page numbering
             const pageCount = pdf.getNumberOfPages();
