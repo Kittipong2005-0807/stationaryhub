@@ -398,7 +398,18 @@ export default function ApprovalsPage() {
         }
 
         // ใช้ (pdf as any).autoTable เพื่อให้แน่ใจว่าใช้งานได้
-        autoTableFunc({
+        try {
+          // ตรวจสอบว่า autoTableFunc เป็น function จริงๆ
+          if (typeof autoTableFunc !== 'function') {
+            throw new Error('autoTable function is not available');
+          }
+          
+          // ตรวจสอบว่า PDF object ยังคงถูกต้อง
+          if (!pdf || typeof pdf !== 'object') {
+            throw new Error('PDF object is invalid');
+          }
+          
+          autoTableFunc({
         head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
         body: tableData,
         startY: i === 0 ? 90 : 30,
@@ -476,10 +487,14 @@ export default function ApprovalsPage() {
           }
         }
       });
-      } catch (autoTableError) {
-        console.error('Error creating autoTable:', autoTableError);
-        showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างตารางได้: ' + (autoTableError as Error).message);
-        throw autoTableError; // throw error แทน return
+        } catch (autoTableError) {
+          console.error('Error creating autoTable:', autoTableError);
+          showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างตารางได้: ' + (autoTableError as Error).message);
+          throw autoTableError; // throw error แทน return
+        }
+      } catch (tableCreationError) {
+        console.error('Error in table creation block:', tableCreationError);
+        throw tableCreationError;
       }
     }
     
@@ -1525,7 +1540,18 @@ export default function ApprovalsPage() {
           }
 
           // ใช้ (pdf as any).autoTable เพื่อให้แน่ใจว่าใช้งานได้
-          autoTableFunc({
+          try {
+            // ตรวจสอบว่า autoTableFunc เป็น function จริงๆ
+            if (typeof autoTableFunc !== 'function') {
+              throw new Error('autoTable function is not available');
+            }
+            
+            // ตรวจสอบว่า PDF object ยังคงถูกต้อง
+            if (!pdf || typeof pdf !== 'object') {
+              throw new Error('PDF object is invalid');
+            }
+            
+            autoTableFunc({
           head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
           body: tableData,
           startY: 90,
@@ -1603,9 +1629,14 @@ export default function ApprovalsPage() {
             }
           }
         });
-        } catch (autoTableError) {
-          console.error(`Error creating autoTable for category ${category}:`, autoTableError);
-          showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้างตารางสำหรับหมวดหมู่ ${category} ได้: ${(autoTableError as Error).message}`);
+          } catch (autoTableError) {
+            console.error(`Error creating autoTable for category ${category}:`, autoTableError);
+            showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้างตารางสำหรับหมวดหมู่ ${category} ได้: ${(autoTableError as Error).message}`);
+            continue;
+          }
+        } catch (tableCreationError) {
+          console.error(`Error in table creation block for category ${category}:`, tableCreationError);
+          showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้างตารางสำหรับหมวดหมู่ ${category} ได้: ${(tableCreationError as Error).message}`);
           continue;
         }
 
