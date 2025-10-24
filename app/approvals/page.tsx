@@ -207,6 +207,11 @@ export default function ApprovalsPage() {
       // ถ้า autoTable ไม่มี ให้เพิ่มเข้าไป
       (pdf as any).autoTable = autoTable;
     }
+
+    // ตรวจสอบอีกครั้งว่า autoTable พร้อมใช้งาน
+    if (!pdf.autoTable && !(pdf as any).autoTable) {
+      throw new Error('autoTable plugin is not available. Please ensure jspdf-autotable is properly imported.');
+    }
     
     // ตั้งค่า font สำหรับภาษาไทย
     setupThaiFont(pdf);
@@ -320,7 +325,8 @@ export default function ApprovalsPage() {
       
       // Create table with proper pagination settings
       try {
-        pdf.autoTable({
+        // ใช้ (pdf as any).autoTable เพื่อให้แน่ใจว่าใช้งานได้
+        (pdf as any).autoTable({
         head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
         body: tableData,
         startY: i === 0 ? 90 : 30,
@@ -1371,15 +1377,23 @@ export default function ApprovalsPage() {
         }
 
         // ตรวจสอบอีกครั้งว่า autoTable พร้อมใช้งาน
-        if (!pdf.autoTable) {
+        if (!pdf.autoTable && !(pdf as any).autoTable) {
           console.error(`autoTable plugin not available for category ${category}`);
           showError('เกิดข้อผิดพลาด', `ไม่สามารถใช้ autoTable สำหรับหมวดหมู่ ${category} ได้`);
           continue;
         }
 
+        // ตรวจสอบว่า PDF object ยังคงถูกต้อง
+        if (!pdf || typeof pdf.setFont !== 'function') {
+          console.error(`PDF object is invalid for category ${category}`);
+          showError('เกิดข้อผิดพลาด', `PDF object ไม่ถูกต้องสำหรับหมวดหมู่ ${category}`);
+          continue;
+        }
+
         // สร้างตารางด้วย autoTable
         try {
-          pdf.autoTable({
+          // ใช้ (pdf as any).autoTable เพื่อให้แน่ใจว่าใช้งานได้
+          (pdf as any).autoTable({
           head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
           body: tableData,
           startY: 90,
