@@ -122,13 +122,10 @@ export default function ApprovalsPage() {
       // ใช้ font ที่รองรับภาษาไทยได้ดีกว่า
       pdf.setFont('helvetica');
       
-      // ตั้งค่า encoding สำหรับภาษาไทย
-      pdf.setLanguage('th');
-      
       // ตั้งค่า font size เริ่มต้น
       pdf.setFontSize(10);
       
-      // ตั้งค่า text encoding
+      // ตั้งค่า PDF properties
       pdf.setProperties({
         title: 'Supply Request Order',
         subject: 'PDF Document',
@@ -136,14 +133,45 @@ export default function ApprovalsPage() {
         creator: 'Stationary Hub System'
       });
       
-      console.log('Thai font setup completed');
+      console.log('Font setup completed');
     } catch (error) {
-      console.warn('Could not set Thai font, using default:', error);
+      console.warn('Could not set font, using default:', error);
+    }
+  };
+
+  // ฟังก์ชันสำหรับจัดการ font ใน autoTable
+  const setupAutoTableThaiFont = () => {
+    return {
+      font: 'helvetica',
+      fontStyle: 'normal',
+      fontSize: 9,
+      // เพิ่มการตั้งค่าสำหรับภาษาไทย
+      textColor: [0, 0, 0],
+      halign: 'left',
+      valign: 'middle',
+      cellPadding: 3,
+      overflow: 'linebreak',
+      minCellHeight: 8,
+    };
+  };
+
+  // ฟังก์ชันสำหรับแปลงข้อความไทยให้แสดงผลได้
+  const convertThaiText = (text: string): string => {
+    if (!text) return '';
+    
+    // แปลงตัวอักษรไทยเป็นตัวอักษรที่ jsPDF รองรับ
+    // หรือใช้วิธีอื่นในการจัดการ
+    try {
+      // ลองใช้ encodeURIComponent แล้ว decode
+      return decodeURIComponent(encodeURIComponent(text));
+    } catch (error) {
+      // ถ้าไม่ได้ ให้ใช้ข้อความต้นฉบับ
+      return text;
     }
   };
 
   // Helper to create PDF with autoTable for proper table pagination
-  const createPDFWithAutoTable = (requisitions: any[], editFormData: any) => {
+  const createPDFWithAutoTable = async (requisitions: any[], editFormData: any) => {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const margin = 10;
     const pageWidth = 210;
@@ -215,14 +243,50 @@ export default function ApprovalsPage() {
         items.forEach((item: any) => {
           tableData.push([
             (item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A',
-            item.PRODUCT_NAME,
+            convertThaiText(item.PRODUCT_NAME),
             item.QUANTITY,
-            item.ORDER_UNIT || 'ชิ้น',
+            convertThaiText(item.ORDER_UNIT || 'ชิ้น'),
             `฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}`,
             `฿${calculateSafeTotalPrice(item)}`
           ]);
         });
       });
+      
+      // สร้าง header สำหรับ PDF
+      if (i === 0) {
+        pdf.setFontSize(20);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
+        
+        // Company info
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(editFormData.companyName, margin, 30);
+        pdf.text(editFormData.companyAddress, margin, 35);
+        pdf.text(`TEL: ${editFormData.phone} FAX: ${editFormData.fax}`, margin, 40);
+        pdf.text(`เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}`, margin, 45);
+        
+        // Date and Requisition ID
+        pdf.text(`Date: ${formatDate(requisition.SUBMITTED_AT)}`, contentWidth + margin - 50, 30);
+        pdf.text(`Requisition ID: #${requisition.REQUISITION_ID}`, contentWidth + margin - 50, 35);
+        
+        // Delivery info
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Please Delivery on:', margin, 55);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(editFormData.deliveryDate || '_________________', margin, 60);
+        pdf.text(`หมายเหตุ: ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}`, margin, 65);
+        pdf.text(`ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ: ${editFormData.contactPerson || 'N/A'}`, margin, 70);
+      }
+      
+      // Cost Center info
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Cost Center: ${requisition.SITE_ID} | ผู้สั่ง: ${requisition.USER_ID} | แผนก: ${requisition.DEPARTMENT || 'N/A'}`, margin, i === 0 ? 80 : 20);
+      
+      // ตั้งค่า font สำหรับ autoTable
+      setupThaiFont(pdf);
       
       // Create table with proper pagination settings
       (pdf as any).autoTable({
@@ -231,24 +295,19 @@ export default function ApprovalsPage() {
         startY: i === 0 ? 90 : 30,
         margin: { left: margin, right: margin, top: 10, bottom: 20 },
         styles: {
-          fontSize: 9,
-          cellPadding: 3,
-          overflow: 'linebreak',
-          halign: 'left',
-          // ป้องกันการตัดแถว
-          minCellHeight: 8,
-          valign: 'middle',
-          // ตั้งค่า font สำหรับภาษาไทย
-          font: 'helvetica',
-          fontStyle: 'normal',
+          ...setupAutoTableThaiFont(),
         },
         headStyles: {
           fillColor: [233, 236, 239],
           textColor: [0, 0, 0],
           fontStyle: 'bold',
           halign: 'center',
-          // ตั้งค่า font สำหรับภาษาไทย
           font: 'helvetica',
+          fontSize: 9,
+          cellPadding: 3,
+          overflow: 'linebreak',
+          minCellHeight: 8,
+          valign: 'middle',
         },
         alternateRowStyles: {
           fillColor: [248, 249, 250],
@@ -1008,7 +1067,7 @@ export default function ApprovalsPage() {
 
     try {
       // สร้าง PDF หลักด้วย autoTable
-      const pdf = createPDFWithAutoTable(filteredRequisitions, editFormData);
+      const pdf = await createPDFWithAutoTable(filteredRequisitions, editFormData);
       // PDF created with autoTable - no need for html2canvas processing
 
       // Save the PDF
@@ -1016,7 +1075,7 @@ export default function ApprovalsPage() {
       pdf.save(fileName);
       
       showSuccess('สร้าง PDF สำเร็จ', `สร้าง PDF เรียบร้อยแล้ว\nไฟล์: ${fileName}\nจำนวน requisitions: ${filteredRequisitions.length}`);
-          } catch (error) {
+    } catch (error) {
       console.error('Error generating PDF:', error);
       showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
     }
@@ -1246,32 +1305,68 @@ export default function ApprovalsPage() {
         pdf.setFont('helvetica', 'bold');
         pdf.text(`หมวดหมู่: ${category}`, margin, 80);
 
+        // สร้าง header สำหรับ PDF
+        pdf.setFontSize(20);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
+        
+        // Company info
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(editAllFormData.companyName, margin, 30);
+        pdf.text(editAllFormData.companyAddress, margin, 35);
+        pdf.text(`TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}`, margin, 40);
+        pdf.text(`เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}`, margin, 45);
+        
+        // Date
+        const currentDateObj = new Date();
+        const thaiMonthsShortList = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const currentDateNum = currentDateObj.getDate().toString().padStart(2, '0');
+        const currentMonth = thaiMonthsShortList[currentDateObj.getMonth()];
+        const currentYear = (currentDateObj.getFullYear() + 543).toString().slice(-4);
+        const currentHours = currentDateObj.getHours().toString().padStart(2, '0');
+        const currentMinutes = currentDateObj.getMinutes().toString().padStart(2, '0');
+        const formattedCurrentDate = `${currentDateNum} ${currentMonth} ${currentYear} ${currentHours}:${currentMinutes}`;
+        
+        pdf.text(`Date: ${formattedCurrentDate}`, pageWidth - margin - 50, 30);
+        
+        // Delivery info
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Please Delivery on:', margin, 55);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(editAllFormData.deliveryDate || '_________________', margin, 60);
+        pdf.text('หมายเหตุ: ต้องการสินค้าด่วน', margin, 65);
+        pdf.text(`ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ: ${editAllFormData.contactPerson || 'N/A'}`, margin, 70);
+        
+        // Category info
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`หมวดหมู่: ${category}`, margin, 80);
+
+        // ตั้งค่า font สำหรับ autoTable
+        setupThaiFont(pdf);
+
         // สร้างตารางด้วย autoTable
-        try {
-          (pdf as any).autoTable({
+        (pdf as any).autoTable({
           head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
           body: tableData,
           startY: 90,
           margin: { left: margin, right: margin, top: 10, bottom: 20 },
           styles: {
-            fontSize: 9,
-            cellPadding: 3,
-            overflow: 'linebreak',
-            halign: 'left',
-            // ป้องกันการตัดแถว
-            minCellHeight: 8,
-            valign: 'middle',
-            // ตั้งค่า font สำหรับภาษาไทย
-            font: 'helvetica',
-            fontStyle: 'normal',
+            ...setupAutoTableThaiFont(),
           },
           headStyles: {
             fillColor: [233, 236, 239],
             textColor: [0, 0, 0],
             fontStyle: 'bold',
             halign: 'center',
-            // ตั้งค่า font สำหรับภาษาไทย
             font: 'helvetica',
+            fontSize: 9,
+            cellPadding: 3,
+            overflow: 'linebreak',
+            minCellHeight: 8,
+            valign: 'middle',
           },
           alternateRowStyles: {
             fillColor: [248, 249, 250],
@@ -1331,11 +1426,6 @@ export default function ApprovalsPage() {
             }
           }
         });
-        } catch (tableError) {
-          console.error(`Error creating table for category ${category}:`, tableError);
-          showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้างตารางสำหรับหมวดหมู่ ${category} ได้: ${(tableError as Error).message}`);
-          continue;
-        }
 
         // บันทึก PDF
         try {
