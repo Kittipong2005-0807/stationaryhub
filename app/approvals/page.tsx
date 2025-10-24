@@ -54,9 +54,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getBasePathUrl } from '@/lib/base-path';
 import { getApiUrl } from '@/lib/api-utils';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 // เพิ่ม font ที่รองรับภาษาไทย
 import 'jspdf/dist/polyfills.es.js';
+
+// เพิ่ม type definitions สำหรับ autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 import html2canvas from 'html2canvas';
 import ThaiDateUtils from '@/lib/date-utils';
 
@@ -119,6 +126,17 @@ export default function ApprovalsPage() {
   // ฟังก์ชันสำหรับจัดการ font ภาษาไทย
   const setupThaiFont = (pdf: jsPDF) => {
     try {
+      // ตรวจสอบว่า autoTable plugin ถูกโหลดแล้วหรือไม่
+      if (!pdf.autoTable) {
+        console.warn('autoTable plugin not loaded, attempting to load...');
+        // ถ้าไม่ได้โหลด ให้ import ใหม่
+        import('jspdf-autotable').then(() => {
+          console.log('autoTable plugin loaded successfully');
+        }).catch((error) => {
+          console.error('Failed to load autoTable plugin:', error);
+        });
+      }
+      
       // ใช้ font ที่รองรับภาษาไทยได้ดีกว่า
       pdf.setFont('helvetica');
       
@@ -177,6 +195,12 @@ export default function ApprovalsPage() {
     const pageWidth = 210;
     const pageHeight = 297;
     const contentWidth = pageWidth - (margin * 2);
+
+    // ตรวจสอบว่า autoTable plugin พร้อมใช้งาน
+    if (!pdf.autoTable) {
+      // ถ้า autoTable ไม่มี ให้เพิ่มเข้าไป
+      (pdf as any).autoTable = autoTable;
+    }
     
     // ตั้งค่า font สำหรับภาษาไทย
     setupThaiFont(pdf);
@@ -289,7 +313,8 @@ export default function ApprovalsPage() {
       setupThaiFont(pdf);
       
       // Create table with proper pagination settings
-      (pdf as any).autoTable({
+      try {
+        pdf.autoTable({
         head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
         body: tableData,
         startY: i === 0 ? 90 : 30,
@@ -367,6 +392,11 @@ export default function ApprovalsPage() {
           }
         }
       });
+      } catch (autoTableError) {
+        console.error('Error creating autoTable:', autoTableError);
+        showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างตารางได้: ' + (autoTableError as Error).message);
+        throw autoTableError; // throw error แทน return
+      }
     }
     
     return pdf;
@@ -1075,7 +1105,7 @@ export default function ApprovalsPage() {
       pdf.save(fileName);
       
       showSuccess('สร้าง PDF สำเร็จ', `สร้าง PDF เรียบร้อยแล้ว\nไฟล์: ${fileName}\nจำนวน requisitions: ${filteredRequisitions.length}`);
-          } catch (error) {
+    } catch (error) {
       console.error('Error generating PDF:', error);
       showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
     }
@@ -1323,8 +1353,14 @@ export default function ApprovalsPage() {
         // ตั้งค่า font สำหรับ autoTable
         setupThaiFont(pdf);
 
+        // ตรวจสอบและเพิ่ม autoTable plugin หากจำเป็น
+        if (!pdf.autoTable) {
+          (pdf as any).autoTable = autoTable;
+        }
+
         // สร้างตารางด้วย autoTable
-        (pdf as any).autoTable({
+        try {
+          pdf.autoTable({
           head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
           body: tableData,
           startY: 90,
@@ -1402,6 +1438,11 @@ export default function ApprovalsPage() {
             }
           }
         });
+        } catch (autoTableError) {
+          console.error(`Error creating autoTable for category ${category}:`, autoTableError);
+          showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้างตารางสำหรับหมวดหมู่ ${category} ได้: ${(autoTableError as Error).message}`);
+          continue;
+        }
 
         // บันทึก PDF
         try {
