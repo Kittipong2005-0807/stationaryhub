@@ -957,7 +957,7 @@ export default function ApprovalsPage() {
       pdf.save(fileName);
       
       showSuccess('สร้าง PDF สำเร็จ', `สร้าง PDF เรียบร้อยแล้ว\nไฟล์: ${fileName}\nจำนวน requisitions: ${filteredRequisitions.length}`);
-    } catch (error) {
+          } catch (error) {
       console.error('Error generating PDF:', error);
       showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
     }
