@@ -1075,7 +1075,7 @@ export default function ApprovalsPage() {
       pdf.save(fileName);
       
       showSuccess('สร้าง PDF สำเร็จ', `สร้าง PDF เรียบร้อยแล้ว\nไฟล์: ${fileName}\nจำนวน requisitions: ${filteredRequisitions.length}`);
-    } catch (error) {
+          } catch (error) {
       console.error('Error generating PDF:', error);
       showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
     }
@@ -1171,6 +1171,12 @@ export default function ApprovalsPage() {
           await new Promise(resolve => setTimeout(resolve, 1000)); // รอ 1 วินาที
         }
         
+        // ตรวจสอบว่ามีข้อมูลเพียงพอหรือไม่
+        if (items.length === 0) {
+          console.log(`No items found for category ${category}, skipping...`);
+          continue;
+        }
+        
         // สร้าง PDF ใหม่สำหรับหมวดหมู่นี้
         const pdf = new jsPDF('p', 'mm', 'a4');
         const margin = 10;
@@ -1207,7 +1213,16 @@ export default function ApprovalsPage() {
         const userDataMap: Record<string, { fullName: string, department: string, costCenterCode: string }> = {};
         for (const userId of Object.keys(itemsByUser)) {
           try {
-            const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${userId}`));
+            // เพิ่ม timeout สำหรับการ fetch
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 วินาที timeout
+            
+            const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${userId}`), {
+              signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
             if (response.ok) {
               const data = await response.json();
               userDataMap[userId] = {
@@ -1280,55 +1295,16 @@ export default function ApprovalsPage() {
         pdf.text(`เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}`, margin, 45);
         
         // Date
-                  const now = new Date();
-                  const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-                  const dateNum = now.getDate().toString().padStart(2, '0');
-                  const month = thaiMonthsShort[now.getMonth()];
-                  const year = (now.getFullYear() + 543).toString().slice(-4);
-                  const hours = now.getHours().toString().padStart(2, '0');
-                  const minutes = now.getMinutes().toString().padStart(2, '0');
+        const nowDate = new Date();
+        const thaiMonthsShortList = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const dateNum = nowDate.getDate().toString().padStart(2, '0');
+        const month = thaiMonthsShortList[nowDate.getMonth()];
+        const year = (nowDate.getFullYear() + 543).toString().slice(-4);
+        const hours = nowDate.getHours().toString().padStart(2, '0');
+        const minutes = nowDate.getMinutes().toString().padStart(2, '0');
         const currentDate = `${dateNum} ${month} ${year} ${hours}:${minutes}`;
         
         pdf.text(`Date: ${currentDate}`, pageWidth - margin - 50, 30);
-        
-        // Delivery info
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Please Delivery on:', margin, 55);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(editAllFormData.deliveryDate || '_________________', margin, 60);
-        pdf.text('หมายเหตุ: ต้องการสินค้าด่วน', margin, 65);
-        pdf.text(`ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ: ${editAllFormData.contactPerson || 'N/A'}`, margin, 70);
-        
-        // Category info
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`หมวดหมู่: ${category}`, margin, 80);
-
-        // สร้าง header สำหรับ PDF
-        pdf.setFontSize(20);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
-        
-        // Company info
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(editAllFormData.companyName, margin, 30);
-        pdf.text(editAllFormData.companyAddress, margin, 35);
-        pdf.text(`TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}`, margin, 40);
-        pdf.text(`เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}`, margin, 45);
-        
-        // Date
-        const currentDateObj = new Date();
-        const thaiMonthsShortList = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-        const currentDateNum = currentDateObj.getDate().toString().padStart(2, '0');
-        const currentMonth = thaiMonthsShortList[currentDateObj.getMonth()];
-        const currentYear = (currentDateObj.getFullYear() + 543).toString().slice(-4);
-        const currentHours = currentDateObj.getHours().toString().padStart(2, '0');
-        const currentMinutes = currentDateObj.getMinutes().toString().padStart(2, '0');
-        const formattedCurrentDate = `${currentDateNum} ${currentMonth} ${currentYear} ${currentHours}:${currentMinutes}`;
-        
-        pdf.text(`Date: ${formattedCurrentDate}`, pageWidth - margin - 50, 30);
         
         // Delivery info
         pdf.setFontSize(10);
@@ -1515,9 +1491,10 @@ export default function ApprovalsPage() {
       REQUISITION_ITEMS: itemsToUse
     };
 
+    let tempDiv: HTMLDivElement | null = null;
     try {
       // สร้าง HTML element ชั่วคราว
-      const tempDiv = document.createElement('div');
+      tempDiv = document.createElement('div');
       tempDiv.style.position = 'absolute';
       tempDiv.style.left = '-9999px';
       tempDiv.style.top = '-9999px';
@@ -1664,7 +1641,9 @@ export default function ApprovalsPage() {
       });
 
       // ลบ element ชั่วคราว
+      if (tempDiv && tempDiv.parentNode) {
       document.body.removeChild(tempDiv);
+      }
 
       // ตรวจสอบ canvas ก่อนสร้าง PDF
       if (canvas.width === 0 || canvas.height === 0) {
@@ -1762,6 +1741,15 @@ export default function ApprovalsPage() {
     } catch (error) {
       console.error('Error generating PDF:', error);
       showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
+    } finally {
+      // ตรวจสอบและลบ tempDiv หากยังค้างอยู่
+      if (tempDiv && tempDiv.parentNode) {
+        try {
+          document.body.removeChild(tempDiv);
+        } catch (cleanupError) {
+          console.warn('Error cleaning up tempDiv:', cleanupError);
+        }
+      }
     }
   };
 
