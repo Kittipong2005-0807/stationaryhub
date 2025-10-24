@@ -127,7 +127,7 @@ export default function ApprovalsPage() {
   const setupThaiFont = (pdf: jsPDF) => {
     try {
       // ตรวจสอบว่า PDF object ถูกต้อง
-      if (!pdf || typeof pdf.setFont !== 'function') {
+      if (!pdf || typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
         console.error('Invalid PDF object provided to setupThaiFont');
         return;
       }
@@ -325,6 +325,11 @@ export default function ApprovalsPage() {
       
       // Create table with proper pagination settings
       try {
+        // ตรวจสอบว่า pdf object ยังคงถูกต้อง
+        if (!pdf) {
+          throw new Error('PDF object is null or undefined');
+        }
+
         // ใช้ (pdf as any).autoTable เพื่อให้แน่ใจว่าใช้งานได้
         (pdf as any).autoTable({
         head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
@@ -1230,6 +1235,12 @@ export default function ApprovalsPage() {
           console.error(`Failed to create PDF for category ${category}`);
           continue;
         }
+
+        // ตรวจสอบว่า PDF object มี methods ที่จำเป็น
+        if (typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
+          console.error(`PDF object is missing required methods for category ${category}`);
+          continue;
+        }
         
         // ตั้งค่า font สำหรับภาษาไทย
         setupThaiFont(pdf);
@@ -1392,6 +1403,13 @@ export default function ApprovalsPage() {
 
         // สร้างตารางด้วย autoTable
         try {
+          // ตรวจสอบว่า pdf object ยังคงถูกต้อง
+          if (!pdf) {
+            console.error(`PDF object is null or undefined for category ${category}`);
+            showError('เกิดข้อผิดพลาด', `PDF object ไม่ถูกต้องสำหรับหมวดหมู่ ${category}`);
+            continue;
+          }
+
           // ใช้ (pdf as any).autoTable เพื่อให้แน่ใจว่าใช้งานได้
           (pdf as any).autoTable({
           head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
