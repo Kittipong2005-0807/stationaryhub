@@ -128,7 +128,12 @@ export default function ApprovalsPage() {
     try {
       // ตรวจสอบว่า PDF object ถูกต้อง
       if (!pdf || typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
-        console.error('Invalid PDF object provided to setupThaiFont');
+        console.error('Invalid PDF object provided to setupThaiFont', {
+          pdfExists: !!pdf,
+          pdfType: typeof pdf,
+          setFontExists: typeof pdf?.setFont,
+          setFontSizeExists: typeof pdf?.setFontSize
+        });
         return;
       }
 
@@ -329,6 +334,23 @@ export default function ApprovalsPage() {
         if (!pdf) {
           throw new Error('PDF object is null or undefined');
         }
+
+        // ตรวจสอบว่า pdf object มี methods ที่จำเป็น
+        if (typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
+          throw new Error('PDF object is missing required methods');
+        }
+
+        // ตรวจสอบว่า autoTable พร้อมใช้งาน
+        if (!(pdf as any).autoTable) {
+          throw new Error('autoTable is not available');
+        }
+
+        console.log('Creating autoTable for requisition', {
+          pdfExists: !!pdf,
+          pdfType: typeof pdf,
+          autoTableExists: !!(pdf as any).autoTable,
+          tableDataLength: tableData.length
+        });
 
         // ใช้ (pdf as any).autoTable เพื่อให้แน่ใจว่าใช้งานได้
         (pdf as any).autoTable({
@@ -1122,7 +1144,7 @@ export default function ApprovalsPage() {
       pdf.save(fileName);
       
       showSuccess('สร้าง PDF สำเร็จ', `สร้าง PDF เรียบร้อยแล้ว\nไฟล์: ${fileName}\nจำนวน requisitions: ${filteredRequisitions.length}`);
-    } catch (error) {
+          } catch (error) {
       console.error('Error generating PDF:', error);
       showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
     }
@@ -1407,8 +1429,29 @@ export default function ApprovalsPage() {
           if (!pdf) {
             console.error(`PDF object is null or undefined for category ${category}`);
             showError('เกิดข้อผิดพลาด', `PDF object ไม่ถูกต้องสำหรับหมวดหมู่ ${category}`);
+          continue;
+        }
+
+          // ตรวจสอบว่า pdf object มี methods ที่จำเป็น
+          if (typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
+            console.error(`PDF object is missing required methods for category ${category}`);
+            showError('เกิดข้อผิดพลาด', `PDF object ไม่มี methods ที่จำเป็นสำหรับหมวดหมู่ ${category}`);
             continue;
           }
+
+          // ตรวจสอบว่า autoTable พร้อมใช้งาน
+          if (!(pdf as any).autoTable) {
+            console.error(`autoTable is not available for category ${category}`);
+            showError('เกิดข้อผิดพลาด', `autoTable ไม่พร้อมใช้งานสำหรับหมวดหมู่ ${category}`);
+            continue;
+          }
+
+          console.log(`Creating autoTable for category ${category}`, {
+            pdfExists: !!pdf,
+            pdfType: typeof pdf,
+            autoTableExists: !!(pdf as any).autoTable,
+            tableDataLength: tableData.length
+          });
 
           // ใช้ (pdf as any).autoTable เพื่อให้แน่ใจว่าใช้งานได้
           (pdf as any).autoTable({
