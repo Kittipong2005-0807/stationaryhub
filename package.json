@@ -69,6 +69,7 @@
     "html2canvas": "^1.4.1",
     "input-otp": "1.4.1",
     "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
     "ldapjs": "^3.0.7",
     "lucide-react": "^0.454.0",
     "mssql": "^11.0.1",

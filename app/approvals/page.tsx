@@ -54,6 +54,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getBasePathUrl } from '@/lib/base-path';
 import { getApiUrl } from '@/lib/api-utils';
 import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import ThaiDateUtils from '@/lib/date-utils';
 
@@ -113,6 +114,115 @@ const calculateSafeTotalPrice = (item: any) => {
 };
 
 export default function ApprovalsPage() {
+  // Helper to create PDF with autoTable for proper table pagination
+  const createPDFWithAutoTable = (requisitions: any[], editFormData: any) => {
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const margin = 10;
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const contentWidth = pageWidth - (margin * 2);
+    
+    let isFirstPage = true;
+    
+    for (let i = 0; i < requisitions.length; i++) {
+      const requisition = requisitions[i];
+      
+      if (!isFirstPage) {
+        pdf.addPage();
+      }
+      isFirstPage = false;
+      
+      // Header
+      if (i === 0) {
+        pdf.setFontSize(20);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
+        
+        // Company info
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(editFormData.companyName, margin, 30);
+        pdf.text(editFormData.companyAddress, margin, 35);
+        pdf.text(`TEL: ${editFormData.phone} FAX: ${editFormData.fax}`, margin, 40);
+        pdf.text(`เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}`, margin, 45);
+        
+        // Date and Requisition ID
+        pdf.text(`Date: ${formatDate(requisition.SUBMITTED_AT)}`, contentWidth + margin - 50, 30);
+        pdf.text(`Requisition ID: #${requisition.REQUISITION_ID}`, contentWidth + margin - 50, 35);
+        
+        // Delivery info
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Please Delivery on:', margin, 55);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(editFormData.deliveryDate || '_________________', margin, 60);
+        pdf.text(`หมายเหตุ: ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}`, margin, 65);
+        pdf.text(`ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ: ${editFormData.contactPerson || 'N/A'}`, margin, 70);
+      }
+      
+      // Cost Center info
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Cost Center: ${requisition.SITE_ID} | ผู้สั่ง: ${requisition.USER_ID} | แผนก: ${requisition.DEPARTMENT || 'N/A'}`, margin, i === 0 ? 80 : 20);
+      
+      // Prepare table data
+      const tableData: any[] = [];
+      const groupedItems = requisition.REQUISITION_ITEMS.reduce((acc: any, item: any) => {
+        const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+        acc[category].push(item);
+        return acc;
+      }, {});
+      
+      Object.entries(groupedItems).forEach(([category, items]: [string, any]) => {
+        // Category header
+        tableData.push([category, '', '', '', '', '']);
+        
+        // Items in category
+        items.forEach((item: any) => {
+          tableData.push([
+            (item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A',
+            item.PRODUCT_NAME,
+            item.QUANTITY,
+            item.ORDER_UNIT || 'ชิ้น',
+            `฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}`,
+            `฿${calculateSafeTotalPrice(item)}`
+          ]);
+        });
+      });
+      
+      // Create table
+      (pdf as any).autoTable({
+        head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
+        body: tableData,
+        startY: i === 0 ? 90 : 30,
+        margin: { left: margin, right: margin },
+        styles: {
+          fontSize: 9,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [233, 236, 239],
+          textColor: [0, 0, 0],
+          fontStyle: 'bold',
+        },
+        alternateRowStyles: {
+          fillColor: [248, 249, 250],
+        },
+        didDrawPage: (data: any) => {
+          // Page numbering
+          const pageCount = pdf.getNumberOfPages();
+          pdf.setFontSize(10);
+          pdf.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        }
+      });
+    }
+    
+    return pdf;
+  };
+
   // Helper to render a canvas image into the PDF with consistent margins and page breaks
   const renderImageWithMargins = (
     pdfInstance: jsPDF,
@@ -126,7 +236,7 @@ export default function ApprovalsPage() {
     const pageH = 297;
     const innerW = pageW - margin * 2;
     const usableH = pageH - margin - bottomMargin;
-    const pageOverlap = 8; // increased overlap to prevent clipping at page breaks
+    const pageOverlap = 15; // increased overlap to prevent clipping at page breaks
     const calculatedImageHeight = (canvasHeight * innerW) / canvasWidth;
 
     const drawFrame = () => {
@@ -807,365 +917,17 @@ export default function ApprovalsPage() {
     }
 
     try {
-      // สร้าง PDF หลัก
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      // Helper to render a canvas image into the PDF with consistent margins and page breaks
-      const renderImageWithMargins = (pdfInstance: jsPDF, imageData: string, canvasWidth: number, canvasHeight: number) => {
-        const marginLocal = 10;
-        const bottomMarginLocal = 15;
-        const pageW = 210;
-        const pageH = 297;
-        const innerW = pageW - marginLocal * 2;
-        const usableH = pageH - marginLocal - bottomMarginLocal;
-        const pageOverlapLocal = 8; // increased overlap to prevent clipping at page breaks
-        const calculatedImageHeight = (canvasHeight * innerW) / canvasWidth;
+      // สร้าง PDF หลักด้วย autoTable
+      const pdf = createPDFWithAutoTable(filteredRequisitions, editFormData);
+      // PDF created with autoTable - no need for html2canvas processing
 
-        const drawFrame = () => {
-          pdfInstance.setFillColor(255, 255, 255);
-          pdfInstance.rect(0, 0, pageW, marginLocal, 'F');
-          pdfInstance.rect(0, pageH - bottomMarginLocal, pageW, bottomMarginLocal, 'F');
-          pdfInstance.rect(0, 0, marginLocal, pageH, 'F');
-          pdfInstance.rect(pageW - marginLocal, 0, marginLocal, pageH, 'F');
-        };
-
-        if (calculatedImageHeight <= usableH) {
-          pdfInstance.addImage(imageData, 'PNG', marginLocal, marginLocal, innerW, calculatedImageHeight);
-          drawFrame();
-          pdfInstance.setFontSize(10);
-          pdfInstance.setTextColor(102, 102, 102);
-          pdfInstance.text(`Page 1 of 1`, 105, pageH - bottomMarginLocal / 2, { align: 'center' });
-        } else {
-          let currentPageLocal = 1;
-          let offsetY = 0;
-          const stepLocal = Math.max(1, usableH - pageOverlapLocal);
-          const totalPagesLocal = Math.ceil(Math.max(0, calculatedImageHeight - pageOverlapLocal) / stepLocal);
-          while (offsetY < calculatedImageHeight - pageOverlapLocal) {
-            if (currentPageLocal > 1) {
-              pdfInstance.addPage();
-            }
-            pdfInstance.addImage(imageData, 'PNG', marginLocal, marginLocal - offsetY, innerW, calculatedImageHeight);
-            drawFrame();
-            pdfInstance.setFontSize(10);
-            pdfInstance.setTextColor(102, 102, 102);
-            pdfInstance.text(`Page ${currentPageLocal} of ${totalPagesLocal}`, 105, pageH - bottomMarginLocal / 2, { align: 'center' });
-            if (currentPageLocal === totalPagesLocal) {
-              pdfInstance.setFontSize(8);
-              pdfInstance.setTextColor(102, 102, 102);
-              pdfInstance.text('Document created by StationaryHub System', 105, pageH - bottomMarginLocal - 2, { align: 'center' });
-              pdfInstance.text(`Created: ${(() => {
-                const now = new Date();
-                const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-                const dateNum = now.getDate().toString().padStart(2, '0');
-                const month = thaiMonthsShort[now.getMonth()];
-                const year = (now.getFullYear() + 543).toString().slice(-4);
-                const hours = now.getHours().toString().padStart(2, '0');
-                const minutes = now.getMinutes().toString().padStart(2, '0');
-                return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
-              })()}`, 105, pageH - bottomMarginLocal - 7, { align: 'center' });
-            }
-            offsetY += stepLocal;
-            currentPageLocal++;
-          }
-        }
-      };
-      let isFirstPage = true;
-      let processedCount = 0;
-
-      // ทดสอบสร้าง PDF ง่ายๆ ก่อน
-      console.log('Testing simple PDF creation...');
-      pdf.setFontSize(20);
-      pdf.text('TEST PDF', 105, 50, { align: 'center' });
-      pdf.setFontSize(12);
-      pdf.text(`Total Requisitions: ${filteredRequisitions.length}`, 20, 80);
-      pdf.text(`Processed: 0`, 20, 90);
-      pdf.text(`Date: ${(() => {
-        const now = new Date();
-        const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-        const dateNum = now.getDate().toString().padStart(2, '0');
-        const month = thaiMonthsShort[now.getMonth()];
-        const year = (now.getFullYear() + 543).toString().slice(-4);
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
-      })()}`, 20, 100);
-
-      for (let i = 0; i < filteredRequisitions.length; i++) {
-        const requisition = filteredRequisitions[i];
-        
-        console.log(`Processing requisition ${i + 1}/${filteredRequisitions.length}:`, {
-          id: requisition.REQUISITION_ID,
-          itemsCount: requisition.REQUISITION_ITEMS?.length || 0,
-          hasItems: !!(requisition.REQUISITION_ITEMS && requisition.REQUISITION_ITEMS.length > 0)
-        });
-        
-        if (!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0) {
-          console.log(`Skipping requisition ${requisition.REQUISITION_ID} - no items, trying to fetch...`);
-          
-          // ลองดึงข้อมูล items ใหม่
-          try {
-            const response = await fetch(getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`));
-            if (response.ok) {
-              const items = await response.json();
-              if (items && items.length > 0) {
-                requisition.REQUISITION_ITEMS = items;
-                console.log(`Fetched ${items.length} items for requisition ${requisition.REQUISITION_ID}`);
-              } else {
-                console.log(`Still no items for requisition ${requisition.REQUISITION_ID} after fetch`);
-                continue;
-              }
-            } else {
-              console.log(`Failed to fetch items for requisition ${requisition.REQUISITION_ID}`);
-              continue;
-            }
-          } catch (error) {
-            console.error(`Error fetching items for requisition ${requisition.REQUISITION_ID}:`, error);
-            continue;
-          }
-        }
-
-        // เพิ่มหน้าใหม่ (ยกเว้นหน้าแรก)
-        if (!isFirstPage) {
-          pdf.addPage();
-        }
-        isFirstPage = false;
-
-        // สร้าง HTML content สำหรับ SUPPLY REQUEST ORDER
-        const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.left = '-9999px';
-        tempDiv.style.top = '-9999px';
-        tempDiv.style.width = '210mm';
-        tempDiv.style.padding = '10mm';
-        tempDiv.style.backgroundColor = 'white';
-        tempDiv.style.fontFamily = 'Arial, sans-serif';
-        tempDiv.style.fontSize = '10px';
-        tempDiv.style.lineHeight = '1.1';
-
-        // ตรวจสอบว่าเป็นคำสั่งซื้อสุดท้ายหรือไม่
-        const isLastRequisition = i === filteredRequisitions.length - 1;
-
-        // ดึง OrgCode4 และข้อมูลชื่อพนักงานของ user สำหรับแสดงใน Cost Center
-        let userOrgCode4 = requisition.SITE_ID; // fallback to SITE_ID
-        let userOrgTDesc3 = 'N/A'; // fallback to N/A
-        let userFullName = requisition.USER_ID; // fallback to USER_ID
-        let userCostCenterCode = requisition.SITE_ID || ''; // default
-        try {
-          const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`));
-          if (response.ok) {
-            const data = await response.json();
-            userOrgCode4 = data.orgCode4 || requisition.SITE_ID;
-            userOrgTDesc3 = data.orgTDesc3 || 'N/A';
-            // ใช้ชื่อไทยก่อน หากไม่มีให้ใช้ชื่ออังกฤษ หากไม่มีให้ใช้ USER_ID
-            userFullName = data.fullNameThai || data.fullNameEng || requisition.USER_ID;
-            userCostCenterCode = data.costcentercode || requisition.SITE_ID || '';
-            console.log(`OrgCode data for requisition ${requisition.REQUISITION_ID}:`, {
-              userId: requisition.USER_ID,
-              orgCode4: userOrgCode4,
-              orgTDesc3: userOrgTDesc3,
-              userFullName: userFullName,
-              siteId: requisition.SITE_ID
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching user OrgCode4:', error);
-        }
-
-        // ตรวจสอบข้อมูลที่จำเป็น
-        if (!userOrgCode4) {
-          userOrgCode4 = requisition.SITE_ID || 'N/A';
-        }
-        if (!userOrgTDesc3) {
-          userOrgTDesc3 = 'N/A';
-        }
-        if (!userCostCenterCode) {
-          userCostCenterCode = 'N/A';
-        }
-
-        // สร้าง HTML content
-        const groupedItems = requisition.REQUISITION_ITEMS.reduce((acc, item) => {
-          const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
-          if (!acc[category]) {
-            acc[category] = [];
-          }
-          acc[category].push(item);
-          return acc;
-        }, {} as Record<string, RequisitionItem[]>);
-
-        const categoryHTML = Object.entries(groupedItems).map(([category, items]) => {
-          const categoryRows = items.map((item, index) => `
-            <tr style="page-break-inside: avoid; break-inside: avoid;">
-              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
-              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px;">${item.PRODUCT_NAME}</td>
-              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${item.QUANTITY}</td>
-              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: center;">${item.ORDER_UNIT || 'ชิ้น'}</td>
-              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: right;">฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}</td>
-              <td style="padding: 6px; border: 1px solid #ddd; font-size: 9px; text-align: right;">฿${calculateSafeTotalPrice(item)}</td>
-            </tr>
-          `).join('');
-
-          return `
-            <tr style="background: #f8f9fa; page-break-inside: avoid; break-inside: avoid;">
-              <td colspan="6" style="padding: 6px 8px; border: 1px solid #ddd; font-size: 9px; font-weight: bold; color: #495057;">${category}</td>
-            </tr>
-            ${categoryRows}
-          `;
-        }).join('');
-
-        // สร้าง HTML content โดยมีหัวข้อเฉพาะใบแรก และไม่มีกล่องสรุปยอดรวม
-        const showHeader = i === 0; // แสดงหัวข้อเฉพาะใบแรก
-        const htmlContent = `
-          <div style="padding: 10px;">
-            ${showHeader ? `
-            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px;">
-              <h1 style="margin: 0; font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-              <div style="text-align: left;">
-                <p style="margin: 0 0 2px 0; font-size: 9px; font-weight: bold;">${editFormData.companyName}</p>
-                <p style="margin: 0 0 2px 0; font-size: 9px;">${editFormData.companyAddress}</p>
-                <p style="margin: 0 0 2px 0; font-size: 9px;">TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
-                <p style="margin: 0 0 2px 0; font-size: 9px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
-              </div>
-              <div style="text-align: right;">
-                <p style="margin: 0 0 2px 0; font-size: 9px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
-                <p style="margin: 0 0 2px 0; font-size: 9px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
-              </div>
-            </div>
-            
-            <div style="margin-bottom: 15px; padding: 8px; border: 1px solid #ccc; background: #f9f9f9;">
-              <h3 style="margin: 0 0 3px 0; font-size: 10px; font-weight: bold;">Please Delivery on:</h3>
-              <p style="margin: 0 0 2px 0; font-size: 9px;">${editFormData.deliveryDate || '_________________________________'}</p>
-              <p style="margin: 0 0 2px 0; font-size: 9px;"><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
-              <p style="margin: 0 0 2px 0; font-size: 9px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson || 'N/A'}</p>
-            </div>
-            ` : ''}
-            
-            <div style="margin-bottom: 10px;">
-              <div style="background: #f5f5f5; padding: 6px 10px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 10px;">
-                <div style="font-size: 10px; color: #333; line-height: 1.4;">
-                  <strong>Cost Center:</strong> ${userOrgCode4} | 
-                  <strong>ผู้สั่ง:</strong> ${userFullName} - ${requisition.USER_ID} (${userCostCenterCode}) | 
-                  <strong>แผนก:</strong> ${requisition.DEPARTMENT || 'N/A'}
-                </div>
-              </div>
-              
-              <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
-                <thead>
-                  <tr style="background: #e9ecef;">
-                    <th style="padding: 6px; border: 1px solid #ddd; font-size: 9px; font-weight: bold;">ITEM_ID</th>
-                    <th style="padding: 6px; border: 1px solid #ddd; font-size: 9px; font-weight: bold;">Description</th>
-                    <th style="padding: 6px; border: 1px solid #ddd; font-size: 9px; font-weight: bold;">Qty</th>
-                    <th style="padding: 6px; border: 1px solid #ddd; font-size: 9px; font-weight: bold;">Unit</th>
-                    <th style="padding: 6px; border: 1px solid #ddd; font-size: 9px; font-weight: bold;">Unit Price</th>
-                    <th style="padding: 6px; border: 1px solid #ddd; font-size: 9px; font-weight: bold;">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${categoryHTML}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        `;
-
-        console.log(`HTML content for requisition ${requisition.REQUISITION_ID}:`, {
-          htmlLength: htmlContent.length,
-          hasContent: htmlContent.length > 1000,
-          userOrgCode4,
-          userOrgTDesc3,
-          itemsCount: requisition.REQUISITION_ITEMS.length,
-          htmlPreview: htmlContent.substring(0, 200) + '...'
-        });
-
-        tempDiv.innerHTML = htmlContent;
-
-        // เพิ่ม element ลงใน DOM
-        document.body.appendChild(tempDiv);
-
-        // รอให้ content render เสร็จ
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        // แปลง HTML เป็น canvas
-        const canvas = await html2canvas(tempDiv, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff'
-        });
-
-        console.log(`Canvas ${i + 1} generated:`, { 
-          width: canvas.width, 
-          height: canvas.height,
-          hasContent: canvas.width > 0 && canvas.height > 0,
-          requisitionId: requisition.REQUISITION_ID,
-          itemsCount: requisition.REQUISITION_ITEMS.length
-        });
-
-        // ลบ element ชั่วคราว
-        document.body.removeChild(tempDiv);
-
-        // ตรวจสอบ canvas ก่อนสร้าง PDF
-        if (canvas.width === 0 || canvas.height === 0) {
-          console.error(`Canvas ${i + 1} is empty, skipping...`);
-          continue;
-        }
-
-        processedCount++;
-
-        // เพิ่มรูปภาพลงใน PDF
-        const imgData = canvas.toDataURL('image/png');
-        console.log(`Image data ${i + 1} generated:`, { 
-          dataLength: imgData.length,
-          hasData: imgData.length > 100,
-          requisitionId: requisition.REQUISITION_ID,
-          dataPreview: imgData.substring(0, 100) + '...'
-        });
-        // ใช้ helper เดียวกันในการวาดภาพพร้อม margins และการตัดหน้า
-        renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
-      }
-
-      // ตรวจสอบ PDF ก่อนดาวน์โหลด
-      console.log('Final PDF check:', {
-        processedCount,
-        totalRequisitions: filteredRequisitions.length,
-        hasProcessedAny: processedCount > 0
-      });
-
-      // ทดสอบ PDF ก่อนดาวน์โหลด
-      const testPdfOutput = pdf.output('datauristring');
-      console.log('Test PDF output:', {
-        length: testPdfOutput.length,
-        hasContent: testPdfOutput.length > 100,
-        preview: testPdfOutput.substring(0, 100) + '...'
-      });
-
-      if (processedCount === 0) {
-        console.log('No requisitions processed, but PDF should still have test content');
-        // ไม่ return เพราะเรามี test content อยู่แล้ว
-      }
-
-      const pdfOutput = pdf.output('datauristring');
-      console.log('Bulk PDF generated:', { 
-        pdfLength: pdfOutput.length,
-        hasContent: pdfOutput.length > 1000,
-        processedCount,
-        totalRequisitions: filteredRequisitions.length,
-        pdfPreview: pdfOutput.substring(0, 200) + '...'
-      });
-
-      if (pdfOutput.length < 1000) {
-        showError('เกิดข้อผิดพลาด', 'ไฟล์ PDF ไม่มีเนื้อหา');
-        return;
-      }
-
-      // ดาวน์โหลด PDF
-      const fileName = editFormData.fileName || `ALL_SUPPLY_REQUEST_ORDERS_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
-      pdf.save(`${fileName}.pdf`);
-
-      showSuccess('สร้าง PDF สำเร็จ!', `ไฟล์ PDF ทั้งหมด ${filteredRequisitions.length} รายการถูกสร้างและดาวน์โหลดแล้ว`);
+      // Save the PDF
+      const fileName = `Supply_Request_Order_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+      
+      showSuccess('สร้าง PDF สำเร็จ', `สร้าง PDF เรียบร้อยแล้ว\nไฟล์: ${fileName}\nจำนวน requisitions: ${filteredRequisitions.length}`);
     } catch (error) {
-      console.error('Error generating all PDFs:', error);
+      console.error('Error generating PDF:', error);
       showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
     }
   };
