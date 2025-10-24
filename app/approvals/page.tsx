@@ -409,7 +409,10 @@ export default function ApprovalsPage() {
             throw new Error('PDF object is invalid');
           }
           
-          autoTableFunc({
+          // ใช้ pdf.autoTable โดยตรงและ bind pdf object
+          const autoTableWithContext = (pdf as any).autoTable.bind(pdf);
+          
+          autoTableWithContext({
         head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
         body: tableData,
         startY: i === 0 ? 90 : 30,
@@ -1489,8 +1492,8 @@ export default function ApprovalsPage() {
           if (!pdf || typeof pdf !== 'object') {
             console.error(`PDF object is null or undefined for category ${category}:`, pdf);
             showError('เกิดข้อผิดพลาด', `PDF object ไม่ถูกต้องสำหรับหมวดหมู่ ${category}`);
-            continue;
-          }
+          continue;
+        }
 
           // ตรวจสอบว่า pdf object มี methods ที่จำเป็น
           if (typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
@@ -1551,7 +1554,10 @@ export default function ApprovalsPage() {
               throw new Error('PDF object is invalid');
             }
             
-            autoTableFunc({
+            // ใช้ pdf.autoTable โดยตรงและ bind pdf object
+            const autoTableWithContext = (pdf as any).autoTable.bind(pdf);
+            
+            autoTableWithContext({
           head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
           body: tableData,
           startY: 90,
