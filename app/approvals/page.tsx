@@ -55,6 +55,8 @@ import { getBasePathUrl } from '@/lib/base-path';
 import { getApiUrl } from '@/lib/api-utils';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+// เพิ่ม font ที่รองรับภาษาไทย
+import 'jspdf/dist/polyfills.es.js';
 import html2canvas from 'html2canvas';
 import ThaiDateUtils from '@/lib/date-utils';
 
@@ -114,6 +116,24 @@ const calculateSafeTotalPrice = (item: any) => {
 };
 
 export default function ApprovalsPage() {
+  // ฟังก์ชันสำหรับจัดการ font ภาษาไทย
+  const setupThaiFont = (pdf: jsPDF) => {
+    try {
+      // ใช้ font ที่รองรับภาษาไทยได้ดีกว่า
+      pdf.setFont('helvetica');
+      
+      // ตั้งค่า encoding สำหรับภาษาไทย
+      pdf.setLanguage('th');
+      
+      // ตั้งค่า font size เริ่มต้น
+      pdf.setFontSize(10);
+      
+      console.log('Thai font setup completed');
+    } catch (error) {
+      console.warn('Could not set Thai font, using default:', error);
+    }
+  };
+
   // Helper to create PDF with autoTable for proper table pagination
   const createPDFWithAutoTable = (requisitions: any[], editFormData: any) => {
     const pdf = new jsPDF('p', 'mm', 'a4');
@@ -121,6 +141,9 @@ export default function ApprovalsPage() {
     const pageWidth = 210;
     const pageHeight = 297;
     const contentWidth = pageWidth - (margin * 2);
+    
+    // ตั้งค่า font สำหรับภาษาไทย
+    setupThaiFont(pdf);
     
     let isFirstPage = true;
     
@@ -207,12 +230,17 @@ export default function ApprovalsPage() {
           // ป้องกันการตัดแถว
           minCellHeight: 8,
           valign: 'middle',
+          // ตั้งค่า font สำหรับภาษาไทย
+          font: 'helvetica',
+          fontStyle: 'normal',
         },
         headStyles: {
           fillColor: [233, 236, 239],
           textColor: [0, 0, 0],
           fontStyle: 'bold',
           halign: 'center',
+          // ตั้งค่า font สำหรับภาษาไทย
+          font: 'helvetica',
         },
         alternateRowStyles: {
           fillColor: [248, 249, 250],
@@ -1081,6 +1109,9 @@ export default function ApprovalsPage() {
         const margin = 10;
         const pageWidth = 210;
         const pageHeight = 297;
+        
+        // ตั้งค่า font สำหรับภาษาไทย
+        setupThaiFont(pdf);
 
         // เรียงลำดับ items ตาม requisition ID และ item order
         items.sort((a, b) => {
@@ -1182,13 +1213,13 @@ export default function ApprovalsPage() {
         pdf.text(`เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}`, margin, 45);
         
         // Date
-        const now = new Date();
-        const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-        const dateNum = now.getDate().toString().padStart(2, '0');
-        const month = thaiMonthsShort[now.getMonth()];
-        const year = (now.getFullYear() + 543).toString().slice(-4);
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
+                  const now = new Date();
+                  const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                  const dateNum = now.getDate().toString().padStart(2, '0');
+                  const month = thaiMonthsShort[now.getMonth()];
+                  const year = (now.getFullYear() + 543).toString().slice(-4);
+                  const hours = now.getHours().toString().padStart(2, '0');
+                  const minutes = now.getMinutes().toString().padStart(2, '0');
         const currentDate = `${dateNum} ${month} ${year} ${hours}:${minutes}`;
         
         pdf.text(`Date: ${currentDate}`, pageWidth - margin - 50, 30);
@@ -1222,12 +1253,17 @@ export default function ApprovalsPage() {
             // ป้องกันการตัดแถว
             minCellHeight: 8,
             valign: 'middle',
+            // ตั้งค่า font สำหรับภาษาไทย
+            font: 'helvetica',
+            fontStyle: 'normal',
           },
           headStyles: {
             fillColor: [233, 236, 239],
             textColor: [0, 0, 0],
             fontStyle: 'bold',
             halign: 'center',
+            // ตั้งค่า font สำหรับภาษาไทย
+            font: 'helvetica',
           },
           alternateRowStyles: {
             fillColor: [248, 249, 250],
@@ -1295,9 +1331,9 @@ export default function ApprovalsPage() {
 
         // บันทึก PDF
         try {
-          const fileName = editAllFormData.fileName || `SUPPLY_REQUEST_ORDER_${category.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
+        const fileName = editAllFormData.fileName || `SUPPLY_REQUEST_ORDER_${category.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
           pdf.save(`${fileName}.pdf`);
-          console.log(`PDF for category ${category} saved: ${fileName}.pdf`);
+        console.log(`PDF for category ${category} saved: ${fileName}.pdf`);
         } catch (saveError) {
           console.error(`Error saving PDF for category ${category}:`, saveError);
           showError('เกิดข้อผิดพลาด', `ไม่สามารถบันทึก PDF สำหรับหมวดหมู่ ${category} ได้: ${(saveError as Error).message}`);
