@@ -1156,6 +1156,18 @@ export default function ApprovalsPage() {
           });
         });
 
+        // ตรวจสอบว่ามีข้อมูลใน tableData หรือไม่
+        if (tableData.length === 0) {
+          console.log(`No data for category ${category}, skipping...`);
+          continue;
+        }
+
+        console.log(`Creating PDF for category ${category}`, {
+          tableDataLength: tableData.length,
+          itemsCount: items.length,
+          usersCount: Object.keys(itemsByUser).length
+        });
+
         // สร้าง header สำหรับ PDF
         pdf.setFontSize(20);
         pdf.setFont('helvetica', 'bold');
@@ -1196,7 +1208,8 @@ export default function ApprovalsPage() {
         pdf.text(`หมวดหมู่: ${category}`, margin, 80);
 
         // สร้างตารางด้วย autoTable
-        (pdf as any).autoTable({
+        try {
+          (pdf as any).autoTable({
           head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
           body: tableData,
           startY: 90,
@@ -1274,24 +1287,22 @@ export default function ApprovalsPage() {
             }
           }
         });
+        } catch (tableError) {
+          console.error(`Error creating table for category ${category}:`, tableError);
+          showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้างตารางสำหรับหมวดหมู่ ${category} ได้: ${(tableError as Error).message}`);
+          continue;
+        }
 
-        // เก็บ PDF ไว้ใน array แทนการดาวน์โหลดทันที
-        const fileName = editAllFormData.fileName || `SUPPLY_REQUEST_ORDER_${category.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
-        
-        // สร้าง blob และเก็บไว้
-        const pdfBlob = pdf.output('blob');
-        const pdfUrl = URL.createObjectURL(pdfBlob);
-        
-        // สร้าง link element และคลิกเพื่อดาวน์โหลด
-        const link = document.createElement('a');
-        link.href = pdfUrl;
-        link.download = `${fileName}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(pdfUrl);
-
-        console.log(`PDF for category ${category} saved: ${fileName}.pdf`);
+        // บันทึก PDF
+        try {
+          const fileName = editAllFormData.fileName || `SUPPLY_REQUEST_ORDER_${category.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
+          pdf.save(`${fileName}.pdf`);
+          console.log(`PDF for category ${category} saved: ${fileName}.pdf`);
+        } catch (saveError) {
+          console.error(`Error saving PDF for category ${category}:`, saveError);
+          showError('เกิดข้อผิดพลาด', `ไม่สามารถบันทึก PDF สำหรับหมวดหมู่ ${category} ได้: ${(saveError as Error).message}`);
+          continue;
+        }
       }
 
       showSuccess('สร้าง PDF สำเร็จ!', `ไฟล์ PDF ทั้งหมด ${totalPDFs} ไฟล์ถูกสร้างและดาวน์โหลดแล้ว (แยกตามหมวดหมู่)`);
