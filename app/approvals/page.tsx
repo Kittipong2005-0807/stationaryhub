@@ -1930,59 +1930,9 @@ export default function ApprovalsPage() {
       const usablePageHeight = pageHeightFull - margin - bottomMargin;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      // ตรวจสอบว่าต้องแบ่งหน้าไหม
-      if (imgHeight <= usablePageHeight) {
-        // เนื้อหาไม่เกินหน้าเดียว
-        renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
-        
-        // เพิ่มหมายเลขหน้า
-        pdf.setFontSize(10);
-        pdf.setTextColor(102, 102, 102);
-        pdf.text(`Page 1 of 1`, 105, pageHeightFull - bottomMargin / 2, { align: 'center' });
-      } else {
-        // เนื้อหาเกินหน้าเดียว - แบ่งเป็นหลายหน้า
-        let currentPage = 1;
-        let yOffset = 0;
-        const totalPages = Math.ceil(imgHeight / usablePageHeight);
-        
-        while (yOffset < imgHeight) {
-          if (currentPage > 1) {
-            pdf.addPage();
-          }
-          
-          // คำนวณความสูงของส่วนที่จะแสดงในหน้านี้
-          const remainingHeight = imgHeight - yOffset;
-          const _pageContentHeight = Math.min(usablePageHeight, remainingHeight);
-          
-          // เพิ่มรูปภาพเฉพาะส่วนที่ต้องการ
-          renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
-          
-          // เพิ่มหมายเลขหน้า
-          pdf.setFontSize(10);
-          pdf.setTextColor(102, 102, 102);
-          pdf.text(`Page ${currentPage} of ${totalPages}`, 105, pageHeightFull - bottomMargin / 2, { align: 'center' });
-          
-          // เพิ่ม footer เฉพาะหน้าสุดท้าย
-          if (currentPage === totalPages) {
-            pdf.setFontSize(8);
-            pdf.setTextColor(102, 102, 102);
-            pdf.text('Document created by StationaryHub System', 105, pageHeightFull - bottomMargin - 2, { align: 'center' });
-            pdf.text(`Created: ${(() => {
-              const now = new Date();
-              const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-              const dateNum = now.getDate().toString().padStart(2, '0');
-              const month = thaiMonthsShort[now.getMonth()];
-              const year = (now.getFullYear() + 543).toString().slice(-4);
-              const hours = now.getHours().toString().padStart(2, '0');
-              const minutes = now.getMinutes().toString().padStart(2, '0');
-              return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
-            })()}`, 105, pageHeightFull - bottomMargin - 7, { align: 'center' });
-          }
-          
-          yOffset += usablePageHeight;
-          currentPage++;
-        }
-      }
+      // ใช้ renderImageWithMargins เพื่อจัดการ pagination ทั้งหมด
+      // มันจะแบ่งหน้าอัตโนมัติและเพิ่มหมายเลขหน้าให้
+      renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
 
       // ตรวจสอบ PDF ก่อนดาวน์โหลด
       const pdfOutput = pdf.output('datauristring');
