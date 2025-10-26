@@ -1445,11 +1445,11 @@ export default function ApprovalsPage() {
           chunkItems.forEach(({userId, userData, userItems}) => {
             // เพิ่ม user header
             tableHTML += `
-              <tr style="background: #f8f9fa;">
+            <tr style="background: #f8f9fa;">
                 <td colspan="6" style="padding: 8px; font-weight: bold; font-size: 11px; color: #333; border: 1px solid #ddd;">
                   ผู้สั่ง: ${userData.fullName} - ${userData.department} - ${userData.costCenterCode} - (${userItems.length} รายการ)
-                </td>
-              </tr>
+              </td>
+            </tr>
             `;
             
             // เพิ่ม items ของ user นี้
@@ -1474,25 +1474,25 @@ export default function ApprovalsPage() {
               </h2>
               
               <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <div style="text-align: left;">
+              <div style="text-align: left;">
                   <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">${editAllFormData.companyName}</div>
                   <div style="font-size: 12px; margin-bottom: 2px;">${editAllFormData.companyAddress}</div>
                   <div style="font-size: 12px; margin-bottom: 2px;">TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}</div>
                   <div style="font-size: 12px; margin-bottom: 2px;">เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}</div>
-                </div>
-                <div style="text-align: right;">
+              </div>
+              <div style="text-align: right;">
                   <div style="font-size: 12px; margin-bottom: 2px;"><strong>Date:</strong> ${currentDate}</div>
                   <div style="font-size: 12px; margin-bottom: 2px;"><strong>หมวดหมู่:</strong> ${category}</div>
-                </div>
               </div>
-              
+            </div>
+            
               <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
                 <div style="font-size: 12px; font-weight: bold; margin-bottom: 3px;">Please Delivery on:</div>
                 <div style="font-size: 11px; margin-bottom: 2px;">${editAllFormData.deliveryDate || '_________________________________'}</div>
                 <div style="font-size: 11px;"><strong>หมายเหตุ:</strong> ต้องการสินค้าด่วน</div>
                 <div style="font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editAllFormData.contactPerson || 'N/A'}</div>
-              </div>
-              
+            </div>
+            
               <table style="width: 100%; border-collapse: collapse;">
                 <thead>
                   <tr style="background: #e9ecef;">
@@ -1508,8 +1508,8 @@ export default function ApprovalsPage() {
                   ${tableHTML}
                 </tbody>
               </table>
-            </div>
-          `;
+          </div>
+        `;
         };
         
         // แบ่ง users เป็น chunks (แต่ละ chunk มีราว 2-3 users)
@@ -1521,7 +1521,8 @@ export default function ApprovalsPage() {
           const userData = userDataMap[userId] || {fullName: userId, department: 'N/A', costCenterCode: 'N/A'};
           
           // ถ้าขนาด chunk ใหญ่มาก ให้เริ่ม chunk ใหม่
-          if (itemsInChunk + userItems.length > 12 && currentChunk.length > 0) {
+          // ลดจำนวนรายการต่อ chunk เป็น 8 เพื่อไม่ให้เกิน 1 หน้า
+          if (itemsInChunk + userItems.length > 8 && currentChunk.length > 0) {
             userChunks.push(currentChunk);
             currentChunk = [];
             itemsInChunk = 0;
@@ -1558,46 +1559,53 @@ export default function ApprovalsPage() {
             const chunkHTML = generateHTMLForChunk(chunk);
             tempDiv.innerHTML = chunkHTML;
             
-            document.body.appendChild(tempDiv);
-            
-            // รอให้ content render เสร็จ
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            
-            // แปลง HTML เป็น canvas
-            const canvas = await html2canvas(tempDiv, {
-              scale: 2,
-              useCORS: true,
-              allowTaint: true,
-              backgroundColor: '#ffffff'
-            });
-            
-            // ลบ element ชั่วคราว
+        document.body.appendChild(tempDiv);
+
+        // รอให้ content render เสร็จ
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // แปลง HTML เป็น canvas
+        const canvas = await html2canvas(tempDiv, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        });
+
+        // ลบ element ชั่วคราว
             if (tempDiv && tempDiv.parentNode) {
-              document.body.removeChild(tempDiv);
+        document.body.removeChild(tempDiv);
             }
-            
-            // ตรวจสอบ canvas ก่อนสร้าง PDF
-            if (canvas.width === 0 || canvas.height === 0) {
+
+        // ตรวจสอบ canvas ก่อนสร้าง PDF
+        if (canvas.width === 0 || canvas.height === 0) {
               showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างภาพได้');
-              continue;
-            }
-            
-            // สร้าง PDF - เพิ่มหน้าใหม่สำหรับแต่ละ chunk
-            if (chunkIndex > 0) {
-              pdf.addPage();
-            }
-            
-            const imgData = canvas.toDataURL('image/png');
+          continue;
+        }
+
+        const imgData = canvas.toDataURL('image/png');
             const imgWidth = pageWidth - margin * 2;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            const usablePageHeight = pageHeight - margin - 20; // พื้นที่ที่ใช้ได้สำหรับเนื้อหา (สูงสุด 267mm)
             
-            // เพิ่มรูปภาพลงใน PDF
-            pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
-            
-            // เพิ่มหมายเลขหน้า
-            pdf.setFontSize(10);
-            pdf.setTextColor(102, 102, 102);
-            pdf.text(`Page ${chunkIndex + 1} of ${userChunks.length}`, pageWidth / 2, pageHeight - 7, { align: 'center' });
+            // ตรวจสอบว่าภาพมีความสูงเกิน 1 หน้าหรือไม่
+            if (imgHeight > usablePageHeight) {
+              // ถ้ารูปสูงเกิน 1 หน้า ให้ใช้ renderImageWithMargins ซึ่งจะแบ่งหน้าอัตโนมัติ
+        renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
+            } else {
+              // ถ้ารูปพอดีใน 1 หน้า ให้เพิ่มหน้าใหม่สำหรับแต่ละ chunk (ยกเว้น chunk แรก)
+              if (chunkIndex > 0) {
+                pdf.addPage();
+              }
+              
+              // เพิ่มรูปภาพลงใน PDF
+              pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
+              
+              // เพิ่มหมายเลขหน้า
+              pdf.setFontSize(10);
+              pdf.setTextColor(102, 102, 102);
+              pdf.text(`Chunk ${chunkIndex + 1} of ${userChunks.length}`, pageWidth / 2, pageHeight - 7, { align: 'center' });
+            }
             
           } catch (html2canvasError) {
             console.error(`Error creating html2canvas for chunk ${chunkIndex} of category ${category}:`, html2canvasError);
@@ -1627,7 +1635,7 @@ export default function ApprovalsPage() {
         try {
           const fileName = editAllFormData.fileName || `SUPPLY_REQUEST_ORDER_${category.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
           pdf.save(`${fileName}.pdf`);
-          console.log(`PDF for category ${category} saved: ${fileName}.pdf`);
+        console.log(`PDF for category ${category} saved: ${fileName}.pdf`);
         } catch (saveError) {
           console.error(`Error saving PDF for category ${category}:`, saveError);
           showError('เกิดข้อผิดพลาด', `ไม่สามารถบันทึก PDF สำหรับหมวดหมู่ ${category} ได้: ${(saveError as Error).message}`);
@@ -1646,6 +1654,20 @@ export default function ApprovalsPage() {
   const generatePDF = async (requisition: Requisition) => {
     // ตรวจสอบและโหลดข้อมูล items หากจำเป็น
     let itemsToUse = requisition.REQUISITION_ITEMS;
+    
+    // ตรวจสอบและลบข้อมูลที่ซ้ำซ้อน
+    if (itemsToUse && itemsToUse.length > 0) {
+      const seen = new Set();
+      itemsToUse = itemsToUse.filter((item: any) => {
+        const id = item.ITEM_ID || item.PRODUCT_ITEM_ID;
+        if (!id || seen.has(id)) {
+          return false;
+        }
+        seen.add(id);
+        return true;
+      });
+      console.log('After removing duplicates:', { originalCount: requisition.REQUISITION_ITEMS?.length, uniqueCount: itemsToUse.length });
+    }
     
     if (!itemsToUse || itemsToUse.length === 0) {
       try {
@@ -1731,13 +1753,29 @@ export default function ApprovalsPage() {
       const needsMultiplePages = estimatedContentHeight > 250;
       
       // สร้าง HTML content โดยใช้ฟังก์ชัน
-      const generateHTMLContent = () => {
+        const generateHTMLContent = () => {
         console.log('Generating HTML with data:', { 
           userOrgCode4, 
           userOrgTDesc3, 
           requisition: requisition.REQUISITION_ID,
-          itemsCount: itemsToUse.length 
+          itemsCount: itemsToUse.length,
+          items: itemsToUse.map(i => ({
+            id: i.ITEM_ID,
+            name: i.PRODUCT_NAME,
+            category: i.CATEGORY_NAME
+          }))
         });
+        
+        // ตรวจสอบว่ามี items ซ้ำซ้อนหรือไม่
+        const itemIds = itemsToUse.map(i => i.ITEM_ID);
+        const uniqueItemIds = new Set(itemIds);
+        if (itemIds.length !== uniqueItemIds.size) {
+          console.warn('Found duplicate items:', {
+            total: itemIds.length,
+            unique: uniqueItemIds.size,
+            duplicates: itemIds.filter(id => itemIds.indexOf(id) !== itemIds.lastIndexOf(id))
+          });
+        }
         
         const groupedItems = itemsToUse.reduce((acc, item) => {
           const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
@@ -1749,6 +1787,11 @@ export default function ApprovalsPage() {
         }, {} as Record<string, typeof itemsToUse>);
 
         const sortedCategories = Object.keys(groupedItems).sort();
+        
+        console.log('Grouped items by category:', {
+          categories: sortedCategories,
+          itemsByCategory: sortedCategories.map(cat => ({ category: cat, count: groupedItems[cat].length }))
+        });
 
 
         const categoryHTML = sortedCategories.map(category => {
