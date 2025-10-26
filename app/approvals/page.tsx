@@ -1405,8 +1405,8 @@ export default function ApprovalsPage() {
               <tr style="background: #f8f9fa; page-break-inside: avoid; break-inside: avoid;">
                 <td colspan="6" style="padding: 8px; font-weight: bold; font-size: 11px; color: #333; border: 1px solid #ddd;">
                   ผู้สั่ง: ${userData.fullName} - ${userData.department} - ${userData.costCenterCode} - (${userItems.length} รายการ)
-                </td>
-              </tr>
+              </td>
+            </tr>
             `;
             
             // เพิ่ม items ของ user นี้
@@ -1436,7 +1436,7 @@ export default function ApprovalsPage() {
         const hours = nowDate.getHours().toString().padStart(2, '0');
         const minutes = nowDate.getMinutes().toString().padStart(2, '0');
         const currentDate = `${dateNum} ${month} ${year} ${hours}:${minutes}`;
-        
+
         const htmlContent = `
           <div style="font-family: 'Prompt', 'Sarabun', 'Arial', sans-serif; width: 100%; padding: 20px;">
             <h2 style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px;">
@@ -1464,20 +1464,20 @@ export default function ApprovalsPage() {
             </div>
             
             <table style="width: 100%; border-collapse: collapse;">
-              <thead>
-                <tr style="background: #e9ecef;">
-                  <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">ITEM_ID</th>
-                  <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Description</th>
-                  <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Qty</th>
-                  <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit</th>
-                  <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit Price</th>
-                  <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Total</th>
-                </tr>
-              </thead>
-              <tbody>
+                <thead>
+                  <tr style="background: #e9ecef;">
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">ITEM_ID</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Description</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Qty</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit Price</th>
+                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
                 ${generateTableRows()}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
           </div>
         `;
 
@@ -1492,40 +1492,40 @@ export default function ApprovalsPage() {
           tempDiv.style.padding = '20mm';
           tempDiv.style.backgroundColor = 'white';
           tempDiv.style.fontFamily = 'Prompt, Sarabun, Arial, sans-serif';
-          tempDiv.innerHTML = htmlContent;
-          
-          document.body.appendChild(tempDiv);
-          
-          // รอให้ content render เสร็จ
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          
-          // แปลง HTML เป็น canvas
-          const canvas = await html2canvas(tempDiv, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: '#ffffff'
-          });
-          
-          // ลบ element ชั่วคราว
+        tempDiv.innerHTML = htmlContent;
+
+        document.body.appendChild(tempDiv);
+
+        // รอให้ content render เสร็จ
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // แปลง HTML เป็น canvas
+        const canvas = await html2canvas(tempDiv, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        });
+
+        // ลบ element ชั่วคราว
           if (tempDiv && tempDiv.parentNode) {
-            document.body.removeChild(tempDiv);
+        document.body.removeChild(tempDiv);
           }
-          
-          // ตรวจสอบ canvas ก่อนสร้าง PDF
-          if (canvas.width === 0 || canvas.height === 0) {
+
+        // ตรวจสอบ canvas ก่อนสร้าง PDF
+        if (canvas.width === 0 || canvas.height === 0) {
             showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างภาพได้');
-            continue;
-          }
-          
+          continue;
+        }
+
           // สร้าง PDF
-          const imgData = canvas.toDataURL('image/png');
+        const imgData = canvas.toDataURL('image/png');
           const imgWidth = pageWidth - margin * 2;
           const imgHeight = (canvas.height * imgWidth) / canvas.width;
           
           // ใช้ renderImageWithMargins เพื่อแบ่งหน้าอัตโนมัติ
-          renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
-          
+        renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
+
         } catch (html2canvasError) {
           console.error(`Error creating html2canvas for category ${category}:`, html2canvasError);
           showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้างตารางสำหรับหมวดหมู่ ${category} ได้: ${(html2canvasError as Error).message}`);
