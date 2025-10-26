@@ -1437,33 +1437,63 @@ export default function ApprovalsPage() {
         const minutes = nowDate.getMinutes().toString().padStart(2, '0');
         const currentDate = `${dateNum} ${month} ${year} ${hours}:${minutes}`;
 
-        const htmlContent = `
-          <div style="font-family: 'Prompt', 'Sarabun', 'Arial', sans-serif; width: 100%; padding: 20px;">
-            <h2 style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px;">
-              SUPPLY REQUEST ORDER
-            </h2>
+        // แบ่งข้อมูลเป็น chunks สำหรับแต่ละหน้า
+        // แต่ละ chunk จะมีราว 10-12 รายการสินค้า
+        const generateHTMLForChunk = (chunkItems: Array<{userId: string, userData: any, userItems: any[]}>) => {
+          let tableHTML = '';
+          
+          chunkItems.forEach(({userId, userData, userItems}) => {
+            // เพิ่ม user header
+            tableHTML += `
+              <tr style="background: #f8f9fa;">
+                <td colspan="6" style="padding: 8px; font-weight: bold; font-size: 11px; color: #333; border: 1px solid #ddd;">
+                  ผู้สั่ง: ${userData.fullName} - ${userData.department} - ${userData.costCenterCode} - (${userItems.length} รายการ)
+                </td>
+              </tr>
+            `;
             
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-              <div style="text-align: left;">
-                <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">${editAllFormData.companyName}</div>
-                <div style="font-size: 12px; margin-bottom: 2px;">${editAllFormData.companyAddress}</div>
-                <div style="font-size: 12px; margin-bottom: 2px;">TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}</div>
-                <div style="font-size: 12px; margin-bottom: 2px;">เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}</div>
+            // เพิ่ม items ของ user นี้
+            userItems.forEach(({requisition, item}) => {
+              tableHTML += `
+                <tr>
+                  <td style="padding: 8px; text-align: center; font-size: 10px; border: 1px solid #ddd;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
+                  <td style="padding: 8px; font-size: 10px; border: 1px solid #ddd;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
+                  <td style="padding: 8px; text-align: center; font-size: 10px; border: 1px solid #ddd;">${item.QUANTITY}</td>
+                  <td style="padding: 8px; text-align: center; font-size: 10px; border: 1px solid #ddd;">${item.ORDER_UNIT || 'ชิ้น'}</td>
+                  <td style="padding: 8px; text-align: right; font-size: 10px; border: 1px solid #ddd;">฿${formatNumberWithCommas(Number(item.UNIT_PRICE || 0))}</td>
+                  <td style="padding: 8px; text-align: right; font-size: 10px; font-weight: bold; border: 1px solid #ddd;">฿${calculateSafeTotalPrice(item)}</td>
+                </tr>
+              `;
+            });
+          });
+          
+          return `
+            <div style="font-family: 'Prompt', 'Sarabun', 'Arial', sans-serif; width: 100%; padding: 20px;">
+              <h2 style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px;">
+                SUPPLY REQUEST ORDER
+              </h2>
+              
+              <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <div style="text-align: left;">
+                  <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">${editAllFormData.companyName}</div>
+                  <div style="font-size: 12px; margin-bottom: 2px;">${editAllFormData.companyAddress}</div>
+                  <div style="font-size: 12px; margin-bottom: 2px;">TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}</div>
+                  <div style="font-size: 12px; margin-bottom: 2px;">เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 12px; margin-bottom: 2px;"><strong>Date:</strong> ${currentDate}</div>
+                  <div style="font-size: 12px; margin-bottom: 2px;"><strong>หมวดหมู่:</strong> ${category}</div>
+                </div>
               </div>
-              <div style="text-align: right;">
-                <div style="font-size: 12px; margin-bottom: 2px;"><strong>Date:</strong> ${currentDate}</div>
-                <div style="font-size: 12px; margin-bottom: 2px;"><strong>หมวดหมู่:</strong> ${category}</div>
+              
+              <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+                <div style="font-size: 12px; font-weight: bold; margin-bottom: 3px;">Please Delivery on:</div>
+                <div style="font-size: 11px; margin-bottom: 2px;">${editAllFormData.deliveryDate || '_________________________________'}</div>
+                <div style="font-size: 11px;"><strong>หมายเหตุ:</strong> ต้องการสินค้าด่วน</div>
+                <div style="font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editAllFormData.contactPerson || 'N/A'}</div>
               </div>
-            </div>
-            
-            <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-              <div style="font-size: 12px; font-weight: bold; margin-bottom: 3px;">Please Delivery on:</div>
-              <div style="font-size: 11px; margin-bottom: 2px;">${editAllFormData.deliveryDate || '_________________________________'}</div>
-              <div style="font-size: 11px;"><strong>หมายเหตุ:</strong> ต้องการสินค้าด่วน</div>
-              <div style="font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editAllFormData.contactPerson || 'N/A'}</div>
-            </div>
-            
-            <table style="width: 100%; border-collapse: collapse;">
+              
+              <table style="width: 100%; border-collapse: collapse;">
                 <thead>
                   <tr style="background: #e9ecef;">
                     <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">ITEM_ID</th>
@@ -1475,77 +1505,129 @@ export default function ApprovalsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                ${generateTableRows()}
+                  ${tableHTML}
                 </tbody>
               </table>
-          </div>
-        `;
-
-        // สร้าง HTML element และใช้ html2canvas
-        let tempDiv: HTMLDivElement | null = null;
-        try {
-          tempDiv = document.createElement('div');
-          tempDiv.style.position = 'absolute';
-          tempDiv.style.left = '-9999px';
-          tempDiv.style.top = '-9999px';
-          tempDiv.style.width = '210mm'; // A4 width
-          tempDiv.style.padding = '20mm';
-          tempDiv.style.backgroundColor = 'white';
-          tempDiv.style.fontFamily = 'Prompt, Sarabun, Arial, sans-serif';
-        tempDiv.innerHTML = htmlContent;
-
-        document.body.appendChild(tempDiv);
-
-        // รอให้ content render เสร็จ
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        // แปลง HTML เป็น canvas
-        const canvas = await html2canvas(tempDiv, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff'
-        });
-
-        // ลบ element ชั่วคราว
-          if (tempDiv && tempDiv.parentNode) {
-        document.body.removeChild(tempDiv);
-          }
-
-        // ตรวจสอบ canvas ก่อนสร้าง PDF
-        if (canvas.width === 0 || canvas.height === 0) {
-            showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างภาพได้');
-          continue;
-        }
-
-          // สร้าง PDF
-        const imgData = canvas.toDataURL('image/png');
-          const imgWidth = pageWidth - margin * 2;
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            </div>
+          `;
+        };
+        
+        // แบ่ง users เป็น chunks (แต่ละ chunk มีราว 2-3 users)
+        const userChunks: Array<Array<{userId: string, userData: any, userItems: any[]}>> = [];
+        let currentChunk: Array<{userId: string, userData: any, userItems: any[]}> = [];
+        let itemsInChunk = 0;
+        
+        Object.entries(itemsByUser).forEach(([userId, {user, items: userItems}]) => {
+          const userData = userDataMap[userId] || {fullName: userId, department: 'N/A', costCenterCode: 'N/A'};
           
-          // ใช้ renderImageWithMargins เพื่อแบ่งหน้าอัตโนมัติ
-        renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
-
-        } catch (html2canvasError) {
-          console.error(`Error creating html2canvas for category ${category}:`, html2canvasError);
-          showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้างตารางสำหรับหมวดหมู่ ${category} ได้: ${(html2canvasError as Error).message}`);
-          continue;
-        } finally {
-          // ลบ element ชั่วคราวหากยังค้างอยู่
-          if (tempDiv && tempDiv.parentNode) {
-            try {
+          // ถ้าขนาด chunk ใหญ่มาก ให้เริ่ม chunk ใหม่
+          if (itemsInChunk + userItems.length > 12 && currentChunk.length > 0) {
+            userChunks.push(currentChunk);
+            currentChunk = [];
+            itemsInChunk = 0;
+          }
+          
+          currentChunk.push({userId, userData, userItems});
+          itemsInChunk += userItems.length;
+        });
+        
+        // เพิ่ม chunk สุดท้าย
+        if (currentChunk.length > 0) {
+          userChunks.push(currentChunk);
+        }
+        
+        console.log(`Split category ${category} into ${userChunks.length} chunks`);
+        
+        // Render แต่ละ chunk และเพิ่มลงใน PDF
+        for (let chunkIndex = 0; chunkIndex < userChunks.length; chunkIndex++) {
+          const chunk = userChunks[chunkIndex];
+          
+          // สร้าง HTML element และใช้ html2canvas
+          let tempDiv: HTMLDivElement | null = null;
+          try {
+            tempDiv = document.createElement('div');
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.left = '-9999px';
+            tempDiv.style.top = '-9999px';
+            tempDiv.style.width = '210mm'; // A4 width
+            tempDiv.style.padding = '20mm';
+            tempDiv.style.backgroundColor = 'white';
+            tempDiv.style.fontFamily = 'Prompt, Sarabun, Arial, sans-serif';
+            
+            // Generate HTML สำหรับ chunk นี้
+            const chunkHTML = generateHTMLForChunk(chunk);
+            tempDiv.innerHTML = chunkHTML;
+            
+            document.body.appendChild(tempDiv);
+            
+            // รอให้ content render เสร็จ
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            
+            // แปลง HTML เป็น canvas
+            const canvas = await html2canvas(tempDiv, {
+              scale: 2,
+              useCORS: true,
+              allowTaint: true,
+              backgroundColor: '#ffffff'
+            });
+            
+            // ลบ element ชั่วคราว
+            if (tempDiv && tempDiv.parentNode) {
               document.body.removeChild(tempDiv);
-            } catch (cleanupError) {
-              console.warn('Error cleaning up tempDiv:', cleanupError);
+            }
+            
+            // ตรวจสอบ canvas ก่อนสร้าง PDF
+            if (canvas.width === 0 || canvas.height === 0) {
+              showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างภาพได้');
+              continue;
+            }
+            
+            // สร้าง PDF - เพิ่มหน้าใหม่สำหรับแต่ละ chunk
+            if (chunkIndex > 0) {
+              pdf.addPage();
+            }
+            
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = pageWidth - margin * 2;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            // เพิ่มรูปภาพลงใน PDF
+            pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
+            
+            // เพิ่มหมายเลขหน้า
+            pdf.setFontSize(10);
+            pdf.setTextColor(102, 102, 102);
+            pdf.text(`Page ${chunkIndex + 1} of ${userChunks.length}`, pageWidth / 2, pageHeight - 7, { align: 'center' });
+            
+          } catch (html2canvasError) {
+            console.error(`Error creating html2canvas for chunk ${chunkIndex} of category ${category}:`, html2canvasError);
+            showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้างตารางสำหรับ chunk ${chunkIndex} ของหมวดหมู่ ${category} ได้: ${(html2canvasError as Error).message}`);
+            // ลบ element ชั่วคราวหากยังค้างอยู่
+            if (tempDiv && tempDiv.parentNode) {
+              try {
+                document.body.removeChild(tempDiv);
+              } catch (cleanupError) {
+                console.warn('Error cleaning up tempDiv:', cleanupError);
+              }
+            }
+            continue;
+          } finally {
+            // ลบ element ชั่วคราวหากยังค้างอยู่
+            if (tempDiv && tempDiv.parentNode) {
+              try {
+                document.body.removeChild(tempDiv);
+              } catch (cleanupError) {
+                console.warn('Error cleaning up tempDiv:', cleanupError);
+              }
             }
           }
         }
 
         // บันทึก PDF
         try {
-        const fileName = editAllFormData.fileName || `SUPPLY_REQUEST_ORDER_${category.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
+          const fileName = editAllFormData.fileName || `SUPPLY_REQUEST_ORDER_${category.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
           pdf.save(`${fileName}.pdf`);
-        console.log(`PDF for category ${category} saved: ${fileName}.pdf`);
+          console.log(`PDF for category ${category} saved: ${fileName}.pdf`);
         } catch (saveError) {
           console.error(`Error saving PDF for category ${category}:`, saveError);
           showError('เกิดข้อผิดพลาด', `ไม่สามารถบันทึก PDF สำหรับหมวดหมู่ ${category} ได้: ${(saveError as Error).message}`);
