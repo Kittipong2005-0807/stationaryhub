@@ -1544,6 +1544,12 @@ export default function ApprovalsPage() {
           const chunk = userChunks[chunkIndex];
           
           // สร้าง HTML element และใช้ html2canvas
+          // ตรวจสอบว่าเราอยู่ใน browser environment
+          if (typeof document === 'undefined' || typeof window === 'undefined') {
+            console.error('Cannot create PDF: not in browser environment');
+            continue;
+          }
+          
           let tempDiv: HTMLDivElement | null = null;
           try {
             tempDiv = document.createElement('div');
@@ -1559,7 +1565,11 @@ export default function ApprovalsPage() {
             const chunkHTML = generateHTMLForChunk(chunk);
             tempDiv.innerHTML = chunkHTML;
             
-        document.body.appendChild(tempDiv);
+            if (document.body) {
+              document.body.appendChild(tempDiv);
+            } else {
+              throw new Error('document.body is not available');
+            }
 
         // รอให้ content render เสร็จ
         await new Promise((resolve) => setTimeout(resolve, 100));
@@ -1733,6 +1743,13 @@ export default function ApprovalsPage() {
       REQUISITION_ITEMS: itemsToUse
     };
 
+    // ตรวจสอบว่าเราอยู่ใน browser environment
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      console.error('Cannot create PDF: not in browser environment');
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ไม่ได้อยู่ใน browser environment');
+      return;
+    }
+
     let tempDiv: HTMLDivElement | null = null;
     try {
       // สร้าง HTML element ชั่วคราว
@@ -1884,7 +1901,11 @@ export default function ApprovalsPage() {
       tempDiv.innerHTML = generateHTMLContent();
 
       // เพิ่ม element ลงใน DOM
-      document.body.appendChild(tempDiv);
+      if (document.body) {
+        document.body.appendChild(tempDiv);
+      } else {
+        throw new Error('document.body is not available');
+      }
 
       // รอให้ content render เสร็จ
       await new Promise((resolve) => setTimeout(resolve, 100));

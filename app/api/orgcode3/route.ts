@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
     console.log("=== API ORGCODE3 POST START ===")
     
     const session = await getServerSession(authOptions)
-    console.log("Session:", session)
+    console.log("Session:", session ? "Found" : "Not found")
     
     if (!session?.user) {
       console.error("❌ No session user found")
@@ -166,7 +166,18 @@ export async function POST(request: NextRequest) {
     
     console.log("✅ Session user found:", session.user)
 
-    const { action, userId, siteId, totalAmount, issueNote, REQUISITION_ITEMS } = await request.json()
+    let requestBody;
+    try {
+      requestBody = await request.json()
+    } catch (parseError) {
+      console.error("❌ Error parsing request JSON:", parseError)
+      return NextResponse.json({ 
+        error: "Invalid JSON in request body",
+        details: parseError instanceof Error ? parseError.message : "Unknown error"
+      }, { status: 400 })
+    }
+
+    const { action, userId, siteId, totalAmount, issueNote, REQUISITION_ITEMS } = requestBody
 
     // Idempotency: if header present, short-circuit duplicates
     const idemKey = request.headers.get('idempotency-key') || request.headers.get('Idempotency-Key')
@@ -258,10 +269,23 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ canSubmit })
 
       default:
-        return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+        return NextResponse.json({ 
+          error: "Invalid action",
+          receivedAction: action,
+          validActions: ["updateUserSiteId", "createRequisition", "checkUserManagerRelationship"]
+        }, { status: 400 })
     }
   } catch (error: any) {
-    console.error("Error in orgcode3 API POST:", error)
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
+    console.error("=== API ORGCODE3 POST ERROR ===")
+    console.error("Error type:", typeof error)
+    console.error("Error message:", error?.message)
+    console.error("Error stack:", error?.stack)
+    console.error("Full error object:", error)
+    
+    return NextResponse.json({ 
+      error: error?.message || "Internal server error",
+      type: typeof error,
+      details: process.env.NODE_ENV === 'development' ? error?.stack : "Check server logs for more information"
+    }, { status: 500 })
   }
 } 

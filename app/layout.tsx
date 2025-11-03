@@ -27,8 +27,8 @@ export default async function RootLayout({
 }) {
   const session = await getServerSession(authOptions);
   return (
-    <html lang="en">
-      <body className="font-sans">
+    <html lang="en" suppressHydrationWarning>
+      <body className="font-sans" suppressHydrationWarning>
         <ThemeProviderClient session={session}>
           <ClientProviders session={session}>
             <Layout>{children}</Layout>
