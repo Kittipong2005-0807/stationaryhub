@@ -1157,7 +1157,21 @@ export default function ApprovalsPage() {
 
   // เพิ่มฟังก์ชันสำหรับลบรายการสินค้า
   const handleRemoveItem = (itemId: number) => {
-    setEditingItems(prev => prev.filter(item => item.ITEM_ID !== itemId));
+    const itemToRemove = editingItems.find(item => item.ITEM_ID === itemId);
+    if (!itemToRemove) {
+      console.warn('Item not found for removal:', itemId);
+      return;
+    }
+    
+    // ยืนยันก่อนลบ
+    if (window.confirm(`คุณต้องการลบรายการ "${itemToRemove.PRODUCT_NAME || 'Unknown Product'}" หรือไม่?`)) {
+      console.log('Removing item:', itemId, itemToRemove);
+      setEditingItems(prev => {
+        const filtered = prev.filter(item => item.ITEM_ID !== itemId);
+        console.log('Items after removal:', filtered.length, 'items remaining');
+        return filtered;
+      });
+    }
   };
 
   // ฟังก์ชันคำนวณยอดรวมที่ปลอดภัย
@@ -4048,9 +4062,15 @@ export default function ApprovalsPage() {
 
                           {/* ปุ่มลบ */}
                           <button
-                            onClick={() => handleRemoveItem(item.ITEM_ID)}
-                            className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition-colors"
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleRemoveItem(item.ITEM_ID);
+                            }}
+                            className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition-colors cursor-pointer"
                             title="ลบรายการนี้"
+                            disabled={savingItems}
                           >
                             <XCircle className="h-4 w-4" />
                           </button>
@@ -4082,9 +4102,15 @@ export default function ApprovalsPage() {
                               </p>
                             </div>
                             <button
-                              onClick={() => handleRemoveItem(item.ITEM_ID)}
-                              className="w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition-colors"
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleRemoveItem(item.ITEM_ID);
+                              }}
+                              className="w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center transition-colors cursor-pointer"
                               title="ลบรายการนี้"
+                              disabled={savingItems}
                             >
                               <XCircle className="h-3 w-3" />
                             </button>
