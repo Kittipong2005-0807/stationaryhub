@@ -115,6 +115,14 @@ export async function PUT(
         const unitPrice = parseFloat(item.UNIT_PRICE)
         const totalPrice = quantity * unitPrice
 
+        // ถ้ามีการแก้ ORDER_UNIT ให้บันทึกลง PRODUCTS ก่อน
+        if (item.ORDER_UNIT && typeof item.ORDER_UNIT === 'string') {
+          await tx.pRODUCTS.update({
+            where: { PRODUCT_ID: parseInt(item.PRODUCT_ID) },
+            data: { ORDER_UNIT: item.ORDER_UNIT }
+          })
+        }
+
         const newItem = await tx.rEQUISITION_ITEMS.create({
           data: {
             REQUISITION_ID: requisitionId,

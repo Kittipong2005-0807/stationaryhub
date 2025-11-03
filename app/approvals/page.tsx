@@ -1085,12 +1085,11 @@ export default function ApprovalsPage() {
     }
   };
 
-  // เพิ่มฟังก์ชันสำหรับบันทึกรายการสินค้าที่แก้ไข
-  const handleSaveItems = async () => {
+  // helper: บันทึกรายการด้วยชุด items ที่กำหนด (ใช้สำหรับ autosave ตอนลบ)
+  const saveEditedItems = async (itemsToSave: RequisitionItem[], silent = false) => {
     if (!editingRequisition) return;
-
     try {
-      setSavingItems(true);
+      if (!silent) setSavingItems(true);
       const response = await fetch(
         getApiUrl(`/api/requisitions/${editingRequisition.REQUISITION_ID}/items`),
         {
@@ -1098,21 +1097,35 @@ export default function ApprovalsPage() {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ items: editingItems })
+          body: JSON.stringify({ items: itemsToSave })
         }
       );
-
-      if (response.ok) {
-        const result = await response.json();
-        showSuccess('บันทึกสำเร็จ!', `รายการสินค้าถูกบันทึกเรียบร้อยแล้ว ยอดรวมใหม่: ฿${result.totalAmount.toFixed(2)}`);
-        setEditItemsDialogOpen(false);
-        
-        // รีเฟรชข้อมูล
-        await handleRefresh();
-      } else {
-        const errorData = await response.json();
-        showError('เกิดข้อผิดพลาด', errorData.error);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to update items' }));
+        throw new Error(errorData.error || 'Failed to update items');
       }
+      const result = await response.json();
+      if (!silent) {
+        showSuccess('บันทึกสำเร็จ!', `ยอดรวมใหม่: ฿${result.totalAmount.toFixed(2)}`);
+        setEditItemsDialogOpen(false);
+        await handleRefresh();
+      }
+    } catch (e: any) {
+      if (!silent) {
+        showError('เกิดข้อผิดพลาด', e?.message || 'ไม่สามารถบันทึกรายการได้');
+      }
+    } finally {
+      if (!silent) setSavingItems(false);
+    }
+  };
+
+  // เพิ่มฟังก์ชันสำหรับบันทึกรายการสินค้าที่แก้ไข (ปุ่มบันทึก)
+  const handleSaveItems = async () => {
+    if (!editingRequisition) return;
+
+    try {
+      setSavingItems(true);
+      await saveEditedItems(editingItems, false);
     } catch (error) {
       console.error('Error saving items:', error);
       showError('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกรายการสินค้าได้');
@@ -1155,23 +1168,31 @@ export default function ApprovalsPage() {
     );
   };
 
-  // เพิ่มฟังก์ชันสำหรับลบรายการสินค้า
+  // เพิ่มฟังก์ชันสำหรับอัปเดตหน่วยสินค้า
+  const handleUpdateItemUnit = (itemId: number, unit: string) => {
+    setEditingItems(prev =>
+      prev.map(item =>
+        item.ITEM_ID === itemId
+          ? {
+              ...item,
+              ORDER_UNIT: unit
+            }
+          : item
+      )
+    );
+  };
+
+  // เพิ่มฟังก์ชันสำหรับลบรายการสินค้า (ลบแล้ว autosave ไปที่เซิร์ฟเวอร์ทันที)
   const handleRemoveItem = (itemId: number) => {
     const itemToRemove = editingItems.find(item => item.ITEM_ID === itemId);
-    if (!itemToRemove) {
-      console.warn('Item not found for removal:', itemId);
-      return;
-    }
-    
-    // ยืนยันก่อนลบ
-    if (window.confirm(`คุณต้องการลบรายการ "${itemToRemove.PRODUCT_NAME || 'Unknown Product'}" หรือไม่?`)) {
-      console.log('Removing item:', itemId, itemToRemove);
-      setEditingItems(prev => {
-        const filtered = prev.filter(item => item.ITEM_ID !== itemId);
-        console.log('Items after removal:', filtered.length, 'items remaining');
-        return filtered;
-      });
-    }
+    if (!itemToRemove) return;
+    if (!window.confirm(`คุณต้องการลบรายการ "${itemToRemove.PRODUCT_NAME || 'Unknown Product'}" หรือไม่?`)) return;
+
+    setEditingItems(prev => {
+      const updated = prev.filter(item => item.ITEM_ID !== itemId);
+      void saveEditedItems(updated, true);
+      return updated;
+    });
   };
 
   // ฟังก์ชันคำนวณยอดรวมที่ปลอดภัย
@@ -4024,6 +4045,20 @@ export default function ApprovalsPage() {
                             </div>
                           </div>
 
+                          {/* หน่วยสินค้า */}
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                              หน่วย:
+                            </label>
+                            <input
+                              type="text"
+                              value={item.ORDER_UNIT || ''}
+                              onChange={(e) => handleUpdateItemUnit(item.ITEM_ID, e.target.value)}
+                              className="w-24 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="เช่น กล่อง"
+                            />
+                          </div>
+
                           {/* จำนวนสินค้า */}
                           <div className="flex items-center gap-2">
                             <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
@@ -4162,6 +4197,20 @@ export default function ApprovalsPage() {
                                   +
                                 </button>
                               </div>
+                            </div>
+
+                            {/* หน่วยสินค้า */}
+                            <div className="space-y-1">
+                              <label className="text-xs font-medium text-gray-700">
+                                หน่วย
+                              </label>
+                              <input
+                                type="text"
+                                value={item.ORDER_UNIT || ''}
+                                onChange={(e) => handleUpdateItemUnit(item.ITEM_ID, e.target.value)}
+                                className="w-full px-2 py-1 text-sm text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="เช่น กล่อง"
+                              />
                             </div>
                           </div>
 
