@@ -59,7 +59,28 @@ export async function apiFetch<T = any>(
     }
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // พยายามดึง error message จาก response
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      let errorDetails = '';
+      
+      try {
+        const errorData = await response.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+        if (errorData.details) {
+          errorDetails = errorData.details;
+        }
+      } catch (parseError) {
+        // ถ้า parse ไม่ได้ ให้ใช้ข้อความเดิม
+        console.warn('Failed to parse error response:', parseError);
+      }
+      
+      const error = new Error(errorMessage);
+      (error as any).status = response.status;
+      (error as any).details = errorDetails;
+      (error as any).response = { status: response.status, error: errorMessage, details: errorDetails };
+      throw error;
     }
 
     const data = await response.json();

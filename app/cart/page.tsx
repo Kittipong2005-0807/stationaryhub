@@ -173,7 +173,9 @@ export default function CartPage() {
       router.push(getBasePathUrl('/orders'));
     } catch (err: any) {
       console.error('Error submitting requisition:', err);
-      showError('เกิดข้อผิดพลาด', 'เกิดข้อผิดพลาดในการส่งใบเบิก กรุณาลองใหม่');
+      const errorMessage = err?.response?.error || err?.message || 'เกิดข้อผิดพลาดในการส่งใบเบิก';
+      const errorDetails = err?.response?.details || err?.details || 'กรุณาลองใหม่หรือตรวจสอบข้อมูล';
+      showError('เกิดข้อผิดพลาด', `${errorMessage}${errorDetails ? `. ${errorDetails}` : ''}`);
     } finally {
       setIsSubmitting(false);
     }

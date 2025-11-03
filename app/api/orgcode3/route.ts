@@ -252,11 +252,33 @@ export async function POST(request: NextRequest) {
           }
           return NextResponse.json(responseBody)
         } catch (error) {
-          console.error("Error in createRequisition:", error)
-          const errorMessage = error instanceof Error ? error.message : "Internal server error"
+          console.error("=== ERROR IN CREATE REQUISITION ===")
+          console.error("Error type:", typeof error)
+          console.error("Error:", error)
+          
+          let errorMessage = "Internal server error"
+          let errorDetails = "Please check if user exists and database connection is working"
+          
+          if (error instanceof Error) {
+            errorMessage = error.message
+            errorDetails = error.stack || errorDetails
+            console.error("Error message:", error.message)
+            console.error("Error stack:", error.stack)
+          }
+          
+          // ตรวจสอบ error ประเภทต่างๆ
+          if (errorMessage.includes("Database connection")) {
+            errorDetails = "Database connection failed. Please check database server status."
+          } else if (errorMessage.includes("user")) {
+            errorDetails = "User not found or failed to create user in database."
+          } else if (errorMessage.includes("SITE_ID")) {
+            errorDetails = "Failed to retrieve or set SITE_ID for the requisition."
+          }
+          
           return NextResponse.json({ 
             error: errorMessage,
-            details: "Please check if user exists and database connection is working"
+            details: errorDetails,
+            type: typeof error
           }, { status: 500 })
         }
 

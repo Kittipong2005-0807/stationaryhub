@@ -80,8 +80,27 @@ export class OrgCode3Service {
       console.log("Found costcentercode:", costcentercode)
       console.log("Found orgcode3:", orgcode3)
       
-      // ใช้ costcentercode เป็นหลัก หากไม่มีให้ใช้ orgcode3
-      return costcentercode && orgcode3 ? {"costcentercode" : costcentercode,"orgcode3" : orgcode3 ,"HQ" : null}:{'costcentercode' : null, 'orgcode3' : null,"HQ" : "HQ"}
+      // กรณีที่ costcentercode ไม่เจอ แต่ orgcode3 เจอ
+      if (!costcentercode && orgcode3) {
+        console.log("⚠️ costcentercode not found, but orgcode3 found. Using orgcode3 as primary.")
+        return {"costcentercode" : null, "orgcode3" : orgcode3, "HQ" : null}
+      }
+      
+      // กรณีที่ costcentercode เจอ แต่ orgcode3 ไม่เจอ
+      if (costcentercode && !orgcode3) {
+        console.log("⚠️ orgcode3 not found, but costcentercode found. Using costcentercode as primary.")
+        return {"costcentercode" : costcentercode, "orgcode3" : null, "HQ" : null}
+      }
+      
+      // กรณีที่ทั้ง 2 ค่าเจอ
+      if (costcentercode && orgcode3) {
+        console.log("✅ Both costcentercode and orgcode3 found.")
+        return {"costcentercode" : costcentercode, "orgcode3" : orgcode3, "HQ" : null}
+      }
+      
+      // กรณีที่ทั้ง 2 ค่าไม่เจอ
+      console.log("❌ Neither costcentercode nor orgcode3 found. Using default 'HQ'.")
+      return {'costcentercode' : null, 'orgcode3' : null, "HQ" : "HQ"}
     } catch (error: unknown) {
       console.error('Error fetching user SITE_ID:', error)
       if (error instanceof Error) {
@@ -165,9 +184,9 @@ export class OrgCode3Service {
         throw new Error("Database schema check failed")
       }
       
-      // ดึง SITE_ID ของ user
+      // ดึง SITE_ID ของ user (เก็บเป็น object)
       const userSiteId = await this.getUserSiteId(userId)
-      console.log("User SITE_ID from view:", userSiteId)
+      console.log("User SITE_ID object:", userSiteId)
       
       // ตรวจสอบว่า user มีอยู่ใน USERS table หรือไม่
       console.log("Checking for user in USERS table with USER_ID:", userId)
@@ -184,17 +203,18 @@ export class OrgCode3Service {
         })
         console.log("All users:", allUsers)
         
-        // สร้าง user ใหม่ถ้าไม่มี
+        // สร้าง user ใหม่ถ้าไม่มี - ใช้ค่า SITE_ID จาก object
+        const userSiteIdString = userSiteId?.costcentercode || userSiteId?.orgcode3 || userSiteId?.HQ || siteId || 'HQ'
         console.log("Creating new user in USERS table:", userId)
         try {
           await prisma.uSERS.create({
             data: {
               USER_ID: userId,
-              USERNAME: userId, // ใช้ userId เป็น username ชั่วคราว
-              EMAIL: `${userId}@company.com`, // email ชั่วคราว
-              PASSWORD: 'temp_password_123', // รหัสผ่านชั่วคราว
+              USERNAME: userId,
+              EMAIL: `${userId}@company.com`,
+              PASSWORD: 'temp_password_123',
               ROLE: 'USER',
-              SITE_ID: userSiteId?.costcentercode || siteId || 'HQ'
+              SITE_ID: userSiteIdString // แปลงเป็น string เมื่อใช้จริง
             }
           })
           console.log("✅ Created new user:", userId)
@@ -204,22 +224,41 @@ export class OrgCode3Service {
         }
       }
       
-      // สร้าง requisition
+      // สร้าง requisition - ใช้ userSiteId object (เก็บทั้ง costcentercode และ orgcode3)
+      // INSERT: ใช้ costcentercode เป็นหลัก (ค่า primary) หากไม่มีให้ใช้ orgcode3 แทน
+      // QUERY: จะใช้ทั้ง costcentercode และ orgcode3 ในการค้นหา (ดู WHERE clause ในฟังก์ชัน query อื่นๆ)
+      
+      // ตรวจสอบว่า costcentercode ไม่เจอ และมี orgcode3 ให้ใช้
+      let siteIdForInsert: string
+      if (!userSiteId?.costcentercode && userSiteId?.orgcode3) {
+        console.log("⚠️ costcentercode not found, using orgcode3 instead:", userSiteId.orgcode3)
+        siteIdForInsert = userSiteId.orgcode3
+      } else {
+        // ใช้ costcentercode เป็นหลัก หากไม่มีใช้ orgcode3, HQ, siteId, หรือ 'HQ' ตามลำดับ
+        siteIdForInsert = userSiteId?.costcentercode || userSiteId?.orgcode3 || userSiteId?.HQ || siteId || 'HQ'
+      }
+      
       console.log("Executing INSERT query with values:", {
         USER_ID: userId,
         STATUS: 'PENDING',
         TOTAL_AMOUNT: totalAmount,
         ISSUE_NOTE: issueNote || '',
-        SITE_ID: userSiteId || siteId || 'HQ'
+        SITE_ID_OBJECT: userSiteId, // object ที่เก็บทั้ง costcentercode และ orgcode3
+        COST_CENTER_CODE: userSiteId?.costcentercode, // ค่าที่จะใช้เป็นหลัก (อาจเป็น null)
+        ORG_CODE3: userSiteId?.orgcode3, // ค่าสำรอง (ใช้เมื่อ costcentercode ไม่เจอ)
+        USING_ORGCODE3: !userSiteId?.costcentercode && !!userSiteId?.orgcode3, // flag บอกว่ากำลังใช้ orgcode3 แทน
+        SITE_ID_FOR_INSERT: siteIdForInsert // ค่าที่จะ INSERT
       })
       
       let finalRequisitionId: number | null = null
       try {
         // ใช้ OUTPUT INSERTED เพื่อได้ ID โดยตรง ป้องกัน race
+        // INSERT: ใช้ costcentercode เป็นหลัก (เพราะ REQUISITIONS.SITE_ID เก็บได้แค่ 1 ค่า)
+        // QUERY: จะใช้ทั้ง costcentercode และ orgcode3 ในการค้นหา (WHERE SITE_ID = costcentercode OR SITE_ID = orgcode3)
         const inserted = await prisma.$queryRaw<{ REQUISITION_ID: number }[]>`
           INSERT INTO REQUISITIONS (USER_ID, STATUS, SUBMITTED_AT, TOTAL_AMOUNT, ISSUE_NOTE, SITE_ID)
           OUTPUT INSERTED.REQUISITION_ID
-          VALUES (${userId}, 'PENDING', GETDATE(), ${totalAmount}, ${issueNote || ''}, ${userSiteId || siteId || 'HQ'})
+          VALUES (${userId}, 'PENDING', GETDATE(), ${totalAmount}, ${issueNote || ''}, ${siteIdForInsert})
         `
         finalRequisitionId = Array.isArray(inserted) && inserted.length > 0 ? inserted[0].REQUISITION_ID : null
         console.log("✅ INSERTED REQUISITION_ID:", finalRequisitionId)
@@ -303,23 +342,75 @@ export class OrgCode3Service {
       }
 
       // ดึง requisitions ที่มี SITE_ID เดียวกัน
+      // ตรวจสอบว่าต้อง query ด้วย costcentercode, orgcode3, หรือทั้งสองค่า
       console.log("🔍 Querying requisitions with SITE_ID:", managerSiteId)
-      const requisitions = await prisma.$queryRaw`
-        SELECT 
-          r.REQUISITION_ID,
-          r.USER_ID,
-          r.STATUS,
-          r.SUBMITTED_AT,
-          r.TOTAL_AMOUNT,
-          r.SITE_ID,
-          r.ISSUE_NOTE,
-          u.USERNAME,
-          u.DEPARTMENT
-        FROM REQUISITIONS r
-        JOIN USERS u ON r.USER_ID = u.USER_ID
-        WHERE r.SITE_ID = ${managerSiteId.costcentercode} or r.SITE_ID = ${managerSiteId.orgcode3}
-        ORDER BY r.SUBMITTED_AT DESC
-      `
+      console.log("🔍 Manager costcentercode:", managerSiteId.costcentercode)
+      console.log("🔍 Manager orgcode3:", managerSiteId.orgcode3)
+      
+      // สร้าง query ตามค่าที่มี (ใช้ Prisma template literal ที่ถูกต้อง)
+      let requisitions
+      if (managerSiteId.costcentercode && managerSiteId.orgcode3) {
+        // มีทั้ง 2 ค่า → query ด้วยทั้ง 2 ค่า (OR condition)
+        console.log("🔍 Querying with both costcentercode and orgcode3")
+        requisitions = await prisma.$queryRaw`
+          SELECT 
+            r.REQUISITION_ID,
+            r.USER_ID,
+            r.STATUS,
+            r.SUBMITTED_AT,
+            r.TOTAL_AMOUNT,
+            r.SITE_ID,
+            r.ISSUE_NOTE,
+            u.USERNAME,
+            u.DEPARTMENT
+          FROM REQUISITIONS r
+          JOIN USERS u ON r.USER_ID = u.USER_ID
+          WHERE r.SITE_ID = ${managerSiteId.costcentercode} OR r.SITE_ID = ${managerSiteId.orgcode3}
+          ORDER BY r.SUBMITTED_AT DESC
+        `
+      } else if (managerSiteId.costcentercode) {
+        // มีแค่ costcentercode → query ด้วย costcentercode เท่านั้น
+        console.log("🔍 Querying with costcentercode only:", managerSiteId.costcentercode)
+        requisitions = await prisma.$queryRaw`
+          SELECT 
+            r.REQUISITION_ID,
+            r.USER_ID,
+            r.STATUS,
+            r.SUBMITTED_AT,
+            r.TOTAL_AMOUNT,
+            r.SITE_ID,
+            r.ISSUE_NOTE,
+            u.USERNAME,
+            u.DEPARTMENT
+          FROM REQUISITIONS r
+          JOIN USERS u ON r.USER_ID = u.USER_ID
+          WHERE r.SITE_ID = ${managerSiteId.costcentercode}
+          ORDER BY r.SUBMITTED_AT DESC
+        `
+      } else if (managerSiteId.orgcode3) {
+        // มีแค่ orgcode3 → query ด้วย orgcode3 เท่านั้น
+        console.log("🔍 Querying with orgcode3 only:", managerSiteId.orgcode3)
+        requisitions = await prisma.$queryRaw`
+          SELECT 
+            r.REQUISITION_ID,
+            r.USER_ID,
+            r.STATUS,
+            r.SUBMITTED_AT,
+            r.TOTAL_AMOUNT,
+            r.SITE_ID,
+            r.ISSUE_NOTE,
+            u.USERNAME,
+            u.DEPARTMENT
+          FROM REQUISITIONS r
+          JOIN USERS u ON r.USER_ID = u.USER_ID
+          WHERE r.SITE_ID = ${managerSiteId.orgcode3}
+          ORDER BY r.SUBMITTED_AT DESC
+        `
+      } else {
+        // ไม่มีทั้ง 2 ค่า → return empty
+        console.log("⚠️ Manager has no SITE_ID (both costcentercode and orgcode3 are null)")
+        return []
+      }
       
       console.log("🔍 Found requisitions:", requisitions)
       
