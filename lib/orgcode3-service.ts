@@ -14,12 +14,12 @@ export class OrgCode3Service {
   /**
    * ดึงข้อมูล Manager ที่มี SITE_ID เดียวกับ User
    */
-  static async getManagersBySiteId(siteId: string): Promise<SiteIdUser[]> {
+  static async getManagersBySiteId(siteId: {costcentercode : string | null , orgcode3 : string | null, HQ : string | null} | null): Promise<SiteIdUser[]> {
     try {
       const managers = await prisma.$queryRaw<SiteIdUser[]>`
         SELECT USER_ID, USERNAME, ROLE, SITE_ID, DEPARTMENT
         FROM USERS 
-        WHERE SITE_ID = ${siteId} 
+        WHERE SITE_ID = ${siteId?.costcentercode} or SITE_ID = ${siteId?.orgcode3}
         AND ROLE IN ('MANAGER', 'ADMIN', 'SUPER_ADMIN', 'DEV')
         ORDER BY ROLE DESC, USERNAME ASC
       `
@@ -33,7 +33,7 @@ export class OrgCode3Service {
   /**
    * ดึงข้อมูล User และ SITE_ID จาก LDAP view
    */
-  static async getUserSiteId(userId: string): Promise<string | null> {
+  static async getUserSiteId(userId: string): Promise<{costcentercode : string | null, orgcode3 : string | null, HQ : string | null} | null> {
     try {
       console.log("Getting SITE_ID for userId:", userId)
       
@@ -63,13 +63,14 @@ export class OrgCode3Service {
         })
         
         if (fallbackUser?.SITE_ID) {
+          // อาจจะมีปํญหาเรื่อง costcentercode กับ orgcode3 ไม่ตรงกัน
           console.log("Found SITE_ID in USERS table:", fallbackUser.SITE_ID)
-          return fallbackUser.SITE_ID
+          return {'costcentercode' : fallbackUser.SITE_ID, 'orgcode3' : fallbackUser.SITE_ID, HQ : null}
         }
         
         // If still no SITE_ID, use default
         console.log("No SITE_ID found, using default 'HQ'")
-        return 'HQ'
+          return {'costcentercode' : null, 'orgcode3' : null, HQ : "HQ"}
       }
       
       // ใช้ costcentercode เป็นหลัก เพื่อให้สอดคล้องกับการหา manager
@@ -80,7 +81,7 @@ export class OrgCode3Service {
       console.log("Found orgcode3:", orgcode3)
       
       // ใช้ costcentercode เป็นหลัก หากไม่มีให้ใช้ orgcode3
-      return costcentercode || orgcode3 || 'HQ'
+      return costcentercode && orgcode3 ? {"costcentercode" : costcentercode,"orgcode3" : orgcode3 ,"HQ" : null}:{'costcentercode' : null, 'orgcode3' : null,"HQ" : "HQ"}
     } catch (error: unknown) {
       console.error('Error fetching user SITE_ID:', error)
       if (error instanceof Error) {
@@ -92,7 +93,7 @@ export class OrgCode3Service {
       
       // Fallback: return default SITE_ID
       console.log("Error occurred, using fallback SITE_ID: 'HQ'")
-      return 'HQ'
+      return {'costcentercode' : null, 'orgcode3' : null,'HQ' : 'HQ'}
     }
   }
 
@@ -193,7 +194,7 @@ export class OrgCode3Service {
               EMAIL: `${userId}@company.com`, // email ชั่วคราว
               PASSWORD: 'temp_password_123', // รหัสผ่านชั่วคราว
               ROLE: 'USER',
-              SITE_ID: userSiteId || siteId || 'HQ'
+              SITE_ID: userSiteId?.costcentercode || siteId || 'HQ'
             }
           })
           console.log("✅ Created new user:", userId)
@@ -316,7 +317,7 @@ export class OrgCode3Service {
           u.DEPARTMENT
         FROM REQUISITIONS r
         JOIN USERS u ON r.USER_ID = u.USER_ID
-        WHERE r.SITE_ID = ${managerSiteId}
+        WHERE r.SITE_ID = ${managerSiteId.costcentercode} or r.SITE_ID = ${managerSiteId.orgcode3}
         ORDER BY r.SUBMITTED_AT DESC
       `
       
@@ -379,7 +380,7 @@ export class OrgCode3Service {
       const userSiteId = await this.getUserSiteId(userId)
       const managerSiteId = await this.getUserSiteId(managerUserId)
       
-      return userSiteId === managerSiteId && userSiteId !== null
+      return (userSiteId?.costcentercode === managerSiteId?.costcentercode ||  userSiteId?.orgcode3 === managerSiteId?.orgcode3) && userSiteId !== null
     } catch (error) {
       console.error('Error checking user-manager relationship:', error)
       return false
@@ -413,7 +414,7 @@ export class OrgCode3Service {
           u.ROLE
         FROM REQUISITIONS r
         JOIN USERS u ON r.USER_ID = u.USER_ID
-        WHERE r.SITE_ID = ${userSiteId}
+        WHERE r.SITE_ID = ${userSiteId?.costcentercode} or r.SITE_ID = ${userSiteId?.orgcode3}
         ORDER BY r.SUBMITTED_AT DESC
       `
       
