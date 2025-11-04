@@ -1854,7 +1854,7 @@ export default function ApprovalsPage() {
                 <td style="padding: 8px; text-align: center; font-size: 10px;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
                 <td style="padding: 8px; font-size: 10px;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
                 <td style="padding: 8px; text-align: center; font-size: 10px;">${item.QUANTITY}</td>
-                <td style="padding: 8px; text-align: center; font-size: 10px;">ชิ้น</td>
+                <td style="padding: 8px; text-align: center; font-size: 10px;">${item.ORDER_UNIT || 'ชิ้น'}</td>
                 <td style="padding: 8px; text-align: right; font-size: 10px;">฿${formatNumberWithCommas(Number(item.UNIT_PRICE || 0))}</td>
                 <td style="padding: 8px; text-align: right; font-size: 10px; font-weight: bold;">฿${calculateSafeTotalPrice(item)}</td>
               </tr>

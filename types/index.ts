@@ -138,6 +138,7 @@ export interface PrismaTransaction {
   pRODUCTS: {
     findMany: (args: any) => Promise<any>;
     findUnique: (args: any) => Promise<any>;
+    update: (args: any) => Promise<any>;
   };
   uSERS: {
     findUnique: (args: any) => Promise<any>;
