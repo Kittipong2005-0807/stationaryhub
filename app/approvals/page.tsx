@@ -675,7 +675,13 @@ export default function ApprovalsPage() {
         });
     } else {
       // Manager เห็น requisitions ที่อยู่ใน SITE_ID เดียวกัน
-      const managerUserId = user?.EmpCode || user?.USER_ID || user?.AdLoginName;
+      const managerUserId = user?.EmpCode;
+      if (!managerUserId) {
+        console.error('Missing EmpCode for manager');
+        showError('ไม่สามารถโหลดข้อมูล', 'ไม่พบ EmpCode ของผู้ใช้งาน');
+        setLoading(false);
+        return;
+      }
       console.log('Manager user data:', {
         EmpCode: user?.EmpCode,
         USER_ID: user?.USER_ID,
@@ -757,8 +763,11 @@ export default function ApprovalsPage() {
           }
         } else {
           // Manager refresh ข้อมูล
-          const managerUserId =
-            user?.EmpCode || user?.USER_ID || user?.AdLoginName;
+          const managerUserId = user?.EmpCode;
+          if (!managerUserId) {
+            console.error('Missing EmpCode for manager');
+            return;
+          }
           const refreshResponse = await fetch(
             getApiUrl(
               `/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`
@@ -803,8 +812,12 @@ export default function ApprovalsPage() {
           }
         }
       } else {
-        const managerUserId =
-          user?.EmpCode || user?.USER_ID || user?.AdLoginName;
+        const managerUserId = user?.EmpCode;
+        if (!managerUserId) {
+          console.error('Missing EmpCode for manager');
+          setLoading(false);
+          return;
+        }
         const response = await fetch(
           getApiUrl(
             `/api/orgcode3?action=getRequisitionsForManager&userId=${managerUserId}`

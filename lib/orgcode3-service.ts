@@ -1,6 +1,6 @@
 import { prisma } from "./prisma"
 import { NotificationService } from "./notification-service"
-import { User } from "@/types"
+import { Prisma } from "@prisma/client"
 
 export interface SiteIdUser {
   USER_ID: string
@@ -19,7 +19,7 @@ export class OrgCode3Service {
       const managers = await prisma.$queryRaw<SiteIdUser[]>`
         SELECT USER_ID, USERNAME, ROLE, SITE_ID, DEPARTMENT
         FROM USERS 
-        WHERE SITE_ID = ${siteId?.costcentercode} or SITE_ID = ${siteId?.orgcode3}
+        WHERE (SITE_ID = ${siteId?.costcentercode} or SITE_ID = ${siteId?.orgcode3})
         AND ROLE IN ('MANAGER', 'ADMIN', 'SUPER_ADMIN', 'DEV')
         ORDER BY ROLE DESC, USERNAME ASC
       `
@@ -331,27 +331,24 @@ export class OrgCode3Service {
   static async getRequisitionsForManager(managerUserId: string): Promise<unknown[]> {
     try {
       console.log("🔍 getRequisitionsForManager called with managerUserId:", managerUserId)
-      
-      // ดึง SITE_ID ของ manager
-      const managerSiteId = await this.getUserSiteId(managerUserId)
-      console.log("🔍 Manager SITE_ID:", managerSiteId)
-      
-      if (!managerSiteId) {
-        console.log("❌ No SITE_ID found for manager, returning empty array")
-        return []
-      }
 
-      // ดึง requisitions ที่มี SITE_ID เดียวกัน
-      // ตรวจสอบว่าต้อง query ด้วย costcentercode, orgcode3, หรือทั้งสองค่า
-      console.log("🔍 Querying requisitions with SITE_ID:", managerSiteId)
-      console.log("🔍 Manager costcentercode:", managerSiteId.costcentercode)
-      console.log("🔍 Manager orgcode3:", managerSiteId.orgcode3)
-      
-      // สร้าง query ตามค่าที่มี (ใช้ Prisma template literal ที่ถูกต้อง)
+      // 1) หา cost center ทั้งหมดที่ผู้จัดการคนนี้ดูแล จาก VS_DivisionMgr (L2 = EmpCode ของผู้จัดการ)
+      const managedCostCenters = await prisma.$queryRaw<{ CostCenter: string }[]>`
+        SELECT DISTINCT CostCenter
+        FROM VS_DivisionMgr
+        WHERE L2 = ${managerUserId}
+        AND CostCenter IS NOT NULL AND CostCenter <> ''
+      `
+
+      const costCenterList = (managedCostCenters || []).map((r) => r.CostCenter).filter(Boolean)
+      console.log("🔍 Managed cost centers:", costCenterList)
+
       let requisitions
-      if (managerSiteId.costcentercode && managerSiteId.orgcode3) {
-        // มีทั้ง 2 ค่า → query ด้วยทั้ง 2 ค่า (OR condition)
-        console.log("🔍 Querying with both costcentercode and orgcode3")
+
+      if (costCenterList.length > 0) {
+        // 2) ดึง requisitions ของผู้ใช้ที่อยู่ใน cost center ที่ผู้จัดการดูแล
+        // ใช้ LEFT JOIN กับ USERS เพื่อไม่ตัดรายการทิ้งหาก USERS ไม่มีข้อมูล
+        // กรองหลักโดยเชื่อมกับ UserWithRoles ตาม EmpCode → costcentercode
         requisitions = await prisma.$queryRaw`
           SELECT 
             r.REQUISITION_ID,
@@ -362,64 +359,87 @@ export class OrgCode3Service {
             r.SITE_ID,
             r.ISSUE_NOTE,
             u.USERNAME,
-            u.DEPARTMENT
+            uwr.CostCenterEng as DEPARTMENT
           FROM REQUISITIONS r
-          JOIN USERS u ON r.USER_ID = u.USER_ID
-          WHERE r.SITE_ID = ${managerSiteId.costcentercode} OR r.SITE_ID = ${managerSiteId.orgcode3}
-          ORDER BY r.SUBMITTED_AT DESC
-        `
-      } else if (managerSiteId.costcentercode) {
-        // มีแค่ costcentercode → query ด้วย costcentercode เท่านั้น
-        console.log("🔍 Querying with costcentercode only:", managerSiteId.costcentercode)
-        requisitions = await prisma.$queryRaw`
-          SELECT 
-            r.REQUISITION_ID,
-            r.USER_ID,
-            r.STATUS,
-            r.SUBMITTED_AT,
-            r.TOTAL_AMOUNT,
-            r.SITE_ID,
-            r.ISSUE_NOTE,
-            u.USERNAME,
-            u.DEPARTMENT
-          FROM REQUISITIONS r
-          JOIN USERS u ON r.USER_ID = u.USER_ID
-          WHERE r.SITE_ID = ${managerSiteId.costcentercode}
-          ORDER BY r.SUBMITTED_AT DESC
-        `
-      } else if (managerSiteId.orgcode3) {
-        // มีแค่ orgcode3 → query ด้วย orgcode3 เท่านั้น
-        console.log("🔍 Querying with orgcode3 only:", managerSiteId.orgcode3)
-        requisitions = await prisma.$queryRaw`
-          SELECT 
-            r.REQUISITION_ID,
-            r.USER_ID,
-            r.STATUS,
-            r.SUBMITTED_AT,
-            r.TOTAL_AMOUNT,
-            r.SITE_ID,
-            r.ISSUE_NOTE,
-            u.USERNAME,
-            u.DEPARTMENT
-          FROM REQUISITIONS r
-          JOIN USERS u ON r.USER_ID = u.USER_ID
-          WHERE r.SITE_ID = ${managerSiteId.orgcode3}
+          LEFT JOIN USERS u ON r.USER_ID = u.USER_ID
+          LEFT JOIN UserWithRoles uwr ON r.USER_ID = uwr.EmpCode
+          WHERE uwr.costcentercode IN (${Prisma.join(costCenterList)})
           ORDER BY r.SUBMITTED_AT DESC
         `
       } else {
-        // ไม่มีทั้ง 2 ค่า → return empty
-        console.log("⚠️ Manager has no SITE_ID (both costcentercode and orgcode3 are null)")
-        return []
+        // 3) Fallback: ใช้ logic เดิมตาม SITE_ID ของผู้จัดการ (costcentercode/orgcode3)
+        console.log("⚠️ No managed cost centers found in VS_DivisionMgr. Fallback to SITE_ID matching.")
+        const managerSiteId = await this.getUserSiteId(managerUserId)
+        console.log("🔍 Manager SITE_ID:", managerSiteId)
+
+        if (!managerSiteId) {
+          console.log("❌ No SITE_ID found for manager, returning empty array")
+          return []
+        }
+
+        if (managerSiteId.costcentercode && managerSiteId.orgcode3) {
+          requisitions = await prisma.$queryRaw`
+            SELECT 
+              r.REQUISITION_ID,
+              r.USER_ID,
+              r.STATUS,
+              r.SUBMITTED_AT,
+              r.TOTAL_AMOUNT,
+              r.SITE_ID,
+              r.ISSUE_NOTE,
+              u.USERNAME,
+              u.DEPARTMENT
+            FROM REQUISITIONS r
+            LEFT JOIN USERS u ON r.USER_ID = u.USER_ID
+            WHERE r.SITE_ID = ${managerSiteId.costcentercode} OR r.SITE_ID = ${managerSiteId.orgcode3}
+            ORDER BY r.SUBMITTED_AT DESC
+          `
+        } else if (managerSiteId.costcentercode) {
+          requisitions = await prisma.$queryRaw`
+            SELECT 
+              r.REQUISITION_ID,
+              r.USER_ID,
+              r.STATUS,
+              r.SUBMITTED_AT,
+              r.TOTAL_AMOUNT,
+              r.SITE_ID,
+              r.ISSUE_NOTE,
+              u.USERNAME,
+              u.DEPARTMENT
+            FROM REQUISITIONS r
+            LEFT JOIN USERS u ON r.USER_ID = u.USER_ID
+            WHERE r.SITE_ID = ${managerSiteId.costcentercode}
+            ORDER BY r.SUBMITTED_AT DESC
+          `
+        } else if (managerSiteId.orgcode3) {
+          requisitions = await prisma.$queryRaw`
+            SELECT 
+              r.REQUISITION_ID,
+              r.USER_ID,
+              r.STATUS,
+              r.SUBMITTED_AT,
+              r.TOTAL_AMOUNT,
+              r.SITE_ID,
+              r.ISSUE_NOTE,
+              u.USERNAME,
+              u.DEPARTMENT
+            FROM REQUISITIONS r
+            LEFT JOIN USERS u ON r.USER_ID = u.USER_ID
+            WHERE r.SITE_ID = ${managerSiteId.orgcode3}
+            ORDER BY r.SUBMITTED_AT DESC
+          `
+        } else {
+          console.log("⚠️ Manager has no SITE_ID (both costcentercode and orgcode3 are null)")
+          return []
+        }
       }
-      
+
       console.log("🔍 Found requisitions:", requisitions)
-      
-      // ดึงข้อมูล requisition items สำหรับแต่ละ requisition
+
       if (Array.isArray(requisitions)) {
         const enrichedRequisitions = await Promise.all(
           requisitions.map(async (req: any) => {
             try {
-              // ดึง requisition items
               const items = await prisma.$queryRaw`
                 SELECT 
                   ri.ITEM_ID,
@@ -437,25 +457,20 @@ export class OrgCode3Service {
                 LEFT JOIN PRODUCT_CATEGORIES pc ON p.CATEGORY_ID = pc.CATEGORY_ID
                 WHERE ri.REQUISITION_ID = ${req.REQUISITION_ID}
               `
-              
+
               return {
                 ...req,
                 REQUISITION_ITEMS: Array.isArray(items) ? items : []
               }
             } catch (itemError) {
               console.error(`Error fetching items for requisition ${req.REQUISITION_ID}:`, itemError)
-              return {
-                ...req,
-                REQUISITION_ITEMS: []
-              }
+              return { ...req, REQUISITION_ITEMS: [] }
             }
           })
         )
-        
-        console.log("🔍 Enriched requisitions with items:", enrichedRequisitions)
         return enrichedRequisitions
       }
-      
+
       return Array.isArray(requisitions) ? requisitions : []
     } catch (error) {
       console.error('Error fetching requisitions for manager:', error)
