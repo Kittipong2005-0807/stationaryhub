@@ -1441,41 +1441,7 @@ export default function ApprovalsPage() {
           usersCount: Object.keys(itemsByUser).length
         });
 
-        // สร้าง HTML content สำหรับ render ภาษาไทยด้วย html2canvas
-        const generateTableRows = () => {
-          let tableHTML = '';
-          
-          Object.entries(itemsByUser).forEach(([userId, { user, items: userItems }]) => {
-            const userData = userDataMap[userId] || { fullName: userId, department: 'N/A', costCenterCode: 'N/A' };
-            
-            // เพิ่ม user header
-            tableHTML += `
-              <tr style="background: #f8f9fa; page-break-inside: avoid; break-inside: avoid;">
-                <td colspan="6" style="padding: 8px; font-weight: bold; font-size: 11px; color: #333; border: 1px solid #ddd;">
-                  ผู้สั่ง: ${userData.fullName} - ${userData.department} - ${userData.costCenterCode} - (${userItems.length} รายการ)
-              </td>
-            </tr>
-            `;
-            
-            // เพิ่ม items ของ user นี้
-            userItems.forEach(({ requisition, item }) => {
-              tableHTML += `
-                <tr style="border-bottom: 1px solid #eee; page-break-inside: avoid; break-inside: avoid;">
-                  <td style="padding: 8px; text-align: center; font-size: 10px; border: 1px solid #ddd;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
-                  <td style="padding: 8px; font-size: 10px; border: 1px solid #ddd;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
-                  <td style="padding: 8px; text-align: center; font-size: 10px; border: 1px solid #ddd;">${item.QUANTITY}</td>
-                  <td style="padding: 8px; text-align: center; font-size: 10px; border: 1px solid #ddd;">${item.ORDER_UNIT || 'ชิ้น'}</td>
-                  <td style="padding: 8px; text-align: right; font-size: 10px; border: 1px solid #ddd;">฿${formatNumberWithCommas(Number(item.UNIT_PRICE || 0))}</td>
-                  <td style="padding: 8px; text-align: right; font-size: 10px; font-weight: bold; border: 1px solid #ddd;">฿${calculateSafeTotalPrice(item)}</td>
-                </tr>
-              `;
-            });
-          });
-          
-          return tableHTML;
-        };
-        
-        // Date
+        // Header ข้อมูลทั่วไป
         const nowDate = new Date();
         const thaiMonthsShortList = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
         const dateNum = nowDate.getDate().toString().padStart(2, '0');
@@ -1485,209 +1451,104 @@ export default function ApprovalsPage() {
         const minutes = nowDate.getMinutes().toString().padStart(2, '0');
         const currentDate = `${dateNum} ${month} ${year} ${hours}:${minutes}`;
 
-        // แบ่งข้อมูลเป็น chunks สำหรับแต่ละหน้า
-        // แต่ละ chunk จะมีราว 10-12 รายการสินค้า
-        const generateHTMLForChunk = (chunkItems: Array<{userId: string, userData: any, userItems: any[]}>) => {
-          let tableHTML = '';
-          
-          chunkItems.forEach(({userId, userData, userItems}) => {
-            // เพิ่ม user header
-            tableHTML += `
-            <tr style="background: #f8f9fa;">
-                <td colspan="6" style="padding: 8px; font-weight: bold; font-size: 11px; color: #333; border: 1px solid #ddd;">
-                  ผู้สั่ง: ${userData.fullName} - ${userData.department} - ${userData.costCenterCode} - (${userItems.length} รายการ)
-              </td>
-            </tr>
-            `;
-            
-            // เพิ่ม items ของ user นี้
-            userItems.forEach(({requisition, item}) => {
-              tableHTML += `
-                <tr>
-                  <td style="padding: 8px; text-align: center; font-size: 10px; border: 1px solid #ddd;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
-                  <td style="padding: 8px; font-size: 10px; border: 1px solid #ddd;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
-                  <td style="padding: 8px; text-align: center; font-size: 10px; border: 1px solid #ddd;">${item.QUANTITY}</td>
-                  <td style="padding: 8px; text-align: center; font-size: 10px; border: 1px solid #ddd;">${item.ORDER_UNIT || 'ชิ้น'}</td>
-                  <td style="padding: 8px; text-align: right; font-size: 10px; border: 1px solid #ddd;">฿${formatNumberWithCommas(Number(item.UNIT_PRICE || 0))}</td>
-                  <td style="padding: 8px; text-align: right; font-size: 10px; font-weight: bold; border: 1px solid #ddd;">฿${calculateSafeTotalPrice(item)}</td>
-                </tr>
-              `;
-            });
+        // วาดหัวกระดาษหน้าแรก
+        pdf.setFontSize(20);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(editAllFormData.companyName, 10, 30);
+        pdf.text(editAllFormData.companyAddress, 10, 35);
+        pdf.text(`TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}`, 10, 40);
+        pdf.text(`เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}`, 10, 45);
+        pdf.text(`Date: ${currentDate}`, pageWidth - 60, 30);
+        pdf.text(`หมวดหมู่: ${convertThaiText(category)}`, pageWidth - 60, 35);
+
+        // เตรียมแถวตาราง (ใช้ AutoTable เพื่อแบ่งหน้าอัตโนมัติและไม่หั่นแถว)
+        const tableBody: any[] = [];
+        Object.entries(itemsByUser).forEach(([userId, { user, items: userItems }]) => {
+          const userData = userDataMap[userId] || { fullName: userId, department: 'N/A', costCenterCode: 'N/A' };
+          // แถวหัวผู้สั่ง (category-like header)
+          tableBody.push([
+            convertThaiText(`ผู้สั่ง: ${userData.fullName} - ${userData.department} - ${userData.costCenterCode} - (${userItems.length} รายการ)`),
+            '', '', '', '', ''
+          ]);
+          // แถวรายการสินค้า
+          userItems.forEach(({ item }) => {
+            tableBody.push([
+              (item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A',
+              convertThaiText(item.PRODUCT_NAME || 'Unknown Product'),
+              item.QUANTITY,
+              convertThaiText(item.ORDER_UNIT || 'ชิ้น'),
+              `฿${formatNumberWithCommas(Number(item.UNIT_PRICE || 0))}`,
+              `฿${calculateSafeTotalPrice(item)}`
+            ]);
           });
-          
-          return `
-            <div style="font-family: 'Prompt', 'Sarabun', 'Arial', sans-serif; width: 100%; padding: 20px;">
-              <h2 style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px;">
-                SUPPLY REQUEST ORDER
-              </h2>
-              
-              <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-              <div style="text-align: left;">
-                  <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">${editAllFormData.companyName}</div>
-                  <div style="font-size: 12px; margin-bottom: 2px;">${editAllFormData.companyAddress}</div>
-                  <div style="font-size: 12px; margin-bottom: 2px;">TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}</div>
-                  <div style="font-size: 12px; margin-bottom: 2px;">เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}</div>
-              </div>
-              <div style="text-align: right;">
-                  <div style="font-size: 12px; margin-bottom: 2px;"><strong>Date:</strong> ${currentDate}</div>
-                  <div style="font-size: 12px; margin-bottom: 2px;"><strong>หมวดหมู่:</strong> ${category}</div>
-              </div>
-            </div>
-            
-              <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-                <div style="font-size: 12px; font-weight: bold; margin-bottom: 3px;">Please Delivery on:</div>
-                <div style="font-size: 11px; margin-bottom: 2px;">${editAllFormData.deliveryDate || '_________________________________'}</div>
-                <div style="font-size: 11px;"><strong>หมายเหตุ:</strong> ต้องการสินค้าด่วน</div>
-                <div style="font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editAllFormData.contactPerson || 'N/A'}</div>
-            </div>
-            
-              <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                  <tr style="background: #e9ecef;">
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">ITEM_ID</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Description</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Qty</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit Price</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${tableHTML}
-                </tbody>
-              </table>
-          </div>
-        `;
-        };
-        
-        // แบ่ง users เป็น chunks (แต่ละ chunk มีราว 2-3 users)
-        const userChunks: Array<Array<{userId: string, userData: any, userItems: any[]}>> = [];
-        let currentChunk: Array<{userId: string, userData: any, userItems: any[]}> = [];
-        let itemsInChunk = 0;
-        
-        Object.entries(itemsByUser).forEach(([userId, {user, items: userItems}]) => {
-          const userData = userDataMap[userId] || {fullName: userId, department: 'N/A', costCenterCode: 'N/A'};
-          
-          // ถ้าขนาด chunk ใหญ่มาก ให้เริ่ม chunk ใหม่
-          // ลดจำนวนรายการต่อ chunk เป็น 8 เพื่อไม่ให้เกิน 1 หน้า
-          if (itemsInChunk + userItems.length > 8 && currentChunk.length > 0) {
-            userChunks.push(currentChunk);
-            currentChunk = [];
-            itemsInChunk = 0;
-          }
-          
-          currentChunk.push({userId, userData, userItems});
-          itemsInChunk += userItems.length;
-        });
-        
-        // เพิ่ม chunk สุดท้าย
-        if (currentChunk.length > 0) {
-          userChunks.push(currentChunk);
-        }
-        
-        console.log(`Split category ${category} into ${userChunks.length} chunks`);
-        
-        // Render แต่ละ chunk และเพิ่มลงใน PDF
-        for (let chunkIndex = 0; chunkIndex < userChunks.length; chunkIndex++) {
-          const chunk = userChunks[chunkIndex];
-          
-          // สร้าง HTML element และใช้ html2canvas
-          // ตรวจสอบว่าเราอยู่ใน browser environment
-          if (typeof document === 'undefined' || typeof window === 'undefined') {
-            console.error('Cannot create PDF: not in browser environment');
-            continue;
-          }
-          
-          let tempDiv: HTMLDivElement | null = null;
-          try {
-            tempDiv = document.createElement('div');
-            tempDiv.style.position = 'absolute';
-            tempDiv.style.left = '-9999px';
-            tempDiv.style.top = '-9999px';
-            tempDiv.style.width = '210mm'; // A4 width
-            tempDiv.style.padding = '20mm';
-            tempDiv.style.backgroundColor = 'white';
-            tempDiv.style.fontFamily = 'Prompt, Sarabun, Arial, sans-serif';
-            
-            // Generate HTML สำหรับ chunk นี้
-            const chunkHTML = generateHTMLForChunk(chunk);
-            tempDiv.innerHTML = chunkHTML;
-            
-            if (document.body) {
-              document.body.appendChild(tempDiv);
-            } else {
-              throw new Error('document.body is not available');
-            }
-
-        // รอให้ content render เสร็จ
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        // แปลง HTML เป็น canvas
-        const canvas = await html2canvas(tempDiv, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff'
         });
 
-        // ลบ element ชั่วคราว
-            if (tempDiv && tempDiv.parentNode) {
-        document.body.removeChild(tempDiv);
-            }
-
-        // ตรวจสอบ canvas ก่อนสร้าง PDF
-        if (canvas.width === 0 || canvas.height === 0) {
-              showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างภาพได้');
-          continue;
-        }
-
-        const imgData = canvas.toDataURL('image/png');
-            const imgWidth = pageWidth - margin * 2;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            const usablePageHeight = pageHeight - margin - 20; // พื้นที่ที่ใช้ได้สำหรับเนื้อหา (สูงสุด 267mm)
-            
-            // ตรวจสอบว่าภาพมีความสูงเกิน 1 หน้าหรือไม่
-            if (imgHeight > usablePageHeight) {
-              // ถ้ารูปสูงเกิน 1 หน้า ให้ใช้ renderImageWithMargins ซึ่งจะแบ่งหน้าอัตโนมัติ
-        renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
+        // เรียก AutoTable พร้อมตั้งค่าไม่ตัดแถวคาบหน้าและหัวตารางซ้ำทุกหน้า
+        autoTable(pdf, {
+          head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
+          body: tableBody,
+          startY: 55,
+          margin: { left: 10, right: 10, top: 10, bottom: 20 },
+          styles: {
+            ...setupAutoTableThaiFont(),
+          },
+          headStyles: {
+            fillColor: [233, 236, 239],
+            textColor: [0, 0, 0],
+            fontStyle: 'bold',
+            halign: 'center',
+            font: 'helvetica',
+            fontSize: 9,
+            cellPadding: 3,
+            overflow: 'linebreak',
+            minCellHeight: 8,
+            valign: 'middle',
+          },
+          columnStyles: {
+            0: { halign: 'center', cellWidth: 22 },
+            1: { halign: 'left', cellWidth: 78 },
+            2: { halign: 'center', cellWidth: 15 },
+            3: { halign: 'center', cellWidth: 15 },
+            4: { halign: 'right', cellWidth: 25 },
+            5: { halign: 'right', cellWidth: 25 },
+          },
+          showHead: 'everyPage',
+          tableWidth: 'wrap',
+          pageBreak: 'avoid',
+          rowPageBreak: 'avoid',
+          didParseCell: (data: any) => {
+            const row = data.row?.raw;
+            // แถวหัวผู้สั่ง: คอลัมน์ 1 มีข้อความ ที่เหลือว่าง
+            if (row && row[1] === '' && row[2] === '' && row[3] === '' && row[4] === '' && row[5] === '') {
+              data.cell.styles.fillColor = [240, 240, 240];
+              data.cell.styles.fontStyle = 'bold';
+              data.cell.styles.fontSize = 10;
+              data.cell.styles.halign = 'left';
+              data.cell.styles.valign = 'middle';
+              data.cell.styles.cellPadding = { top: 4, right: 3, bottom: 4, left: 6 };
+              data.cell.styles.pageBreak = 'avoid';
             } else {
-              // ถ้ารูปพอดีใน 1 หน้า ให้เพิ่มหน้าใหม่สำหรับแต่ละ chunk (ยกเว้น chunk แรก)
-              if (chunkIndex > 0) {
-                pdf.addPage();
-              }
-              
-              // เพิ่มรูปภาพลงใน PDF
-              pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
-              
-              // เพิ่มหมายเลขหน้า
-              pdf.setFontSize(10);
-              pdf.setTextColor(102, 102, 102);
-              pdf.text(`Chunk ${chunkIndex + 1} of ${userChunks.length}`, pageWidth / 2, pageHeight - 7, { align: 'center' });
+              data.cell.styles.pageBreak = 'avoid';
+              data.cell.styles.minCellHeight = 8;
             }
-            
-          } catch (html2canvasError) {
-            console.error(`Error creating html2canvas for chunk ${chunkIndex} of category ${category}:`, html2canvasError);
-            showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้างตารางสำหรับ chunk ${chunkIndex} ของหมวดหมู่ ${category} ได้: ${(html2canvasError as Error).message}`);
-            // ลบ element ชั่วคราวหากยังค้างอยู่
-            if (tempDiv && tempDiv.parentNode) {
-              try {
-                document.body.removeChild(tempDiv);
-              } catch (cleanupError) {
-                console.warn('Error cleaning up tempDiv:', cleanupError);
-              }
-            }
-            continue;
-          } finally {
-            // ลบ element ชั่วคราวหากยังค้างอยู่
-            if (tempDiv && tempDiv.parentNode) {
-              try {
-                document.body.removeChild(tempDiv);
-              } catch (cleanupError) {
-                console.warn('Error cleaning up tempDiv:', cleanupError);
-              }
+          },
+          didDrawPage: (data: any) => {
+            const pageCount = pdf.getNumberOfPages();
+            pdf.setFontSize(10);
+            pdf.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+          },
+          willDrawCell: (data: any) => {
+            const remainingHeight = pdf.internal.pageSize.height - data.cursor.y;
+            const rowHeight = 12;
+            if (remainingHeight < rowHeight && data.row.index > 0) {
+              pdf.addPage();
+              data.cursor.y = 20;
             }
           }
-        }
+        });
 
         // บันทึก PDF
         try {
