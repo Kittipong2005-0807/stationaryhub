@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get('user-agent') || 'unknown'
     
     // Add product to database using GETDATE() เพื่อให้ได้เวลาที่ถูกต้อง
-    const newProduct = await prisma.$executeRaw`
+    await prisma.$executeRaw`
       INSERT INTO PRODUCTS (ITEM_ID, PRODUCT_NAME, CATEGORY_ID, UNIT_COST, ORDER_UNIT, PHOTO_URL, CREATED_AT)
       VALUES (${body.ITEM_ID || null}, ${body.PRODUCT_NAME}, ${parseInt(body.CATEGORY_ID)}, 
               ${body.UNIT_COST !== undefined && body.UNIT_COST !== null && body.UNIT_COST !== '' ? parseFloat(body.UNIT_COST) : 0}, 

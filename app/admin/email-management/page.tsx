@@ -30,7 +30,7 @@ export default function EmailManagementPage() {
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to fetch email stats' })
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Error fetching email stats' })
     } finally {
       setLoading(false)
@@ -62,7 +62,7 @@ export default function EmailManagementPage() {
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to retry emails' })
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: 'error', text: 'Error retrying emails' })
     } finally {
       setRetryLoading(false)

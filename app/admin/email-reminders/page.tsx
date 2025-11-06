@@ -12,35 +12,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { apiPost, apiGet } from '@/lib/api-utils';
+import { apiPost } from '@/lib/api-utils';
 import ThaiDateUtils from '@/lib/date-utils';
 import {
   Bell,
   CheckCircle,
   XCircle,
   RefreshCw,
-  AlertTriangle,
   Clock,
   Mail,
   Users,
   Calendar,
   Settings,
   Save,
-  Eye,
-  Edit,
   Filter,
   Download,
-  Upload,
-  Zap,
-  Shield,
-  Globe,
-  MailCheck,
   Timer,
-  Target,
   Activity,
   BarChart3,
-  FileText,
-  Send
+  FileText
 } from 'lucide-react';
 
 interface ReminderStats {
@@ -256,7 +246,7 @@ export default function EmailRemindersPage() {
       } else {
         setError('เกิดข้อผิดพลาดในการบันทึกการตั้งค่า');
       }
-    } catch (error) {
+    } catch {
       setError('เกิดข้อผิดพลาดในการบันทึกการตั้งค่า');
     } finally {
       setLoading(false);
@@ -296,7 +286,7 @@ export default function EmailRemindersPage() {
       setSuccess('');
 
       // ส่งอีเมลทดสอบ
-      const testResult = await apiPost('/api/test-email', {
+      await apiPost('/api/test-email', {
         to: 'manager@company.com',
         subject: '🔔 ทดสอบระบบแจ้งเตือนซ้ำ - StationaryHub',
         message: 'นี่เป็นการทดสอบระบบแจ้งเตือนซ้ำ\n\nระบบจะส่งอีเมลแจ้งเตือนซ้ำทุก 10 โมงเช้าให้ Manager เมื่อมีคำขอที่รอการอนุมัติ\n\nขอแสดงความนับถือ\nทีมพัฒนา StationaryHub',
@@ -305,9 +295,9 @@ export default function EmailRemindersPage() {
 
       setSuccess('ส่งอีเมลทดสอบแจ้งเตือนซ้ำสำเร็จ');
 
-    } catch (error) {
+    } catch {
       setError('เกิดข้อผิดพลาดในการส่งอีเมลทดสอบ');
-      console.error('Error testing reminder:', error);
+      console.error('Error testing reminder');
     } finally {
       setLoading(false);
     }

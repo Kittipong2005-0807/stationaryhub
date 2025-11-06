@@ -52,7 +52,7 @@ export default function AdminCartPage() {
 
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
-  const { showSuccess, showError, showWarning, showInfo } = useModal();
+  const { showSuccess, showError } = useModal();
 
   console.log('🛒 Auth context values:', {
     isAuthenticated,
@@ -226,10 +226,6 @@ export default function AdminCartPage() {
 
     // ถ้าเป็น filename ที่ไม่มี path ให้เรียกผ่าน API image
     return getBasePathUrl(`/api/image/${photoUrl}`);
-  };
-
-  const handleQuantityChange = (itemId: number, newQuantity: number) => {
-    updateQuantity(itemId, newQuantity);
   };
 
   return (

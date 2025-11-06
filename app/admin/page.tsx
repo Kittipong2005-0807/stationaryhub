@@ -27,7 +27,6 @@ import {
   FormControl,
   InputLabel,
   Select,
-  TextField,
 } from "@mui/material"
 import {
   Dashboard,
@@ -225,28 +224,6 @@ export default function AdminDashboard() {
 
     // ถ้าเป็น filename ที่ไม่มี path ให้เรียกผ่าน API image
     return getBasePathUrl(`/api/image/${photoUrl}`);
-  };
-
-  const handlePriceChange = async (productId: number, newPrice: number) => {
-    try {
-      const response = await apiPost('/api/products/update-price', {
-        productId,
-        newPrice,
-        year: selectedYear,
-        notes: `Price updated via admin panel`
-      });
-
-      if (response.success) {
-        alert(`Price updated successfully for Product ID ${productId} to ฿${newPrice.toFixed(2)}`);
-        fetchProductPrices(); // Refresh prices after update
-        fetchRealPriceHistory(); // Refresh history
-      } else {
-        alert(`Failed to update price for Product ID ${productId}: ${response.error}`);
-      }
-    } catch (error) {
-      console.error(`Error updating price for Product ID ${productId}:`, error);
-      alert(`Error updating price for Product ID ${productId}`);
-    }
   };
 
 

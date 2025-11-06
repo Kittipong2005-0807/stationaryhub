@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { sendMail } from "@/lib/database"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
 import { ApprovalService } from "@/lib/approval-service"
-import { OrgCode3Service } from "@/lib/orgcode3-service"
-import { NotificationService } from "@/lib/notification-service"
-import { ThaiTimeUtils } from "@/lib/thai-time-utils"
 
 // ฟังก์ชันดึง EmpCode จาก session
-async function getEmpCodeFromSession(request: NextRequest) {
+async function getEmpCodeFromSession(_request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     // ใช้ AdLoginName จาก session โดยตรง
@@ -208,7 +204,7 @@ export async function POST(request: NextRequest) {
     }
     
     // สร้าง requisition ใหม่ ใช้ GETDATE() เพื่อให้ได้เวลาที่ถูกต้อง
-    const result = await prisma.$executeRaw`
+    await prisma.$executeRaw`
       INSERT INTO REQUISITIONS (USER_ID, STATUS, SUBMITTED_AT, TOTAL_AMOUNT, ISSUE_NOTE)
       VALUES (${empCode}, 'PENDING', GETDATE(), ${data.TOTAL_AMOUNT || 0}, ${data.ISSUE_NOTE || null})
     `

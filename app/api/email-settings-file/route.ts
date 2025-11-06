@@ -7,7 +7,7 @@ import { ThaiTimeUtils } from "@/lib/thai-time-utils";
 const CONFIG_FILE_PATH = path.join(process.cwd(), 'config', 'email-settings.json');
 
 // GET - ดึงการตั้งค่าอีเมลจากไฟล์
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     console.log('📧 Fetching email settings from file...');
 

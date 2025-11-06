@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-    } catch (fileError) {
+    } catch {
       return NextResponse.json(
         { success: false, error: 'Failed to read file' },
         { status: 400 }

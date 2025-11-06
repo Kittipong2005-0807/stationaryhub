@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/authOptions"
 import { prisma } from "@/lib/prisma"
-import { ThaiTimeUtils } from "@/lib/thai-time-utils"
 import { NotificationService } from "@/lib/notification-service"
 
 export async function POST(request: NextRequest) {
@@ -101,7 +100,7 @@ export async function POST(request: NextRequest) {
             adminUserId = adminUser.USER_ID
           }
         }
-      } catch (error) {
+      } catch {
         console.log('⚠️ Could not find admin user, using default admin ID')
       }
 
@@ -119,7 +118,7 @@ export async function POST(request: NextRequest) {
       console.log(`🔄 Updated requisition ${requisition.REQUISITION_ID} status to CLOSED`)
 
       // บันทึกลง EMAIL_LOGS หลังจากส่งเมลสำเร็จ
-      const notification = await prisma.$executeRaw`
+      await prisma.$executeRaw`
         INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, TO_EMAIL)
         VALUES (${toUserId}, ${emailSubject}, ${emailSubject}, 'SENT', GETDATE(), ${userEmail})
       `
@@ -138,7 +137,7 @@ export async function POST(request: NextRequest) {
       console.error(`❌ Error sending arrival email to ${userEmail}:`, emailError)
       
       // บันทึก error ลง EMAIL_LOGS
-      const notification = await prisma.$executeRaw`
+      await prisma.$executeRaw`
         INSERT INTO EMAIL_LOGS (TO_USER_ID, SUBJECT, BODY, STATUS, SENT_AT, TO_EMAIL, ERROR_MESSAGE)
         VALUES (${toUserId}, ${emailSubject}, ${emailSubject}, 'FAILED', GETDATE(), ${userEmail}, ${emailError instanceof Error ? emailError.message : String(emailError)})
       `

@@ -34,7 +34,6 @@ import {
   Refresh,
   Email,
   Visibility,
-  FilterList,
   Download
 } from '@mui/icons-material';
 import { useAuth } from '@/src/contexts/AuthContext';

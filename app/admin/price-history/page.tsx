@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Grid } from '@mui/material';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
@@ -21,7 +20,6 @@ import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 import { Refresh, TrendingUp, TrendingDown, Remove } from '@mui/icons-material';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import ThaiDateUtils from '@/lib/date-utils';
 
@@ -65,7 +63,6 @@ export default function PriceHistoryPage() {
   const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const { user, isAuthenticated } = useAuth();
-  const router = useRouter();
 
   // Fetch price history and products
   useEffect(() => {

@@ -12,7 +12,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Box,
   Chip,
   Dialog,
   DialogTitle,
@@ -20,8 +19,7 @@ import {
   DialogActions,
   IconButton,
   CircularProgress,
-  Alert,
-  Divider
+  Alert
 } from '@mui/material';
 import {
   Refresh,

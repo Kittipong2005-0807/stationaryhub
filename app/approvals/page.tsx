@@ -2,7 +2,6 @@
 
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { useToast } from '@/components/ui/ToastContainer';
 import { useModal } from '@/components/ui/ModalManager';
 
 import { Button } from '@/components/ui/button';
@@ -206,6 +205,149 @@ export default function ApprovalsPage() {
     }
   };
 
+  // Helper function: วาด header สำหรับ PDF
+  const drawPDFHeader = (
+    pdf: jsPDF,
+    editFormData: any,
+    requisition: Requisition | null,
+    options: {
+      pageWidth: number;
+      margin: number;
+      contentWidth?: number;
+      showDate?: boolean;
+      showCategory?: string;
+      showRequisitionId?: boolean;
+    }
+  ) => {
+    const { pageWidth, margin, contentWidth, showDate = true, showCategory, showRequisitionId = true } = options;
+    const rightMargin = contentWidth ? contentWidth + margin - 50 : pageWidth - 60;
+
+    pdf.setFontSize(20);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
+
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(editFormData.companyName, margin, 30);
+    pdf.text(editFormData.companyAddress, margin, 35);
+    pdf.text(`TEL: ${editFormData.phone} FAX: ${editFormData.fax}`, margin, 40);
+    pdf.text(`เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}`, margin, 45);
+
+    if (showDate && requisition) {
+      pdf.text(`Date: ${formatDate(requisition.SUBMITTED_AT)}`, rightMargin, 30);
+    }
+
+    if (showRequisitionId && requisition) {
+      pdf.text(`Requisition ID: #${requisition.REQUISITION_ID}`, rightMargin, 35);
+    }
+
+    if (showCategory) {
+      pdf.text(`หมวดหมู่: ${convertThaiText(showCategory)}`, rightMargin, showDate && requisition ? 40 : 30);
+    }
+
+    if (requisition) {
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Please Delivery on:', margin, 55);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(editFormData.deliveryDate || '_________________', margin, 60);
+      pdf.text(`หมายเหตุ: ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}`, margin, 65);
+      pdf.text(`ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ: ${editFormData.contactPerson || 'N/A'}`, margin, 70);
+    }
+  };
+
+  // Helper function: วาด Cost Center info
+  const drawCostCenterInfo = (
+    pdf: jsPDF,
+    requisition: Requisition,
+    options: { margin: number; yPosition: number }
+  ) => {
+    const { margin, yPosition } = options;
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(
+      `Cost Center: ${requisition.SITE_ID} | ผู้สั่ง: ${requisition.USER_ID} | แผนก: ${requisition.DEPARTMENT || 'N/A'}`,
+      margin,
+      yPosition
+    );
+  };
+
+  // Helper function: สร้าง AutoTable config ที่ใช้ร่วมกัน
+  const getCommonAutoTableConfig = (pdf: jsPDF, options: {
+    startY: number;
+    margin: { left: number; right: number; top: number; bottom: number };
+    pageWidth: number;
+    pageHeight: number;
+    columnWidths?: { [key: number]: { halign?: string; cellWidth?: number } };
+  }) => {
+    const { startY, margin, pageWidth, pageHeight, columnWidths } = options;
+    const defaultColumnStyles = {
+      0: { halign: 'center', cellWidth: 20 },
+      1: { halign: 'left', cellWidth: 60 },
+      2: { halign: 'center', cellWidth: 15 },
+      3: { halign: 'center', cellWidth: 15 },
+      4: { halign: 'right', cellWidth: 25 },
+      5: { halign: 'right', cellWidth: 25 },
+    };
+
+    return {
+      startY,
+      margin,
+      styles: {
+        ...setupAutoTableThaiFont(),
+      },
+      headStyles: {
+        fillColor: [233, 236, 239],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold' as const,
+        halign: 'center',
+        font: 'helvetica',
+        fontSize: 9,
+        cellPadding: 3,
+        overflow: 'linebreak',
+        minCellHeight: 8,
+        valign: 'middle',
+      },
+      alternateRowStyles: {
+        fillColor: [248, 249, 250],
+      },
+      columnStyles: columnWidths || defaultColumnStyles,
+      showHead: 'everyPage' as const,
+      tableWidth: 'wrap' as const,
+      pageBreak: 'avoid' as const,
+      rowPageBreak: 'avoid' as const,
+      didParseCell: (data: any) => {
+        const rowData = data.row?.raw;
+        if (rowData && rowData[1] === '' && rowData[2] === '' && rowData[3] === '' && rowData[4] === '' && rowData[5] === '') {
+          // Category/User header row
+          data.cell.styles.fillColor = [240, 240, 240];
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fontSize = 10;
+          data.cell.styles.halign = 'left';
+          data.cell.styles.valign = 'middle';
+          data.cell.styles.cellPadding = { top: 4, right: 3, bottom: 4, left: 6 };
+          data.cell.styles.pageBreak = 'avoid' as const;
+        } else {
+          data.cell.styles.pageBreak = 'avoid' as const;
+          data.cell.styles.minCellHeight = 8;
+        }
+      },
+      didDrawPage: (data: any) => {
+        const pageCount = pdf.getNumberOfPages();
+        pdf.setFontSize(10);
+        pdf.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      },
+      willDrawCell: (data: any) => {
+        const remainingHeight = pdf.internal.pageSize.height - data.cursor.y;
+        const rowHeight = 12;
+        if (remainingHeight < rowHeight && data.row.index > 0) {
+          pdf.addPage();
+          data.cursor.y = 20;
+        }
+      }
+    };
+  };
+
   // ฟังก์ชันสำหรับแปลงข้อความไทยให้แสดงผลได้
   const convertThaiText = (text: string): string => {
     if (!text) return '';
@@ -215,7 +357,7 @@ export default function ApprovalsPage() {
     try {
       // ลองใช้ encodeURIComponent แล้ว decode
       return decodeURIComponent(encodeURIComponent(text));
-    } catch (error) {
+    } catch {
       // ถ้าไม่ได้ ให้ใช้ข้อความต้นฉบับ
       return text;
     }
@@ -231,16 +373,12 @@ export default function ApprovalsPage() {
 
     // ตรวจสอบว่า autoTable plugin พร้อมใช้งาน
     if (!pdf.autoTable) {
-      // ถ้า autoTable ไม่มี ให้เพิ่มเข้าไป
       (pdf as any).autoTable = autoTable;
     }
-
-    // ตรวจสอบอีกครั้งว่า autoTable พร้อมใช้งาน
     if (!pdf.autoTable && !(pdf as any).autoTable) {
       throw new Error('autoTable plugin is not available. Please ensure jspdf-autotable is properly imported.');
     }
     
-    // ตั้งค่า font สำหรับภาษาไทย
     setupThaiFont(pdf);
     
     let isFirstPage = true;
@@ -253,40 +391,24 @@ export default function ApprovalsPage() {
       }
       isFirstPage = false;
       
-      // Header
+      // วาด header (เฉพาะหน้าแรก)
       if (i === 0) {
-        pdf.setFontSize(20);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
-        
-        // Company info
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(editFormData.companyName, margin, 30);
-        pdf.text(editFormData.companyAddress, margin, 35);
-        pdf.text(`TEL: ${editFormData.phone} FAX: ${editFormData.fax}`, margin, 40);
-        pdf.text(`เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}`, margin, 45);
-        
-        // Date and Requisition ID
-        pdf.text(`Date: ${formatDate(requisition.SUBMITTED_AT)}`, contentWidth + margin - 50, 30);
-        pdf.text(`Requisition ID: #${requisition.REQUISITION_ID}`, contentWidth + margin - 50, 35);
-        
-        // Delivery info
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Please Delivery on:', margin, 55);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(editFormData.deliveryDate || '_________________', margin, 60);
-        pdf.text(`หมายเหตุ: ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}`, margin, 65);
-        pdf.text(`ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ: ${editFormData.contactPerson || 'N/A'}`, margin, 70);
+        drawPDFHeader(pdf, editFormData, requisition, {
+          pageWidth,
+          margin,
+          contentWidth,
+          showDate: true,
+          showRequisitionId: true
+        });
       }
       
-      // Cost Center info
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Cost Center: ${requisition.SITE_ID} | ผู้สั่ง: ${requisition.USER_ID} | แผนก: ${requisition.DEPARTMENT || 'N/A'}`, margin, i === 0 ? 80 : 20);
+      // วาด Cost Center info
+      drawCostCenterInfo(pdf, requisition, {
+        margin,
+        yPosition: i === 0 ? 80 : 20
+      });
       
-      // Prepare table data
+      // เตรียมข้อมูลตาราง
       const tableData: any[] = [];
       const groupedItems = requisition.REQUISITION_ITEMS.reduce((acc: any, item: any) => {
         const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
@@ -298,10 +420,7 @@ export default function ApprovalsPage() {
       }, {});
       
       Object.entries(groupedItems).forEach(([category, items]: [string, any]) => {
-        // Category header with special styling
-        tableData.push([category, '', '', '', '', '']);
-        
-        // Items in category
+        tableData.push([convertThaiText(category), '', '', '', '', '']);
         items.forEach((item: any) => {
           tableData.push([
             (item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A',
@@ -314,187 +433,22 @@ export default function ApprovalsPage() {
         });
       });
       
-      // สร้าง header สำหรับ PDF
-      if (i === 0) {
-        pdf.setFontSize(20);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
-        
-        // Company info
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(editFormData.companyName, margin, 30);
-        pdf.text(editFormData.companyAddress, margin, 35);
-        pdf.text(`TEL: ${editFormData.phone} FAX: ${editFormData.fax}`, margin, 40);
-        pdf.text(`เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}`, margin, 45);
-        
-        // Date and Requisition ID
-        pdf.text(`Date: ${formatDate(requisition.SUBMITTED_AT)}`, contentWidth + margin - 50, 30);
-        pdf.text(`Requisition ID: #${requisition.REQUISITION_ID}`, contentWidth + margin - 50, 35);
-        
-        // Delivery info
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Please Delivery on:', margin, 55);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(editFormData.deliveryDate || '_________________', margin, 60);
-        pdf.text(`หมายเหตุ: ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}`, margin, 65);
-        pdf.text(`ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ: ${editFormData.contactPerson || 'N/A'}`, margin, 70);
-      }
-      
-      // Cost Center info
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Cost Center: ${requisition.SITE_ID} | ผู้สั่ง: ${requisition.USER_ID} | แผนก: ${requisition.DEPARTMENT || 'N/A'}`, margin, i === 0 ? 80 : 20);
-      
-      // ตั้งค่า font สำหรับ autoTable
-      setupThaiFont(pdf);
-      
-      // Create table with proper pagination settings
+      // สร้างตารางด้วย AutoTable
       try {
-        // ตรวจสอบว่า pdf object ยังคงถูกต้อง
-        if (!pdf) {
-          throw new Error('PDF object is null or undefined');
-        }
-
-        // ตรวจสอบว่า pdf object มี methods ที่จำเป็น
-        if (typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
-          console.error('PDF object is missing required methods');
-          throw new Error('PDF object is missing required methods');
-        }
-
-        // ตรวจสอบว่า autoTable พร้อมใช้งาน
-        if (!(pdf as any).autoTable) {
-          console.error('autoTable is not available');
-          throw new Error('autoTable is not available');
-        }
-
-        console.log('Creating autoTable for requisition', {
-          pdfExists: !!pdf,
-          pdfType: typeof pdf,
-          autoTableExists: !!(pdf as any).autoTable,
-          tableDataLength: tableData.length
+        autoTable(pdf, {
+          head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
+          body: tableData,
+          ...getCommonAutoTableConfig(pdf, {
+            startY: i === 0 ? 90 : 30,
+            margin: { left: margin, right: margin, top: 10, bottom: 20 },
+            pageWidth,
+            pageHeight
+          }) as any
         });
-
-        // ตรวจสอบอีกครั้งก่อนใช้งาน autoTable
-        if (!pdf || typeof pdf !== 'object') {
-          throw new Error('PDF object is invalid');
-        }
-
-        // ตรวจสอบว่า autoTable function พร้อมใช้งาน
-        const autoTableFunc = (pdf as any).autoTable;
-        if (typeof autoTableFunc !== 'function') {
-          throw new Error('autoTable function is not available');
-        }
-
-        // ทดสอบ PDF object ก่อนใช้งาน autoTable
-        try {
-          pdf.setFont('helvetica');
-          pdf.setFontSize(10);
-          console.log('PDF object is working correctly for requisition');
-        } catch (testError) {
-          console.error('PDF object test failed:', testError);
-          throw new Error('PDF object is not working correctly');
-        }
-
-        // ใช้ (pdf as any).autoTable เพื่อให้แน่ใจว่าใช้งานได้
-        try {
-          // ตรวจสอบว่า autoTableFunc เป็น function จริงๆ
-          if (typeof autoTableFunc !== 'function') {
-            throw new Error('autoTable function is not available');
-          }
-          
-          // ตรวจสอบว่า PDF object ยังคงถูกต้อง
-          if (!pdf || typeof pdf !== 'object') {
-            throw new Error('PDF object is invalid');
-          }
-          
-          // ใช้ pdf.autoTable โดยตรง
-          autoTable(pdf, {
-        head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
-        body: tableData,
-        startY: i === 0 ? 90 : 30,
-        margin: { left: margin, right: margin, top: 10, bottom: 20 },
-        styles: {
-          ...setupAutoTableThaiFont(),
-        },
-        headStyles: {
-          fillColor: [233, 236, 239],
-          textColor: [0, 0, 0],
-          fontStyle: 'bold',
-          halign: 'center',
-          font: 'helvetica',
-          fontSize: 9,
-          cellPadding: 3,
-          overflow: 'linebreak',
-          minCellHeight: 8,
-          valign: 'middle',
-        },
-        alternateRowStyles: {
-          fillColor: [248, 249, 250],
-        },
-        columnStyles: {
-          0: { halign: 'center', cellWidth: 20 }, // ITEM_ID
-          1: { halign: 'left', cellWidth: 60 },   // Description
-          2: { halign: 'center', cellWidth: 15 }, // Qty
-          3: { halign: 'center', cellWidth: 15 }, // Unit
-          4: { halign: 'right', cellWidth: 25 },  // Unit Price
-          5: { halign: 'right', cellWidth: 25 },  // Total
-        },
-        // ตั้งค่า pagination ที่เหมาะสม
-        tableWidth: 'wrap',
-        showHead: 'everyPage',
-        // ป้องกันการตัดแถวตาราง
-        pageBreak: 'avoid',
-        rowPageBreak: 'avoid',
-        // ตั้งค่าให้แถวไม่ถูกตัดครึ่ง
-        didDrawPage: (data: any) => {
-          // Page numbering
-          const pageCount = pdf.getNumberOfPages();
-          pdf.setFontSize(10);
-          pdf.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-        },
-        // จัดการการแบ่งหน้าให้ดีขึ้น
-        didParseCell: (data: any) => {
-          // จัดการ category header rows
-          const rowData = data.row.raw;
-          if (rowData && rowData[1] === '' && rowData[2] === '' && rowData[3] === '' && rowData[4] === '' && rowData[5] === '') {
-            // Category header row
-            data.cell.styles.fillColor = [240, 240, 240];
-            data.cell.styles.fontStyle = 'bold';
-            data.cell.styles.fontSize = 10;
-            data.cell.styles.halign = 'left';
-            data.cell.styles.valign = 'middle';
-            data.cell.styles.cellPadding = { top: 4, right: 3, bottom: 4, left: 6 };
-            // ป้องกันการตัด category header
-            data.cell.styles.pageBreak = 'avoid';
-          } else {
-            // สำหรับแถวข้อมูลสินค้า ป้องกันการตัดแถว
-            data.cell.styles.pageBreak = 'avoid';
-            data.cell.styles.minCellHeight = 8;
-          }
-        },
-        // เพิ่มการจัดการการแบ่งหน้า
-        willDrawCell: (data: any) => {
-          // ตรวจสอบว่ามีพื้นที่เพียงพอสำหรับแถวนี้หรือไม่
-          const remainingHeight = pdf.internal.pageSize.height - data.cursor.y;
-          const rowHeight = 12; // ความสูงของแถว
-          
-          if (remainingHeight < rowHeight && data.row.index > 0) {
-            // ถ้าไม่มีพื้นที่เพียงพอ ให้ขึ้นหน้าใหม่
-            pdf.addPage();
-            data.cursor.y = 20; // เริ่มต้นที่ตำแหน่งใหม่
-          }
-        }
-      });
-        } catch (autoTableError) {
-          console.error('Error creating autoTable:', autoTableError);
-          showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างตารางได้: ' + (autoTableError as Error).message);
-          throw autoTableError; // throw error แทน return
-        }
-      } catch (tableCreationError) {
-        console.error('Error in table creation block:', tableCreationError);
-        throw tableCreationError;
+      } catch (autoTableError) {
+        console.error('Error creating autoTable:', autoTableError);
+        showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างตารางได้: ' + (autoTableError as Error).message);
+        throw autoTableError;
       }
     }
     
@@ -566,7 +520,6 @@ export default function ApprovalsPage() {
       currentPage++;
     }
   };
-  const { showSuccess: showToastSuccess, showError: showToastError, showInfo: showToastInfo } = useToast();
   const { showSuccess, showError, showWarning, showInfo } = useModal();
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -865,7 +818,7 @@ export default function ApprovalsPage() {
     requisitions.forEach((req) => {
       if (req.REQUISITION_ITEMS && req.REQUISITION_ITEMS.length > 0) {
         // สำหรับแต่ละ item ใน requisition
-        req.REQUISITION_ITEMS.forEach((item, index) => {
+        req.REQUISITION_ITEMS.forEach((item) => {
           csvData.push([
             `ใบเบิกสินค้า #${req.REQUISITION_ID}`, // ชื่อเอกสาร
             req.REQUISITION_ID, // Requisition ID
@@ -949,7 +902,7 @@ export default function ApprovalsPage() {
     // สร้างข้อมูลรายการสินค้าสำหรับ requisition เดียว
     const csvData: (string | number)[][] = [];
 
-    requisition.REQUISITION_ITEMS.forEach((item, index) => {
+    requisition.REQUISITION_ITEMS.forEach((item) => {
       csvData.push([
         `ใบเบิกสินค้า #${requisition.REQUISITION_ID}`, // ชื่อเอกสาร
         requisition.REQUISITION_ID, // Requisition ID
@@ -1356,7 +1309,6 @@ export default function ApprovalsPage() {
         
         // สร้าง PDF ใหม่สำหรับหมวดหมู่นี้
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const margin = 10;
         const pageWidth = 210;
         const pageHeight = 297;
         
@@ -1451,22 +1403,23 @@ export default function ApprovalsPage() {
         const minutes = nowDate.getMinutes().toString().padStart(2, '0');
         const currentDate = `${dateNum} ${month} ${year} ${hours}:${minutes}`;
 
-        // วาดหัวกระดาษหน้าแรก
-        pdf.setFontSize(20);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
+        // วาดหัวกระดาษหน้าแรก - ใช้ helper function
+        drawPDFHeader(pdf, editAllFormData, null, {
+          pageWidth,
+          margin: 10,
+          showDate: false,
+          showCategory: category,
+          showRequisitionId: false
+        });
+        
+        // เพิ่มวันที่ปัจจุบันที่ด้านขวา
         pdf.setFontSize(9);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(editAllFormData.companyName, 10, 30);
-        pdf.text(editAllFormData.companyAddress, 10, 35);
-        pdf.text(`TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}`, 10, 40);
-        pdf.text(`เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}`, 10, 45);
         pdf.text(`Date: ${currentDate}`, pageWidth - 60, 30);
-        pdf.text(`หมวดหมู่: ${convertThaiText(category)}`, pageWidth - 60, 35);
 
         // เตรียมแถวตาราง (ใช้ AutoTable เพื่อแบ่งหน้าอัตโนมัติและไม่หั่นแถว)
         const tableBody: any[] = [];
-        Object.entries(itemsByUser).forEach(([userId, { user, items: userItems }]) => {
+        Object.entries(itemsByUser).forEach(([userId, { user: _user, items: userItems }]) => {
           const userData = userDataMap[userId] || { fullName: userId, department: 'N/A', costCenterCode: 'N/A' };
           // แถวหัวผู้สั่ง (category-like header)
           tableBody.push([
@@ -1490,64 +1443,20 @@ export default function ApprovalsPage() {
         autoTable(pdf, {
           head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
           body: tableBody,
-          startY: 55,
-          margin: { left: 10, right: 10, top: 10, bottom: 20 },
-          styles: {
-            ...setupAutoTableThaiFont(),
-          },
-          headStyles: {
-            fillColor: [233, 236, 239],
-            textColor: [0, 0, 0],
-            fontStyle: 'bold',
-            halign: 'center',
-            font: 'helvetica',
-            fontSize: 9,
-            cellPadding: 3,
-            overflow: 'linebreak',
-            minCellHeight: 8,
-            valign: 'middle',
-          },
-          columnStyles: {
-            0: { halign: 'center', cellWidth: 22 },
-            1: { halign: 'left', cellWidth: 78 },
-            2: { halign: 'center', cellWidth: 15 },
-            3: { halign: 'center', cellWidth: 15 },
-            4: { halign: 'right', cellWidth: 25 },
-            5: { halign: 'right', cellWidth: 25 },
-          },
-          showHead: 'everyPage',
-          tableWidth: 'wrap',
-          pageBreak: 'avoid',
-          rowPageBreak: 'avoid',
-          didParseCell: (data: any) => {
-            const row = data.row?.raw;
-            // แถวหัวผู้สั่ง: คอลัมน์ 1 มีข้อความ ที่เหลือว่าง
-            if (row && row[1] === '' && row[2] === '' && row[3] === '' && row[4] === '' && row[5] === '') {
-              data.cell.styles.fillColor = [240, 240, 240];
-              data.cell.styles.fontStyle = 'bold';
-              data.cell.styles.fontSize = 10;
-              data.cell.styles.halign = 'left';
-              data.cell.styles.valign = 'middle';
-              data.cell.styles.cellPadding = { top: 4, right: 3, bottom: 4, left: 6 };
-              data.cell.styles.pageBreak = 'avoid';
-            } else {
-              data.cell.styles.pageBreak = 'avoid';
-              data.cell.styles.minCellHeight = 8;
+          ...getCommonAutoTableConfig(pdf, {
+            startY: 55,
+            margin: { left: 10, right: 10, top: 10, bottom: 20 },
+            pageWidth,
+            pageHeight,
+            columnWidths: {
+              0: { halign: 'center', cellWidth: 22 },
+              1: { halign: 'left', cellWidth: 78 },
+              2: { halign: 'center', cellWidth: 15 },
+              3: { halign: 'center', cellWidth: 15 },
+              4: { halign: 'right', cellWidth: 25 },
+              5: { halign: 'right', cellWidth: 25 },
             }
-          },
-          didDrawPage: (data: any) => {
-            const pageCount = pdf.getNumberOfPages();
-            pdf.setFontSize(10);
-            pdf.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-          },
-          willDrawCell: (data: any) => {
-            const remainingHeight = pdf.internal.pageSize.height - data.cursor.y;
-            const rowHeight = 12;
-            if (remainingHeight < rowHeight && data.row.index > 0) {
-              pdf.addPage();
-              data.cursor.y = 20;
-            }
-          }
+          }) as any
         });
 
         // บันทึก PDF
@@ -1647,7 +1556,7 @@ export default function ApprovalsPage() {
     }
     
     // สร้าง requisition object ที่มี items ที่ถูกต้อง
-    const requisitionWithItems = {
+    const _requisitionWithItems = {
       ...requisition,
       REQUISITION_ITEMS: itemsToUse
     };
@@ -1676,7 +1585,7 @@ export default function ApprovalsPage() {
       // สร้าง HTML content สำหรับ SUPPLY REQUEST ORDER
       // ประมาณการความสูงของเนื้อหา
       const estimatedContentHeight = 200 + (itemsToUse.length * 25);
-      const needsMultiplePages = estimatedContentHeight > 250;
+      const _needsMultiplePages = estimatedContentHeight > 250;
       
       // สร้าง HTML content โดยใช้ฟังก์ชัน
         const generateHTMLContent = () => {
@@ -1851,14 +1760,6 @@ export default function ApprovalsPage() {
         hasData: imgData.length > 100
       });
       const pdf = new jsPDF('p', 'mm', 'a4');
-      // Shared pagination/margin config
-      const margin = 10;
-      const bottomMargin = 15;
-      const pageWidth = 210;
-      const pageHeightFull = 297;
-      const imgWidth = pageWidth - margin * 2;
-      const usablePageHeight = pageHeightFull - margin - bottomMargin;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
       // ใช้ renderImageWithMargins เพื่อจัดการ pagination ทั้งหมด
       // มันจะแบ่งหน้าอัตโนมัติและเพิ่มหมายเลขหน้าให้
@@ -3178,7 +3079,7 @@ export default function ApprovalsPage() {
                   selectedRequisition.REQUISITION_ITEMS.length > 0 ? (
                     <div className="space-y-6">
                       {groupItemsByCategory(selectedRequisition.REQUISITION_ITEMS).map(
-                        (categoryGroup, categoryIndex) => (
+                        (categoryGroup) => (
                           <div key={categoryGroup.category} className="space-y-3">
                             {/* หัวข้อหมวดหมู่ */}
                             <div className="flex items-center gap-3 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">

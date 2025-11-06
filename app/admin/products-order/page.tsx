@@ -1,13 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Grid } from '@mui/material';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
-import Box from '@mui/material/Box';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
@@ -22,8 +20,6 @@ import {
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
-import ThaiDateUtils from '@/lib/date-utils';
 import { getBasePathUrl } from '@/lib/base-path';
 import ProductCard from '@/components/ProductCart';
 import { type Product } from '@/lib/database';
@@ -120,22 +116,6 @@ export default function AdminProductsOrderPage() {
 
     setFilteredProducts(filtered);
   }, [products, searchTerm, selectedCategory, sortBy]);
-
-  // ฟังก์ชันสำหรับสร้าง URL รูปภาพที่ถูกต้อง
-  const getImageUrl = (photoUrl: string | null | undefined) => {
-    if (!photoUrl) return getBasePathUrl('/placeholder.svg');
-    
-    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-      return photoUrl;
-    }
-    
-    if (photoUrl.startsWith('/')) {
-      const filename = photoUrl.substring(1);
-      return getBasePathUrl(`/api/image/${filename}`);
-    }
-    
-    return getBasePathUrl(`/api/image/${photoUrl}`);
-  };
 
   const getCategoryName = (categoryId: number) => {
     const category = categories.find(c => c.CATEGORY_ID === categoryId);
