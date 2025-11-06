@@ -122,37 +122,49 @@ export default function ApprovalsPage() {
       const fontList = (pdf as any).internal?.getFontList?.();
       if (fontList && fontList['THSarabunNew']) {
         console.log('Thai font already loaded');
-        return true;
+        // ตรวจสอบว่า font ใช้งานได้จริง
+        try {
+          pdf.setFont('THSarabunNew', 'normal');
+          const testText = 'ทดสอบ';
+          pdf.text(testText, 10, 10);
+          console.log('Thai font verified and working');
+          return true;
+        } catch (testError) {
+          console.warn('Font exists but not working, reloading...', testError);
+        }
       }
 
-      // ใช้ THSarabunNew TTF จาก CDN
-      // ใช้ font จาก GitHub หรือ CDN ที่รองรับ
-      const fontUrl = 'https://raw.githubusercontent.com/sarabun-webfont/sarabun-webfont/master/fonts/THSarabunNew.ttf';
+      console.log('Loading Thai font from CDN...');
       
-      // Fallback URLs
-      const fallbackUrls = [
-        'https://cdn.jsdelivr.net/gh/sarabun-thai/sarabun@main/fonts/THSarabunNew.ttf',
-        'https://fonts.gstatic.com/s/sarabun/v13/DtViJx26TKEr37c9aBVNnB4Nv4.ttf'
+      // ใช้ THSarabunNew TTF จาก CDN ที่ใช้งานได้จริง
+      const fontUrls = [
+        'https://raw.githubusercontent.com/sarabun-webfont/sarabun-webfont/master/fonts/THSarabunNew.ttf',
+        'https://github.com/sarabun-webfont/sarabun-webfont/raw/master/fonts/THSarabunNew.ttf',
+        'https://cdn.jsdelivr.net/gh/sarabun-thai/sarabun@main/fonts/THSarabunNew.ttf'
       ];
       
-      // ลองโหลด font จาก URL หลัก
-      let fontLoaded = false;
-      const urlsToTry = [fontUrl, ...fallbackUrls];
-      
-      for (const url of urlsToTry) {
+      for (const fontUrl of fontUrls) {
         try {
-          const response = await fetch(url, {
+          console.log(`Trying to load font from: ${fontUrl}`);
+          const response = await fetch(fontUrl, {
             method: 'GET',
-            headers: {
-              'Accept': 'application/octet-stream'
-            }
+            mode: 'cors',
+            cache: 'no-cache'
           });
           
           if (!response.ok) {
+            console.warn(`Font URL failed: ${response.status} ${response.statusText}`);
             continue;
           }
           
           const fontArrayBuffer = await response.arrayBuffer();
+          console.log(`Font loaded, size: ${fontArrayBuffer.byteLength} bytes`);
+          
+          if (fontArrayBuffer.byteLength < 1000) {
+            console.warn('Font file too small, likely invalid');
+            continue;
+          }
+          
           const fontBytes = new Uint8Array(fontArrayBuffer);
           
           // แปลงเป็น base64 (ใช้วิธีที่รองรับขนาดใหญ่)
@@ -164,28 +176,39 @@ export default function ApprovalsPage() {
           }
           const fontBase64 = btoa(chunks.join(''));
           
-          // ฝัง font เข้า jsPDF (jsPDF ต้องการ TTF)
-          pdf.addFileToVFS('THSarabunNew.ttf', fontBase64);
-          pdf.addFont('THSarabunNew.ttf', 'THSarabunNew', 'normal');
-          pdf.addFont('THSarabunNew.ttf', 'THSarabunNew', 'bold');
+          console.log(`Font converted to base64, length: ${fontBase64.length}`);
           
-          console.log('Thai font loaded successfully from:', url);
-          fontLoaded = true;
-          break;
+          // ฝัง font เข้า jsPDF
+          try {
+            pdf.addFileToVFS('THSarabunNew.ttf', fontBase64);
+            pdf.addFont('THSarabunNew.ttf', 'THSarabunNew', 'normal');
+            pdf.addFont('THSarabunNew.ttf', 'THSarabunNew', 'bold');
+            
+            // ตรวจสอบว่า font ถูกฝังสำเร็จ
+            const newFontList = (pdf as any).internal?.getFontList?.();
+            if (newFontList && newFontList['THSarabunNew']) {
+              // ทดสอบว่า font ใช้งานได้จริง
+              pdf.setFont('THSarabunNew', 'normal');
+              console.log('Thai font loaded and registered successfully');
+              return true;
+            } else {
+              console.warn('Font registered but not found in font list');
+              continue;
+            }
+          } catch (addFontError) {
+            console.error('Error adding font to jsPDF:', addFontError);
+            continue;
+          }
         } catch (fontLoadError) {
-          console.warn(`Failed to load font from ${url}:`, fontLoadError);
+          console.warn(`Failed to load font from ${fontUrl}:`, fontLoadError);
           continue;
         }
       }
       
-      if (!fontLoaded) {
-        console.warn('Failed to load Thai font from all URLs, using fallback');
-        return false;
-      }
-      
-      return true;
+      console.error('Failed to load Thai font from all URLs');
+      return false;
     } catch (error) {
-      console.warn('Could not load Thai font:', error);
+      console.error('Could not load Thai font:', error);
       return false;
     }
   };
@@ -331,10 +354,11 @@ export default function ApprovalsPage() {
       return `<tr style="page-break-inside: avoid; break-inside: avoid;">${cells}</tr>`;
     }).join('');
 
+    // ใช้ inline style แทน @import เพื่อลดการโหลดซ้ำ (renderHTMLToPDF จะโหลด font แล้ว)
     return `
-      <div style="font-family: 'Prompt', 'Sarabun', 'Arial', sans-serif; padding: 20px; background: white;">
+      <div style="font-family: 'Sarabun', 'Prompt', 'Sarabun New', 'TH Sarabun New', 'Arial Unicode MS', 'Arial', sans-serif; padding: 20px; background: white; font-size: 14px; line-height: 1.5;">
         <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
-          <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
+          <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-family: 'Sarabun', sans-serif;">SUPPLY REQUEST ORDER</h1>
         </div>
         
         <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
@@ -395,6 +419,9 @@ export default function ApprovalsPage() {
   };
 
   // Helper function: แปลง HTML เป็น PDF ด้วย html2canvas (รองรับภาษาไทย)
+  // Cache สำหรับ font links เพื่อไม่ให้โหลดซ้ำ
+  let fontLinksLoaded = false;
+  
   const renderHTMLToPDF = async (
     htmlContent: string,
     pdf: jsPDF,
@@ -412,7 +439,42 @@ export default function ApprovalsPage() {
     }
 
     let tempDiv: HTMLDivElement | null = null;
+    let fontLink: HTMLLinkElement | null = null;
     try {
+      // โหลด font เพียงครั้งเดียว (cache)
+      if (!fontLinksLoaded) {
+        // Preload font ก่อน
+        const fontPreload = document.createElement('link');
+        fontPreload.rel = 'preconnect';
+        fontPreload.href = 'https://fonts.googleapis.com';
+        document.head.appendChild(fontPreload);
+        
+        const fontPreload2 = document.createElement('link');
+        fontPreload2.rel = 'preconnect';
+        fontPreload2.href = 'https://fonts.gstatic.com';
+        fontPreload2.crossOrigin = 'anonymous';
+        document.head.appendChild(fontPreload2);
+        
+        // เพิ่ม @font-face สำหรับ font ไทย (โหลดจาก Google Fonts)
+        fontLink = document.createElement('link');
+        fontLink.href = 'https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap';
+        fontLink.rel = 'stylesheet';
+        document.head.appendChild(fontLink);
+        
+        // รอให้ font โหลดจริงๆ (ใช้ document.fonts.ready)
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+        
+        fontLinksLoaded = true;
+      } else {
+        // Font ถูกโหลดแล้ว รอเพียงเล็กน้อยเพื่อให้แน่ใจว่า ready
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
       tempDiv = document.createElement('div');
       tempDiv.style.position = 'absolute';
       tempDiv.style.left = '-9999px';
@@ -420,7 +482,10 @@ export default function ApprovalsPage() {
       tempDiv.style.width = `${pageWidth}mm`;
       tempDiv.style.padding = '20mm';
       tempDiv.style.backgroundColor = 'white';
-      tempDiv.style.fontFamily = 'Prompt, Sarabun, Arial, sans-serif';
+      // ใช้ font ไทยที่แน่ใจว่าจะทำงาน
+      tempDiv.style.fontFamily = "'Sarabun', 'Prompt', 'Sarabun New', 'TH Sarabun New', 'Arial Unicode MS', 'Arial', sans-serif";
+      tempDiv.style.fontSize = '14px';
+      tempDiv.style.lineHeight = '1.5';
       tempDiv.innerHTML = htmlContent;
 
       if (document.body) {
@@ -429,19 +494,29 @@ export default function ApprovalsPage() {
         throw new Error('document.body is not available');
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // รอให้ font และ content render เสร็จ (เพิ่มเวลาเพื่อให้แน่ใจว่า font โหลดแล้ว)
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
       const canvas = await html2canvas(tempDiv, {
         scale,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        logging: false
+        logging: false,
+        onclone: (clonedDoc) => {
+          // แน่ใจว่า font ถูก apply ใน cloned document
+          const clonedElement = clonedDoc.querySelector('div');
+          if (clonedElement) {
+            clonedElement.style.fontFamily = "'Sarabun', 'Prompt', 'Sarabun New', 'TH Sarabun New', 'Arial Unicode MS', 'Arial', sans-serif";
+          }
+        }
       });
 
       if (tempDiv && tempDiv.parentNode) {
         document.body.removeChild(tempDiv);
       }
+      
+      // ไม่ลบ font links เพราะจะใช้ซ้ำ (cache)
 
       if (canvas.width === 0 || canvas.height === 0) {
         throw new Error('ไม่สามารถสร้างภาพได้');
@@ -550,7 +625,7 @@ export default function ApprovalsPage() {
     };
   };
 
-  // Helper to create PDF with AutoTable (รองรับภาษาไทย)
+  // Helper to create PDF with AutoTable (รองรับภาษาไทย) หรือ html2canvas (fallback)
   const createPDFWithAutoTable = async (requisitions: any[], editFormData: any) => {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const margin = 10;
@@ -558,97 +633,199 @@ export default function ApprovalsPage() {
     const pageHeight = 297;
     const contentWidth = pageWidth - (margin * 2);
 
-    // โหลดและฝัง font ภาษาไทย
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      throw new Error('Cannot create PDF: not in browser environment');
+    }
+
+    // โหลดและฝัง font ภาษาไทย (setupThaiFont เรียก loadThaiFont อยู่แล้ว)
+    console.log('Setting up Thai font...');
     await setupThaiFont(pdf);
-    const fontLoaded = await loadThaiFont(pdf);
-    const fontName = fontLoaded ? 'THSarabunNew' : 'helvetica';
     
-    let isFirstPage = true;
+    // ตรวจสอบว่า font ใช้งานได้จริง
+    const fontList = (pdf as any).internal?.getFontList?.();
+    const fontLoaded = fontList && fontList['THSarabunNew'];
+    let fontWorks = false;
     
-    for (let i = 0; i < requisitions.length; i++) {
-      const requisition = requisitions[i];
-      
-      if (!isFirstPage) {
-        pdf.addPage();
-      }
-      isFirstPage = false;
-      
-      // วาด header (เฉพาะหน้าแรก)
-      if (i === 0) {
-        pdf.setFont(fontName, 'bold');
-        pdf.setFontSize(20);
-        pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
-        
-        pdf.setFont(fontName, 'normal');
-        pdf.setFontSize(9);
-        pdf.text(editFormData.companyName, margin, 30);
-        pdf.text(editFormData.companyAddress, margin, 35);
-        pdf.text(`TEL: ${editFormData.phone} FAX: ${editFormData.fax}`, margin, 40);
-        pdf.text(`เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}`, margin, 45);
-        
-        pdf.text(`Date: ${formatDate(requisition.SUBMITTED_AT)}`, contentWidth + margin - 50, 30);
-        pdf.text(`Requisition ID: #${requisition.REQUISITION_ID}`, contentWidth + margin - 50, 35);
-        
-        pdf.setFontSize(10);
-        pdf.setFont(fontName, 'bold');
-        pdf.text('Please Delivery on:', margin, 55);
-        pdf.setFont(fontName, 'normal');
-        pdf.text(editFormData.deliveryDate || '_________________', margin, 60);
-        pdf.text(`หมายเหตุ: ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}`, margin, 65);
-        pdf.text(`ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ: ${editFormData.contactPerson || 'N/A'}`, margin, 70);
-      }
-      
-      // วาด Cost Center info
-      pdf.setFontSize(10);
-      pdf.setFont(fontName, 'bold');
-      pdf.text(
-        `Cost Center: ${requisition.SITE_ID} | ผู้สั่ง: ${requisition.USER_ID} | แผนก: ${requisition.DEPARTMENT || 'N/A'}`,
-        margin,
-        i === 0 ? 80 : 20
-      );
-      
-      // เตรียมข้อมูลตาราง
-      const tableData: Array<Array<string | number>> = [];
-      const groupedItems = requisition.REQUISITION_ITEMS.reduce((acc: any, item: any) => {
-        const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
-        if (!acc[category]) {
-          acc[category] = [];
-        }
-        acc[category].push(item);
-        return acc;
-      }, {});
-      
-      Object.entries(groupedItems).forEach(([category, items]: [string, any]) => {
-        tableData.push([category, '', '', '', '', '']);
-        items.forEach((item: any) => {
-          tableData.push([
-            (item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A',
-            item.PRODUCT_NAME || 'Unknown Product',
-            item.QUANTITY,
-            item.ORDER_UNIT || 'ชิ้น',
-            `฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}`,
-            `฿${calculateSafeTotalPrice(item)}`
-          ]);
-        });
-      });
-      
-      // สร้างตารางด้วย AutoTable (รองรับภาษาไทย)
+    if (fontLoaded) {
       try {
-        autoTable(pdf, {
-          head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
-          body: tableData,
-          ...getAutoTableConfigWithThai(pdf, {
-            startY: i === 0 ? 90 : 30,
-            margin: { left: margin, right: margin, top: 10, bottom: 20 },
+        pdf.setFont('THSarabunNew', 'normal');
+        pdf.setFontSize(10);
+        // ทดสอบเขียนข้อความไทย
+        pdf.text('ทดสอบ', 10, 10);
+        fontWorks = true;
+        console.log('Thai font verified and working');
+      } catch (testError) {
+        console.warn('Thai font test failed:', testError);
+        fontWorks = false;
+      }
+    }
+    
+    const useHtml2Canvas = !fontLoaded || !fontWorks;
+    
+    if (useHtml2Canvas) {
+      console.log('Using html2canvas fallback for Thai language support');
+      // ใช้ html2canvas แทน AutoTable (รองรับภาษาไทยแน่นอน)
+      for (let i = 0; i < requisitions.length; i++) {
+        const requisition = requisitions[i];
+        
+        if (i > 0) {
+          pdf.addPage();
+        }
+        
+        // เตรียมข้อมูลตาราง
+        const tableData: Array<Array<string | number>> = [];
+        const groupedItems = requisition.REQUISITION_ITEMS.reduce((acc: any, item: any) => {
+          const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
+          if (!acc[category]) {
+            acc[category] = [];
+          }
+          acc[category].push(item);
+          return acc;
+        }, {});
+        
+        Object.entries(groupedItems).forEach(([category, items]: [string, any]) => {
+          tableData.push([category, '', '', '', '', '']);
+          items.forEach((item: any) => {
+            tableData.push([
+              (item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A',
+              item.PRODUCT_NAME || 'Unknown Product',
+              item.QUANTITY,
+              item.ORDER_UNIT || 'ชิ้น',
+              `฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}`,
+              `฿${calculateSafeTotalPrice(item)}`
+            ]);
+          });
+        });
+        
+        // สร้าง HTML content (รองรับภาษาไทย)
+        const htmlContent = createHTMLTableForPDF(
+          tableData,
+          ['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total'],
+          {
+            companyName: editFormData.companyName,
+            companyAddress: editFormData.companyAddress,
+            phone: editFormData.phone,
+            fax: editFormData.fax,
+            taxId: editFormData.taxId,
+            deliveryDate: editFormData.deliveryDate,
+            contactPerson: editFormData.contactPerson,
+            issueNote: requisition.ISSUE_NOTE,
+            costCenter: requisition.SITE_ID,
+            userInfo: `${requisition.USER_ID}`,
+            department: requisition.DEPARTMENT || 'N/A',
+            date: formatDate(requisition.SUBMITTED_AT),
+            requisitionId: requisition.REQUISITION_ID.toString(),
+            totalAmount: requisition.TOTAL_AMOUNT,
+            itemCount: requisition.REQUISITION_ITEMS.length,
+            status: requisition.STATUS
+          }
+        );
+        
+        // แปลง HTML เป็น PDF (รองรับภาษาไทย)
+        try {
+          await renderHTMLToPDF(htmlContent, pdf, {
+            margin,
             pageWidth,
             pageHeight,
-            fontName
-          }) as any
+            scale: 1.5
+          });
+        } catch (renderError) {
+          console.error('Error rendering HTML to PDF:', renderError);
+          showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (renderError as Error).message);
+          throw renderError;
+        }
+      }
+    } else {
+      console.log('Using AutoTable with Thai font');
+      // ใช้ AutoTable พร้อม font ไทย
+      const fontName = 'THSarabunNew';
+      let isFirstPage = true;
+      
+      for (let i = 0; i < requisitions.length; i++) {
+        const requisition = requisitions[i];
+        
+        if (!isFirstPage) {
+          pdf.addPage();
+        }
+        isFirstPage = false;
+        
+        // วาด header (เฉพาะหน้าแรก)
+        if (i === 0) {
+          pdf.setFont(fontName, 'bold');
+          pdf.setFontSize(20);
+          pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
+          
+          pdf.setFont(fontName, 'normal');
+          pdf.setFontSize(9);
+          pdf.text(editFormData.companyName, margin, 30);
+          pdf.text(editFormData.companyAddress, margin, 35);
+          pdf.text(`TEL: ${editFormData.phone} FAX: ${editFormData.fax}`, margin, 40);
+          pdf.text(`เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}`, margin, 45);
+          
+          pdf.text(`Date: ${formatDate(requisition.SUBMITTED_AT)}`, contentWidth + margin - 50, 30);
+          pdf.text(`Requisition ID: #${requisition.REQUISITION_ID}`, contentWidth + margin - 50, 35);
+          
+          pdf.setFontSize(10);
+          pdf.setFont(fontName, 'bold');
+          pdf.text('Please Delivery on:', margin, 55);
+          pdf.setFont(fontName, 'normal');
+          pdf.text(editFormData.deliveryDate || '_________________', margin, 60);
+          pdf.text(`หมายเหตุ: ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}`, margin, 65);
+          pdf.text(`ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ: ${editFormData.contactPerson || 'N/A'}`, margin, 70);
+        }
+        
+        // วาด Cost Center info
+        pdf.setFontSize(10);
+        pdf.setFont(fontName, 'bold');
+        pdf.text(
+          `Cost Center: ${requisition.SITE_ID} | ผู้สั่ง: ${requisition.USER_ID} | แผนก: ${requisition.DEPARTMENT || 'N/A'}`,
+          margin,
+          i === 0 ? 80 : 20
+        );
+        
+        // เตรียมข้อมูลตาราง
+        const tableData: Array<Array<string | number>> = [];
+        const groupedItems = requisition.REQUISITION_ITEMS.reduce((acc: any, item: any) => {
+          const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
+          if (!acc[category]) {
+            acc[category] = [];
+          }
+          acc[category].push(item);
+          return acc;
+        }, {});
+        
+        Object.entries(groupedItems).forEach(([category, items]: [string, any]) => {
+          tableData.push([category, '', '', '', '', '']);
+          items.forEach((item: any) => {
+            tableData.push([
+              (item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A',
+              item.PRODUCT_NAME || 'Unknown Product',
+              item.QUANTITY,
+              item.ORDER_UNIT || 'ชิ้น',
+              `฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}`,
+              `฿${calculateSafeTotalPrice(item)}`
+            ]);
+          });
         });
-      } catch (autoTableError) {
-        console.error('Error creating autoTable:', autoTableError);
-        showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างตารางได้: ' + (autoTableError as Error).message);
-        throw autoTableError;
+        
+        // สร้างตารางด้วย AutoTable (รองรับภาษาไทย)
+        try {
+          autoTable(pdf, {
+            head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
+            body: tableData,
+            ...getAutoTableConfigWithThai(pdf, {
+              startY: i === 0 ? 90 : 30,
+              margin: { left: margin, right: margin, top: 10, bottom: 20 },
+              pageWidth,
+              pageHeight,
+              fontName
+            }) as any
+          });
+        } catch (autoTableError) {
+          console.error('Error creating autoTable:', autoTableError);
+          showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างตารางได้: ' + (autoTableError as Error).message);
+          throw autoTableError;
+        }
       }
     }
     
@@ -1593,11 +1770,6 @@ export default function ApprovalsPage() {
           usersCount: Object.keys(itemsByUser).length
         });
 
-        // โหลดและฝัง font ภาษาไทย
-        await setupThaiFont(pdf);
-        const fontLoaded = await loadThaiFont(pdf);
-        const fontName = fontLoaded ? 'THSarabunNew' : 'helvetica';
-
         // Header ข้อมูลทั่วไป
         const nowDate = new Date();
         const thaiMonthsShortList = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -1607,20 +1779,6 @@ export default function ApprovalsPage() {
         const hours = nowDate.getHours().toString().padStart(2, '0');
         const minutes = nowDate.getMinutes().toString().padStart(2, '0');
         const currentDate = `${dateNum} ${month} ${year} ${hours}:${minutes}`;
-
-        // วาด header
-        pdf.setFont(fontName, 'bold');
-        pdf.setFontSize(20);
-        pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
-        
-        pdf.setFont(fontName, 'normal');
-        pdf.setFontSize(9);
-        pdf.text(editAllFormData.companyName, 10, 30);
-        pdf.text(editAllFormData.companyAddress, 10, 35);
-        pdf.text(`TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}`, 10, 40);
-        pdf.text(`เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}`, 10, 45);
-        pdf.text(`Date: ${currentDate}`, pageWidth - 60, 30);
-        pdf.text(`หมวดหมู่: ${category}`, pageWidth - 60, 35);
 
         // เตรียมแถวตาราง (รองรับภาษาไทย)
         const tableBody: Array<Array<string | number>> = [];
@@ -1644,30 +1802,36 @@ export default function ApprovalsPage() {
           });
         });
 
-        // สร้างตารางด้วย AutoTable (รองรับภาษาไทย)
+        // สร้าง HTML content (รองรับภาษาไทยแน่นอน)
+        const htmlContent = createHTMLTableForPDF(
+          tableBody,
+          ['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total'],
+          {
+            companyName: editAllFormData.companyName,
+            companyAddress: editAllFormData.companyAddress,
+            phone: editAllFormData.phone,
+            fax: editAllFormData.fax,
+            taxId: editAllFormData.taxId,
+            deliveryDate: editAllFormData.deliveryDate,
+            contactPerson: editAllFormData.contactPerson,
+            category: category,
+            date: currentDate,
+            totalAmount: categoryTotals[category],
+            itemCount: items.length
+          }
+        );
+
+        // แปลง HTML เป็น PDF (รองรับภาษาไทยแน่นอน)
         try {
-          autoTable(pdf, {
-            head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
-            body: tableBody,
-            ...getAutoTableConfigWithThai(pdf, {
-              startY: 55,
-              margin: { left: 10, right: 10, top: 10, bottom: 20 },
-              pageWidth,
-              pageHeight,
-              columnWidths: {
-                0: { halign: 'center', cellWidth: 22 },
-                1: { halign: 'left', cellWidth: 78 },
-                2: { halign: 'center', cellWidth: 15 },
-                3: { halign: 'center', cellWidth: 15 },
-                4: { halign: 'right', cellWidth: 25 },
-                5: { halign: 'right', cellWidth: 25 },
-              },
-              fontName
-            }) as any
+          await renderHTMLToPDF(htmlContent, pdf, {
+            margin: 10,
+            pageWidth,
+            pageHeight,
+            scale: 1.5
           });
-        } catch (autoTableError) {
-          console.error(`Error creating autoTable for category ${category}:`, autoTableError);
-          showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้างตารางสำหรับหมวดหมู่ ${category} ได้: ${(autoTableError as Error).message}`);
+        } catch (renderError) {
+          console.error(`Error rendering PDF for category ${category}:`, renderError);
+          showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้าง PDF สำหรับหมวดหมู่ ${category} ได้: ${(renderError as Error).message}`);
           continue;
         }
 
