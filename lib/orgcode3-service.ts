@@ -494,6 +494,55 @@ export class OrgCode3Service {
   }
 
   /**
+   * ตรวจสอบว่า Manager สามารถอนุมัติ requisition ของ User ได้หรือไม่ (ใช้ VS_DivisionMgr)
+   */
+  static async canManagerApproveRequisition(userId: string, managerUserId: string): Promise<boolean> {
+    try {
+      console.log("🔍 canManagerApproveRequisition called with userId:", userId, "managerUserId:", managerUserId)
+      
+      // 1) หา cost center ของ user ที่ส่งคำขอ
+      const userData = await prisma.$queryRaw<{ costcentercode: string | null }[]>`
+        SELECT costcentercode
+        FROM UserWithRoles
+        WHERE EmpCode = ${userId}
+      `
+      
+      if (!userData || userData.length === 0 || !userData[0].costcentercode) {
+        console.log("❌ User not found in UserWithRoles or no costcentercode")
+        // Fallback: ใช้ logic เดิม
+        return await this.canUserSubmitToManager(userId, managerUserId)
+      }
+      
+      const userCostCenter = userData[0].costcentercode
+      console.log("🔍 User cost center:", userCostCenter)
+      
+      // 2) ตรวจสอบว่า manager ดูแล cost center นี้หรือไม่
+      const managerCheck = await prisma.$queryRaw<{ L2: string }[]>`
+        SELECT L2
+        FROM VS_DivisionMgr
+        WHERE L2 = ${managerUserId}
+        AND CostCenter = ${userCostCenter}
+        AND CostCenter IS NOT NULL AND CostCenter <> ''
+      `
+      
+      console.log("🔍 Manager check result:", managerCheck)
+      
+      if (managerCheck && managerCheck.length > 0) {
+        console.log("✅ Manager can approve requisition")
+        return true
+      }
+      
+      // 3) Fallback: ใช้ logic เดิมถ้าไม่พบใน VS_DivisionMgr
+      console.log("⚠️ Manager not found in VS_DivisionMgr for this cost center, using fallback")
+      return await this.canUserSubmitToManager(userId, managerUserId)
+    } catch (error) {
+      console.error('Error checking manager approval permission:', error)
+      // Fallback: ใช้ logic เดิม
+      return await this.canUserSubmitToManager(userId, managerUserId)
+    }
+  }
+
+  /**
    * ดึงข้อมูลคำสั่งซื้อทั้งหมดจากแผนกเดียวกัน (SITE_ID เดียวกัน)
    */
   static async getAllRequisitionsForDepartment(userId: string): Promise<unknown[]> {

@@ -21,28 +21,24 @@ export async function POST(
     }
 
     const user = session.user as any
-    const userId = String(user.USER_ID) // แปลงเป็น string เพื่อให้แน่ใจ
+    // ใช้ EmpCode เป็นหลักเพื่อให้ตรงกับระบบที่ใช้ EmpCode ในทุกที่
+    const managerEmpCode = user.EmpCode || user.USER_ID || user.AdLoginName
     console.log("🔍 User data:", { 
       AdLoginName: user.AdLoginName, 
       USER_ID: user.USER_ID, 
       EmpCode: user.EmpCode,
       ROLE: user.ROLE,
-      userId 
+      managerEmpCode 
     })
 
-    // ตรวจสอบว่า user มีอยู่ใน USERS table หรือไม่
-    const userExists = await prisma.uSERS.findUnique({
-      where: { USER_ID: userId }
-    })
-    
-    if (!userExists) {
-      console.log("❌ User not found in USERS table:", userId)
-      return NextResponse.json({ error: "User not found in database" }, { status: 404 })
+    if (!managerEmpCode) {
+      console.log("❌ No EmpCode found in session")
+      return NextResponse.json({ error: "User identification not found" }, { status: 400 })
     }
 
-    // ตรวจสอบ Permission แทนการตรวจสอบ Role
-    console.log("🔍 Checking approval permission for userId:", userId)
-    const canApprove = await RoleManagementService.canApproveRequisition(userId)
+    // ตรวจสอบ Permission แทนการตรวจสอบ Role (ใช้ EmpCode)
+    console.log("🔍 Checking approval permission for managerEmpCode:", managerEmpCode)
+    const canApprove = await RoleManagementService.canApproveRequisition(managerEmpCode)
     console.log("🔍 Can approve result:", canApprove)
     if (!canApprove) {
       console.log("❌ Insufficient permissions to approve requisitions")
@@ -82,13 +78,13 @@ export async function POST(
       return NextResponse.json({ error: "Requisition already rejected" }, { status: 400 })
     }
     
-    // ตรวจสอบว่า Manager สามารถอนุมัติ requisition นี้ได้หรือไม่ (มี orgcode3 เดียวกัน)
+    // ตรวจสอบว่า Manager สามารถอนุมัติ requisition นี้ได้หรือไม่ (ใช้ VS_DivisionMgr)
     console.log("🔍 Checking if manager can approve this requisition")
-    console.log("🔍 Requisition USER_ID:", requisition.USER_ID, "Manager userId:", userId)
+    console.log("🔍 Requisition USER_ID:", requisition.USER_ID, "Manager EmpCode:", managerEmpCode)
     
-    const canApproveThisRequisition = await OrgCode3Service.canUserSubmitToManager(
-      requisition.USER_ID, // user ID จาก requisition
-      userId  // manager ID
+    const canApproveThisRequisition = await OrgCode3Service.canManagerApproveRequisition(
+      requisition.USER_ID, // user ID จาก requisition (EmpCode)
+      managerEmpCode  // manager EmpCode
     )
     
     console.log("🔍 Can approve this requisition result:", canApproveThisRequisition)
@@ -100,18 +96,18 @@ export async function POST(
 
     // ตรวจสอบ Permission เฉพาะสำหรับการ Reject
     if (action === "reject") {
-      const canReject = await RoleManagementService.hasPermission(userId, Permission.REJECT_REQUISITION)
+      const canReject = await RoleManagementService.hasPermission(managerEmpCode, Permission.REJECT_REQUISITION)
       if (!canReject) {
         return NextResponse.json({ error: "Insufficient permissions to reject requisitions" }, { status: 403 })
       }
     }
 
     // ใช้ ApprovalService เพื่อสร้างการอนุมัติ
-    console.log("🔍 Creating approval with data:", { action, note, requisitionId, userId })
+    console.log("🔍 Creating approval with data:", { action, note, requisitionId, managerEmpCode })
     
     const approvalData = {
       REQUISITION_ID: requisitionId,
-      APPROVED_BY: userId,
+      APPROVED_BY: managerEmpCode, // ใช้ EmpCode แทน USER_ID
       STATUS: action === "approve" ? "APPROVED" : "REJECTED" as "APPROVED" | "REJECTED",
       NOTE: note
     }
