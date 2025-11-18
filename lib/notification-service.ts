@@ -2649,7 +2649,7 @@ export class NotificationService {
           <div class="content">
             <div class="section">
               <h3>สินค้ามาถึงแล้ว</h3>
-              <p>สินค้าที่คุณสั่งซื้อมาถึงแล้ว กรุณามารับสินค้า</p>
+              <p>สินค้าที่คุณสั่งซื้อมาถึงแล้ว</p>
               <table class="info-table">
                 <tr>
                   <td>เลขที่คำขอ:</td>

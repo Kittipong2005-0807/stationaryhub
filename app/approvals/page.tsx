@@ -1322,7 +1322,7 @@ export default function ApprovalsPage() {
   const handleNotifyArrival = (requisition: Requisition) => {
     setSelectedRequisition(requisition);
     setNotifyMessage(
-      `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`
+      `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ส่งครบเรียบร้อยแล้ว`
     );
     setNotifyDialogOpen(true);
   };

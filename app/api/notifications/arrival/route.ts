@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     // สร้างข้อความอีเมล
     const emailSubject = `📦 สินค้ามาแล้ว - Requisition #${requisition.REQUISITION_ID}`
-    const emailMessage = message || `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`
+    const emailMessage = message || `สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ส่งครบเรียบร้อยแล้ว`
 
     // ส่งอีเมลจริง
     try {

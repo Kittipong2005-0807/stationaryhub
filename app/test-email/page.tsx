@@ -166,7 +166,7 @@ export default function TestEmailPage() {
         setSubject('สินค้ามาแล้ว - StationaryHub');
         setMessage(`เรียน ท่านผู้ใช้งาน
 
-สินค้าที่คุณขอเบิกได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า
+สินค้าส่งครบเรียบร้อยแล้ว
 
 รายละเอียดคำขอ:
 - เลขที่คำขอ: #REQ-${Date.now().toString().slice(-6)}

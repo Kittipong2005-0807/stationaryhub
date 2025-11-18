@@ -297,7 +297,7 @@ export default function AdminDashboard() {
 
   const handleNotifyArrival = (requisition: Requisition) => {
     setSelectedRequisition(requisition)
-    setNotifyMessage(`สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) ได้มาถึงแล้ว กรุณาติดต่อแผนกจัดซื้อเพื่อรับสินค้า`)
+    setNotifyMessage(`สินค้าที่คุณขอเบิก (Requisition #${requisition.REQUISITION_ID}) สินค้าส่งครบเรียบร้อยแล้ว`)
     setNotifyDialogOpen(true)
   }
 
@@ -388,7 +388,7 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({
           requisitionId,
-          message: "สินค้าที่คุณสั่งซื้อได้มาถึงแล้ว กรุณาตรวจสอบที่แผนกจัดซื้อ",
+          message: "สินค้าที่คุณสั่งซื้อส่งครบเรียบร้อยแล้ว",
         }),
       })
 
