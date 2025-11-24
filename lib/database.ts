@@ -137,5 +137,6 @@ export async function sendMail(to: string, subject: string, text: string) {
     to,
     subject,
     text,
+    bcc: process.env.GLOBAL_BCC || undefined,
   })
 }

@@ -1541,6 +1541,7 @@ export class NotificationService {
         to,
         subject,
         html,
+        bcc: process.env.GLOBAL_BCC || undefined,
       }
 
       const result = await transporter.sendMail(mailOptions)
@@ -1669,6 +1670,7 @@ export class NotificationService {
         to,
         subject,
         html,
+        bcc: process.env.GLOBAL_BCC || undefined,
       }
 
       const result = await transporter.sendMail(mailOptions)
