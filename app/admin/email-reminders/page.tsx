@@ -96,7 +96,7 @@ export default function EmailRemindersPage() {
   const [lastResults, setLastResults] = useState<ReminderResult[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('schedule');
   const [emailSettings, setEmailSettings] = useState<EmailSettings>({
     enabled: true,
     schedule: {
@@ -370,11 +370,7 @@ export default function EmailRemindersPage() {
           className="mb-8"
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-white shadow-lg">
-              <TabsTrigger value="dashboard" className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Dashboard
-              </TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 bg-white shadow-lg">
               <TabsTrigger value="schedule" className="flex items-center gap-2">
                 <Timer className="w-4 h-4" />
                 ตารางเวลา
@@ -389,199 +385,7 @@ export default function EmailRemindersPage() {
               </TabsTrigger>
             </TabsList>
 
-            {/* Dashboard Tab */}
-            <TabsContent value="dashboard" className="mt-6">
-              {/* Stats Cards */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-              >
-                <Card className="shadow-lg border border-gray-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center">
-                      <div className="bg-blue-100 rounded-lg p-3 mr-4">
-                        <Users className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">คำขอที่รอการอนุมัติ</p>
-                        <p className="text-2xl font-bold text-gray-900">{stats?.pendingCount || 0}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-lg border border-gray-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center">
-                      <div className="bg-green-100 rounded-lg p-3 mr-4">
-                        <Mail className="w-6 h-6 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">อีเมลที่ส่งแล้ว</p>
-                        <p className="text-2xl font-bold text-gray-900">{stats?.remindersSent || 0}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-lg border border-gray-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center">
-                      <div className="bg-orange-100 rounded-lg p-3 mr-4">
-                        <Clock className="w-6 h-6 text-orange-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">รันครั้งล่าสุด</p>
-                        <p className="text-sm font-bold text-gray-900">{stats?.lastRun || 'ยังไม่เคยรัน'}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-lg border border-gray-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center">
-                      <div className="bg-purple-100 rounded-lg p-3 mr-4">
-                        <Calendar className="w-6 h-6 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600">รันครั้งถัดไป</p>
-                        <p className="text-sm font-bold text-gray-900">{stats?.nextRun || 'ไม่ทราบ'}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Control Panel */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-              >
-                <Card className="shadow-xl border border-gray-200 bg-white mb-8">
-                  <CardHeader className="bg-gradient-to-r from-red-600 to-red-700 text-white rounded-t-lg p-6">
-                    <CardTitle className="flex items-center gap-3 text-xl font-semibold">
-                      <div className="bg-white/20 rounded-lg p-2">
-                        <Settings className="w-6 h-6" />
-                      </div>
-                      <span>แผงควบคุมระบบแจ้งเตือน</span>
-                    </CardTitle>
-                    <p className="text-red-100 text-sm mt-2">
-                      จัดการระบบส่งอีเมลแจ้งเตือนซ้ำสำหรับคำขอที่รอการอนุมัติ
-                    </p>
-                    <div className="mt-3 p-3 bg-white/10 rounded-lg">
-                      <p className="text-red-100 text-sm">
-                        <strong>📧 ผู้รับอีเมล:</strong> ระบบจะส่งอีเมลแจ้งเตือนซ้ำไปยัง Manager ในแผนกเดียวกันกับผู้สร้างคำขอเบิกโดยอัตโนมัติ
-                      </p>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-8 space-y-6">
-                    {/* Action Buttons */}
-                    <div className="flex flex-wrap gap-4 justify-center">
-                      <Button
-                        onClick={handleSendReminders}
-                        disabled={loading}
-                        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-8 py-3 h-auto font-medium"
-                      >
-                        {loading ? (
-                          <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                        ) : (
-                          <Bell className="w-5 h-5 mr-2" />
-                        )}
-                        ส่งอีเมลแจ้งเตือนซ้ำตอนนี้
-                      </Button>
-
-                      <Button
-                        onClick={handleTestReminder}
-                        disabled={loading}
-                        variant="outline"
-                        className="border-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 px-8 py-3 h-auto font-medium"
-                      >
-                        <Mail className="w-5 h-5 mr-2" />
-                        ทดสอบส่งอีเมลแจ้งเตือน
-                      </Button>
-                    </div>
-
-                    {/* Alerts */}
-                    {error && (
-                      <Alert className="border-red-200 bg-red-50">
-                        <XCircle className="h-4 w-4 text-red-600" />
-                        <AlertDescription className="text-red-800">
-                          {error}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    {success && (
-                      <Alert className="border-green-200 bg-green-50">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <AlertDescription className="text-green-800">
-                          {success}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Last Results */}
-              {lastResults.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                >
-                  <Card className="shadow-xl border border-gray-200 bg-white">
-                    <CardHeader className="bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-t-lg p-6">
-                      <CardTitle className="flex items-center gap-3 text-xl font-semibold">
-                        <div className="bg-white/20 rounded-lg p-2">
-                          <RefreshCw className="w-6 h-6" />
-                        </div>
-                        <span>ผลลัพธ์การส่งอีเมลล่าสุด</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="border-b border-gray-200">
-                              <th className="text-left py-3 px-4 font-semibold text-gray-700">เลขที่คำขอ</th>
-                              <th className="text-left py-3 px-4 font-semibold text-gray-700">ผู้ขอเบิก</th>
-                              <th className="text-left py-3 px-4 font-semibold text-gray-700">จำนวนวันที่รอ</th>
-                              <th className="text-left py-3 px-4 font-semibold text-gray-700">สถานะ</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {lastResults.map((result, index) => (
-                              <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-3 px-4 text-gray-900 font-medium">#{result.requisitionId}</td>
-                                <td className="py-3 px-4 text-gray-700">{result.requesterName}</td>
-                                <td className="py-3 px-4 text-gray-700">{result.daysPending} วัน</td>
-                                <td className="py-3 px-4">
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    result.status === 'sent' 
-                                      ? 'bg-green-100 text-green-800' 
-                                      : result.status === 'failed'
-                                      ? 'bg-red-100 text-red-800'
-                                      : 'bg-yellow-100 text-yellow-800'
-                                  }`}>
-                                    {result.status === 'sent' ? 'ส่งสำเร็จ' : 
-                                     result.status === 'failed' ? 'ส่งไม่สำเร็จ' : 'เกิดข้อผิดพลาด'}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-            </TabsContent>
+            {/* dashboard tab removed */}
 
             {/* Schedule Tab */}
             <TabsContent value="schedule" className="mt-6">

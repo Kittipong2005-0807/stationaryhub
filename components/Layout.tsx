@@ -318,7 +318,7 @@ export default function Layout({ children }: LayoutProps) {
 
     if (user?.ROLE === "MANAGER") {
       items.push(
-        { label: "Dashboard", path: "/manager", icon: Dashboard },
+        // Dashboard removed for Manager
         { label: "Approvals", path: "/approvals", icon: Assignment },
         { label: "Products", path: "/manager/products", icon: Inventory },
         { label: "Cart", path: "/manager/cart", icon: ShoppingCart, badge: cartItemCount > 0 ? cartItemCount : undefined },
@@ -328,7 +328,7 @@ export default function Layout({ children }: LayoutProps) {
 
     if (user?.ROLE === "ADMIN") {
       items.push(
-        { label: "Dashboard", path: "/admin", icon: Dashboard },
+        // Dashboard removed for Admin
         { label: "Products", path: "/admin/products-order", icon: Inventory },
         { label: "Cart", path: "/admin/cart", icon: ShoppingCart, badge: cartItemCount > 0 ? cartItemCount : undefined },
         { label: "Orders", path: "/admin/orders", icon: Assignment },

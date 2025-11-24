@@ -47,7 +47,8 @@ export default function HomePage() {
       return;
     }
     if (user?.ROLE === "MANAGER") {
-      router.replace(getBasePathUrl("/manager"));
+      // Redirect managers directly to Approvals after login
+      router.replace(getBasePathUrl("/approvals"));
       return;
     }
     if (user?.ROLE === "ADMIN") {
