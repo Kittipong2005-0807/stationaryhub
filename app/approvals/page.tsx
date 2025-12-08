@@ -52,12 +52,12 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getBasePathUrl } from '@/lib/base-path';
 import { getApiUrl } from '@/lib/api-utils';
+import ThaiDateUtils from '@/lib/date-utils';
+// Heavy libraries - consider dynamic import in future optimization
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-// เพิ่ม font ที่รองรับภาษาไทย
 import 'jspdf/dist/polyfills.es.js';
 import html2canvas from 'html2canvas';
-import ThaiDateUtils from '@/lib/date-utils';
 
 interface RequisitionItem {
   ITEM_ID: number;

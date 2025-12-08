@@ -35,11 +35,8 @@ export default function HomePage() {
   const categories: (string | undefined)[] = Array.from(new Set((products || []).map((p: Product) => p.CATEGORY_NAME).filter(Boolean)));
   
   
-  console.log("Test User : ", user)
-
   useEffect(() => {
     // useEffect: check auth and fetch products
-    console.log("HomePage user:", user);
     if (isAuthLoading) return;
     // Redirect if not authenticated or not USER role
     if (!isAuthenticated) {
@@ -52,7 +49,7 @@ export default function HomePage() {
       return;
     }
     if (user?.ROLE === "ADMIN") {
-      router.replace(getBasePathUrl("/admin"));
+      router.replace(getBasePathUrl("/admin/products-order"));
       return;
     }
     // Only fetch products if authenticated and USER role
@@ -60,7 +57,6 @@ export default function HomePage() {
       setLoading(true);
       apiGet("/api/products")
         .then((data) => {
-          console.log("API /stationaryhub/api/products data:", data);
           setProducts(data);
           setFilteredProducts(data);
           setLoading(false);
@@ -75,7 +71,7 @@ export default function HomePage() {
 
   // Filter and sort products
   useEffect(() => {
-    let filtered = products.filter(product => {
+    const filtered = products.filter(product => {
       const matchesSearch = product.PRODUCT_NAME.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            product.CATEGORY_NAME?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === "" || product.CATEGORY_NAME === selectedCategory;
@@ -114,8 +110,6 @@ export default function HomePage() {
   }
 
   // Debug log: echo filteredProducts and viewMode
-  console.log("filteredProducts:", filteredProducts);
-  console.log("viewMode:", viewMode);
 
   return (
     <div className="py-6 px-4 max-w-7xl mx-auto">

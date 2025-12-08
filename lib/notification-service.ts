@@ -2357,7 +2357,7 @@ export class NotificationService {
               '<p>กรุณาติดตามการจัดซื้อและจัดส่งสินค้า</p>'
             }
             <div style="text-align: center;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin" class="button">ดูรายการคำขอเบิก</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/orders" class="button">ดูรายการคำขอเบิก</a>
             </div>
           </div>
         `
@@ -2398,7 +2398,7 @@ export class NotificationService {
               </ul>
             </div>
             <div style="text-align: center;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin" class="button">จัดการคำขอเบิก</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/orders" class="button">จัดการคำขอเบิก</a>
             </div>
           </div>
         `

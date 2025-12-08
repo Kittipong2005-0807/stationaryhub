@@ -21,7 +21,12 @@ const nextConfig = {
   // Experimental features
   experimental: {
     // Fix CSS preload warning
-    optimizePackageImports: ['@/components'],
+    optimizePackageImports: [
+      '@/components',
+      '@mui/material',
+      '@mui/icons-material',
+      'framer-motion'
+    ],
     // เพิ่มการตั้งค่าเพื่อลด CSS preload warning
     optimizeCss: true
   },
@@ -61,14 +66,36 @@ const nextConfig = {
       };
     }
 
-    // เพิ่มการตั้งค่าเพื่อลด CSS preload warning
+    // เพิ่มการตั้งค่าเพื่อลด CSS preload warning และเพิ่ม performance
     if (!isServer) {
       config.optimization = {
         ...config.optimization,
         splitChunks: {
           ...config.optimization.splitChunks,
+          chunks: 'all',
           cacheGroups: {
             ...config.optimization.splitChunks.cacheGroups,
+            // Separate vendor chunks for better caching
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              priority: 10,
+              reuseExistingChunk: true,
+            },
+            // MUI separate chunk
+            mui: {
+              test: /[\\/]node_modules[\\/]@mui[\\/]/,
+              name: 'mui',
+              priority: 20,
+              reuseExistingChunk: true,
+            },
+            // Framer motion separate chunk
+            framer: {
+              test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+              name: 'framer-motion',
+              priority: 20,
+              reuseExistingChunk: true,
+            },
             styles: {
               name: 'styles',
               test: /\.(css|scss)$/,
@@ -85,7 +112,9 @@ const nextConfig = {
 
   // Compiler optimizations
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production'
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn']
+    } : false
   },
 
   // ESLint - ignore warnings during production build output
