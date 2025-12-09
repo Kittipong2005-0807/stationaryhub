@@ -53,11 +53,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getBasePathUrl } from '@/lib/base-path';
 import { getApiUrl } from '@/lib/api-utils';
 import ThaiDateUtils from '@/lib/date-utils';
-// Heavy libraries - consider dynamic import in future optimization
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import 'jspdf/dist/polyfills.es.js';
-import html2canvas from 'html2canvas';
 
 interface RequisitionItem {
   ITEM_ID: number;
@@ -115,788 +110,6 @@ const calculateSafeTotalPrice = (item: any) => {
 };
 
 export default function ApprovalsPage() {
-  // ฟังก์ชันสำหรับโหลดและฝัง font ภาษาไทย (Sarabun) เข้า jsPDF
-  const loadThaiFont = async (pdf: jsPDF): Promise<boolean> => {
-    try {
-      // ตรวจสอบว่า font ถูกฝังแล้วหรือยัง
-      const fontList = (pdf as any).internal?.getFontList?.();
-      if (fontList && fontList['THSarabunNew']) {
-        console.log('Thai font already loaded');
-        // ตรวจสอบว่า font ใช้งานได้จริง
-        try {
-          pdf.setFont('THSarabunNew', 'normal');
-          const testText = 'ทดสอบ';
-          pdf.text(testText, 10, 10);
-          console.log('Thai font verified and working');
-          return true;
-        } catch (testError) {
-          console.warn('Font exists but not working, reloading...', testError);
-        }
-      }
-
-      console.log('Loading Thai font from CDN...');
-      
-      // ใช้ THSarabunNew TTF จาก CDN ที่ใช้งานได้จริง
-      const fontUrls = [
-        'https://raw.githubusercontent.com/sarabun-webfont/sarabun-webfont/master/fonts/THSarabunNew.ttf',
-        'https://github.com/sarabun-webfont/sarabun-webfont/raw/master/fonts/THSarabunNew.ttf',
-        'https://cdn.jsdelivr.net/gh/sarabun-thai/sarabun@main/fonts/THSarabunNew.ttf'
-      ];
-      
-      for (const fontUrl of fontUrls) {
-        try {
-          console.log(`Trying to load font from: ${fontUrl}`);
-          const response = await fetch(fontUrl, {
-            method: 'GET',
-            mode: 'cors',
-            cache: 'no-cache'
-          });
-          
-          if (!response.ok) {
-            console.warn(`Font URL failed: ${response.status} ${response.statusText}`);
-            continue;
-          }
-          
-          const fontArrayBuffer = await response.arrayBuffer();
-          console.log(`Font loaded, size: ${fontArrayBuffer.byteLength} bytes`);
-          
-          if (fontArrayBuffer.byteLength < 1000) {
-            console.warn('Font file too small, likely invalid');
-            continue;
-          }
-          
-          const fontBytes = new Uint8Array(fontArrayBuffer);
-          
-          // แปลงเป็น base64 (ใช้วิธีที่รองรับขนาดใหญ่)
-          const chunks: string[] = [];
-          const chunkSize = 8192;
-          for (let i = 0; i < fontBytes.length; i += chunkSize) {
-            const chunk = fontBytes.subarray(i, i + chunkSize);
-            chunks.push(String.fromCharCode(...chunk));
-          }
-          const fontBase64 = btoa(chunks.join(''));
-          
-          console.log(`Font converted to base64, length: ${fontBase64.length}`);
-          
-          // ฝัง font เข้า jsPDF
-          try {
-            pdf.addFileToVFS('THSarabunNew.ttf', fontBase64);
-            pdf.addFont('THSarabunNew.ttf', 'THSarabunNew', 'normal');
-            pdf.addFont('THSarabunNew.ttf', 'THSarabunNew', 'bold');
-            
-            // ตรวจสอบว่า font ถูกฝังสำเร็จ
-            const newFontList = (pdf as any).internal?.getFontList?.();
-            if (newFontList && newFontList['THSarabunNew']) {
-              // ทดสอบว่า font ใช้งานได้จริง
-              pdf.setFont('THSarabunNew', 'normal');
-              console.log('Thai font loaded and registered successfully');
-              return true;
-            } else {
-              console.warn('Font registered but not found in font list');
-              continue;
-            }
-          } catch (addFontError) {
-            console.error('Error adding font to jsPDF:', addFontError);
-            continue;
-          }
-        } catch (fontLoadError) {
-          console.warn(`Failed to load font from ${fontUrl}:`, fontLoadError);
-          continue;
-        }
-      }
-      
-      console.error('Failed to load Thai font from all URLs');
-      return false;
-    } catch (error) {
-      console.error('Could not load Thai font:', error);
-      return false;
-    }
-  };
-
-  // ฟังก์ชันสำหรับจัดการ font ภาษาไทย
-  const setupThaiFont = async (pdf: jsPDF) => {
-    try {
-      // ตรวจสอบว่า PDF object ถูกต้อง
-      if (!pdf || typeof pdf !== 'object') {
-        console.error('Invalid PDF object provided to setupThaiFont');
-        return;
-      }
-
-      // ตรวจสอบว่า PDF object มี methods ที่จำเป็น
-      if (typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
-        console.error('PDF object is missing required methods');
-        return;
-      }
-
-      // ตรวจสอบว่า PDF object มี properties ที่จำเป็น
-      if (!pdf.internal || !pdf.internal.pageSize) {
-        console.error('PDF object is missing internal properties');
-        return;
-      }
-
-      // โหลดและฝัง font ภาษาไทย
-      const fontLoaded = await loadThaiFont(pdf);
-      
-      if (fontLoaded) {
-        // ใช้ font ภาษาไทย
-        pdf.setFont('THSarabunNew', 'normal');
-      } else {
-        // Fallback: ใช้ font มาตรฐาน
-        pdf.setFont('helvetica');
-      }
-      
-      // ตั้งค่า font size เริ่มต้น
-      pdf.setFontSize(10);
-      
-      // ตั้งค่า PDF properties
-      pdf.setProperties({
-        title: 'Supply Request Order',
-        subject: 'PDF Document',
-        author: 'Stationary Hub System',
-        creator: 'Stationary Hub System'
-      });
-      
-      console.log('Font setup completed');
-    } catch (error) {
-      console.warn('Could not set font, using default:', error);
-    }
-  };
-
-  // ฟังก์ชันสำหรับจัดการ font ใน autoTable (รองรับภาษาไทย)
-  const setupAutoTableThaiFont = (fontName: string = 'THSarabunNew') => {
-    try {
-      return {
-        font: fontName, // ใช้ font ไทยที่ฝังไว้
-        fontStyle: 'normal' as const,
-        fontSize: 9,
-        // เพิ่มการตั้งค่าสำหรับภาษาไทย
-        textColor: [0, 0, 0] as [number, number, number],
-        halign: 'left' as const,
-        valign: 'middle' as const,
-        cellPadding: 3,
-        overflow: 'linebreak' as const,
-        minCellHeight: 8,
-      };
-    } catch (error) {
-      console.error('Error in setupAutoTableThaiFont:', error);
-      return {
-        font: 'helvetica', // Fallback
-        fontStyle: 'normal' as const,
-        fontSize: 9,
-        textColor: [0, 0, 0] as [number, number, number],
-        halign: 'left' as const,
-        valign: 'middle' as const,
-        cellPadding: 3,
-        overflow: 'linebreak' as const,
-        minCellHeight: 8,
-      };
-    }
-  };
-
-
-  // Helper function: สร้าง HTML table สำหรับ PDF ที่รองรับภาษาไทย
-  const createHTMLTableForPDF = (
-    tableData: Array<Array<string | number>>,
-    headerRow: string[],
-    options: {
-      companyName: string;
-      companyAddress: string;
-      phone: string;
-      fax: string;
-      taxId: string;
-      deliveryDate?: string;
-      contactPerson?: string;
-      issueNote?: string;
-      costCenter?: string;
-      userInfo?: string;
-      department?: string;
-      date?: string;
-      requisitionId?: string;
-      category?: string;
-      totalAmount?: number;
-      itemCount?: number;
-      status?: string;
-    }
-  ): string => {
-    const {
-      companyName,
-      companyAddress,
-      phone,
-      fax,
-      taxId,
-      deliveryDate,
-      contactPerson,
-      issueNote,
-      costCenter,
-      userInfo,
-      department,
-      date,
-      requisitionId,
-      category,
-      totalAmount,
-      itemCount,
-      status
-    } = options;
-
-    const tableRowsHTML = tableData.map(row => {
-      const isHeaderRow = row.length >= 6 && row[1] === '' && row[2] === '' && row[3] === '' && row[4] === '' && row[5] === '';
-      
-      if (isHeaderRow) {
-        return `<tr style="background: #f8f9fa; page-break-inside: avoid; break-inside: avoid;">
-          <td colspan="6" style="padding: 8px; font-weight: bold; font-size: 11px; color: #333; border: 1px solid #ddd;">${row[0]}</td>
-        </tr>`;
-      }
-      
-      const cells = row.map((cell, index) => {
-        const align = index === 0 ? 'center' : index === 1 ? 'left' : index >= 4 ? 'right' : 'center';
-        return `<td style="padding: 8px; text-align: ${align}; font-size: 10px; border: 1px solid #ddd;">${cell}</td>`;
-      }).join('');
-      return `<tr style="page-break-inside: avoid; break-inside: avoid;">${cells}</tr>`;
-    }).join('');
-
-    // ใช้ inline style แทน @import เพื่อลดการโหลดซ้ำ (renderHTMLToPDF จะโหลด font แล้ว)
-    return `
-      <div style="font-family: 'Sarabun', 'Prompt', 'Sarabun New', 'TH Sarabun New', 'Arial Unicode MS', 'Arial', sans-serif; padding: 20px; background: white; font-size: 14px; line-height: 1.5;">
-        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
-          <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-family: 'Sarabun', sans-serif;">SUPPLY REQUEST ORDER</h1>
-        </div>
-        
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-          <div style="text-align: left;">
-            <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${companyName}</p>
-            <p style="margin: 0 0 2px 0; font-size: 10px;">${companyAddress}</p>
-            <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${phone} FAX: ${fax}</p>
-            <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${taxId}</p>
-          </div>
-          <div style="text-align: right;">
-            ${date ? `<p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${date}</p>` : ''}
-            ${requisitionId ? `<p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #${requisitionId}</p>` : ''}
-            ${category ? `<p style="margin: 0 0 2px 0; font-size: 10px;"><strong>หมวดหมู่:</strong> ${category}</p>` : ''}
-          </div>
-        </div>
-        
-        ${deliveryDate || contactPerson || issueNote ? `
-          <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-            ${deliveryDate ? `<h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
-            <p style="margin: 0 0 3px 0; font-size: 11px;">${deliveryDate}</p>` : ''}
-            ${issueNote ? `<p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ${issueNote}</p>` : ''}
-            ${contactPerson ? `<p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${contactPerson}</p>` : ''}
-          </div>
-        ` : ''}
-        
-        ${costCenter || userInfo || department ? `
-          <div style="margin-bottom: 15px; background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; font-weight: bold; font-size: 12px;">
-            <div style="font-size: 12px; color: #333; line-height: 1.4;">
-              ${costCenter ? `<strong>Cost Center:</strong> ${costCenter} | ` : ''}
-              ${userInfo ? `<strong>ผู้สั่ง:</strong> ${userInfo} | ` : ''}
-              ${department ? `<strong>แผนก:</strong> ${department}` : ''}
-            </div>
-          </div>
-        ` : ''}
-        
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
-          <thead>
-            <tr style="background: #e9ecef;">
-              ${headerRow.map(header => `<th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">${header}</th>`).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            ${tableRowsHTML}
-          </tbody>
-        </table>
-        
-        ${totalAmount !== undefined ? `
-          <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
-            <h3 style="margin: 0 0 5px 0; color: #1976d2; font-size: 12px;">สรุปยอดรวม</h3>
-            <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${formatNumberWithCommas(Number(totalAmount))}</div>
-            ${itemCount !== undefined ? `<p style="margin: 5px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนรายการ: ${itemCount} รายการ</p>` : ''}
-            ${status ? `<p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">สถานะ: ${status}</p>` : ''}
-            ${department ? `<p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">แผนก: ${department}</p>` : ''}
-          </div>
-        ` : ''}
-      </div>
-    `;
-  };
-
-  // Helper function: แปลง HTML เป็น PDF ด้วย html2canvas (รองรับภาษาไทย)
-  // Cache สำหรับ font links เพื่อไม่ให้โหลดซ้ำ
-  let fontLinksLoaded = false;
-  
-  const renderHTMLToPDF = async (
-    htmlContent: string,
-    pdf: jsPDF,
-    options: {
-      margin?: number;
-      pageWidth?: number;
-      pageHeight?: number;
-      scale?: number;
-    } = {}
-  ): Promise<void> => {
-    const { margin = 10, pageWidth = 210, pageHeight = 297, scale = 1.5 } = options;
-
-    if (typeof document === 'undefined' || typeof window === 'undefined') {
-      throw new Error('Cannot create PDF: not in browser environment');
-    }
-
-    let tempDiv: HTMLDivElement | null = null;
-    let fontLink: HTMLLinkElement | null = null;
-    try {
-      // โหลด font เพียงครั้งเดียว (cache)
-      if (!fontLinksLoaded) {
-        // Preload font ก่อน
-        const fontPreload = document.createElement('link');
-        fontPreload.rel = 'preconnect';
-        fontPreload.href = 'https://fonts.googleapis.com';
-        document.head.appendChild(fontPreload);
-        
-        const fontPreload2 = document.createElement('link');
-        fontPreload2.rel = 'preconnect';
-        fontPreload2.href = 'https://fonts.gstatic.com';
-        fontPreload2.crossOrigin = 'anonymous';
-        document.head.appendChild(fontPreload2);
-        
-        // เพิ่ม @font-face สำหรับ font ไทย (โหลดจาก Google Fonts)
-        fontLink = document.createElement('link');
-        fontLink.href = 'https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap';
-        fontLink.rel = 'stylesheet';
-        document.head.appendChild(fontLink);
-        
-        // รอให้ font โหลดจริงๆ (ใช้ document.fonts.ready)
-        if (document.fonts && document.fonts.ready) {
-          await document.fonts.ready;
-          await new Promise((resolve) => setTimeout(resolve, 300));
-        } else {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-        
-        fontLinksLoaded = true;
-      } else {
-        // Font ถูกโหลดแล้ว รอเพียงเล็กน้อยเพื่อให้แน่ใจว่า ready
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-
-      tempDiv = document.createElement('div');
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      tempDiv.style.top = '-9999px';
-      tempDiv.style.width = `${pageWidth}mm`;
-      tempDiv.style.padding = '20mm';
-      tempDiv.style.backgroundColor = 'white';
-      // ใช้ font ไทยที่แน่ใจว่าจะทำงาน
-      tempDiv.style.fontFamily = "'Sarabun', 'Prompt', 'Sarabun New', 'TH Sarabun New', 'Arial Unicode MS', 'Arial', sans-serif";
-      tempDiv.style.fontSize = '14px';
-      tempDiv.style.lineHeight = '1.5';
-      tempDiv.innerHTML = htmlContent;
-
-      if (document.body) {
-        document.body.appendChild(tempDiv);
-      } else {
-        throw new Error('document.body is not available');
-      }
-
-      // รอให้ font และ content render เสร็จ (เพิ่มเวลาเพื่อให้แน่ใจว่า font โหลดแล้ว)
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      const canvas = await html2canvas(tempDiv, {
-        scale,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        onclone: (clonedDoc) => {
-          // แน่ใจว่า font ถูก apply ใน cloned document
-          const clonedElement = clonedDoc.querySelector('div');
-          if (clonedElement) {
-            clonedElement.style.fontFamily = "'Sarabun', 'Prompt', 'Sarabun New', 'TH Sarabun New', 'Arial Unicode MS', 'Arial', sans-serif";
-          }
-        }
-      });
-
-      if (tempDiv && tempDiv.parentNode) {
-        document.body.removeChild(tempDiv);
-      }
-      
-      // ไม่ลบ font links เพราะจะใช้ซ้ำ (cache)
-
-      if (canvas.width === 0 || canvas.height === 0) {
-        throw new Error('ไม่สามารถสร้างภาพได้');
-      }
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.85);
-      const imgWidth = pageWidth - margin * 2;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      const usablePageHeight = pageHeight - margin - 20;
-
-      if (imgHeight > usablePageHeight) {
-        renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
-      } else {
-        pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
-        pdf.setFontSize(10);
-        pdf.text(`Page 1 of 1`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-      }
-    } finally {
-      if (tempDiv && tempDiv.parentNode) {
-        try {
-          document.body.removeChild(tempDiv);
-        } catch (cleanupError) {
-          console.warn('Error cleaning up tempDiv:', cleanupError);
-        }
-      }
-    }
-  };
-
-  // Helper function: สร้าง AutoTable config ที่ใช้ font ไทย
-  const getAutoTableConfigWithThai = (pdf: jsPDF, options: {
-    startY: number;
-    margin: { left: number; right: number; top: number; bottom: number };
-    pageWidth: number;
-    pageHeight: number;
-    columnWidths?: { [key: number]: { halign?: string; cellWidth?: number } };
-    fontName?: string;
-  }) => {
-    const { startY, margin, pageWidth, pageHeight, columnWidths, fontName = 'THSarabunNew' } = options;
-    const defaultColumnStyles = {
-      0: { halign: 'center', cellWidth: 20 },
-      1: { halign: 'left', cellWidth: 60 },
-      2: { halign: 'center', cellWidth: 15 },
-      3: { halign: 'center', cellWidth: 15 },
-      4: { halign: 'right', cellWidth: 25 },
-      5: { halign: 'right', cellWidth: 25 },
-    };
-
-    return {
-      startY,
-      margin,
-      styles: {
-        ...setupAutoTableThaiFont(fontName),
-      },
-      headStyles: {
-        fillColor: [233, 236, 239],
-        textColor: [0, 0, 0],
-        fontStyle: 'bold' as const,
-        halign: 'center',
-        font: fontName,
-        fontSize: 9,
-        cellPadding: 3,
-        overflow: 'linebreak',
-        minCellHeight: 8,
-        valign: 'middle',
-      },
-      alternateRowStyles: {
-        fillColor: [248, 249, 250],
-      },
-      columnStyles: columnWidths || defaultColumnStyles,
-      showHead: 'everyPage' as const,
-      tableWidth: 'wrap' as const,
-      pageBreak: 'avoid' as const,
-      rowPageBreak: 'avoid' as const,
-      didParseCell: (data: any) => {
-        const rowData = data.row?.raw;
-        if (rowData && rowData[1] === '' && rowData[2] === '' && rowData[3] === '' && rowData[4] === '' && rowData[5] === '') {
-          // Category/User header row
-          data.cell.styles.fillColor = [240, 240, 240];
-          data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fontSize = 10;
-          data.cell.styles.halign = 'left';
-          data.cell.styles.valign = 'middle';
-          data.cell.styles.cellPadding = { top: 4, right: 3, bottom: 4, left: 6 };
-          data.cell.styles.pageBreak = 'avoid' as const;
-          data.cell.styles.font = fontName;
-        } else {
-          data.cell.styles.pageBreak = 'avoid' as const;
-          data.cell.styles.minCellHeight = 8;
-          data.cell.styles.font = fontName;
-        }
-      },
-      didDrawPage: (data: any) => {
-        const pageCount = pdf.getNumberOfPages();
-        pdf.setFont(fontName);
-        pdf.setFontSize(10);
-        pdf.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-      },
-      willDrawCell: (data: any) => {
-        const remainingHeight = pdf.internal.pageSize.height - data.cursor.y;
-        const rowHeight = 12;
-        if (remainingHeight < rowHeight && data.row.index > 0) {
-          pdf.addPage();
-          data.cursor.y = 20;
-        }
-      }
-    };
-  };
-
-  // Helper to create PDF with AutoTable (รองรับภาษาไทย) หรือ html2canvas (fallback)
-  const createPDFWithAutoTable = async (requisitions: any[], editFormData: any) => {
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const margin = 10;
-    const pageWidth = 210;
-    const pageHeight = 297;
-    const contentWidth = pageWidth - (margin * 2);
-
-    if (typeof document === 'undefined' || typeof window === 'undefined') {
-      throw new Error('Cannot create PDF: not in browser environment');
-    }
-
-    // โหลดและฝัง font ภาษาไทย (setupThaiFont เรียก loadThaiFont อยู่แล้ว)
-    console.log('Setting up Thai font...');
-    await setupThaiFont(pdf);
-    
-    // ตรวจสอบว่า font ใช้งานได้จริง
-    const fontList = (pdf as any).internal?.getFontList?.();
-    const fontLoaded = fontList && fontList['THSarabunNew'];
-    let fontWorks = false;
-    
-    if (fontLoaded) {
-      try {
-        pdf.setFont('THSarabunNew', 'normal');
-        pdf.setFontSize(10);
-        // ทดสอบเขียนข้อความไทย
-        pdf.text('ทดสอบ', 10, 10);
-        fontWorks = true;
-        console.log('Thai font verified and working');
-      } catch (testError) {
-        console.warn('Thai font test failed:', testError);
-        fontWorks = false;
-      }
-    }
-    
-    const useHtml2Canvas = !fontLoaded || !fontWorks;
-    
-    if (useHtml2Canvas) {
-      console.log('Using html2canvas fallback for Thai language support');
-      // ใช้ html2canvas แทน AutoTable (รองรับภาษาไทยแน่นอน)
-      for (let i = 0; i < requisitions.length; i++) {
-        const requisition = requisitions[i];
-        
-        if (i > 0) {
-          pdf.addPage();
-        }
-        
-        // เตรียมข้อมูลตาราง
-        const tableData: Array<Array<string | number>> = [];
-        const groupedItems = requisition.REQUISITION_ITEMS.reduce((acc: any, item: any) => {
-          const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
-          if (!acc[category]) {
-            acc[category] = [];
-          }
-          acc[category].push(item);
-          return acc;
-        }, {});
-        
-        Object.entries(groupedItems).forEach(([category, items]: [string, any]) => {
-          tableData.push([category, '', '', '', '', '']);
-          items.forEach((item: any) => {
-            tableData.push([
-              (item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A',
-              item.PRODUCT_NAME || 'Unknown Product',
-              item.QUANTITY,
-              item.ORDER_UNIT || 'ชิ้น',
-              `฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}`,
-              `฿${calculateSafeTotalPrice(item)}`
-            ]);
-          });
-        });
-        
-        // สร้าง HTML content (รองรับภาษาไทย)
-        const htmlContent = createHTMLTableForPDF(
-          tableData,
-          ['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total'],
-          {
-            companyName: editFormData.companyName,
-            companyAddress: editFormData.companyAddress,
-            phone: editFormData.phone,
-            fax: editFormData.fax,
-            taxId: editFormData.taxId,
-            deliveryDate: editFormData.deliveryDate,
-            contactPerson: editFormData.contactPerson,
-            issueNote: requisition.ISSUE_NOTE,
-            costCenter: requisition.SITE_ID,
-            userInfo: `${requisition.USER_ID}`,
-            department: requisition.DEPARTMENT || 'N/A',
-            date: formatDate(requisition.SUBMITTED_AT),
-            requisitionId: requisition.REQUISITION_ID.toString(),
-            totalAmount: requisition.TOTAL_AMOUNT,
-            itemCount: requisition.REQUISITION_ITEMS.length,
-            status: requisition.STATUS
-          }
-        );
-        
-        // แปลง HTML เป็น PDF (รองรับภาษาไทย)
-        try {
-          await renderHTMLToPDF(htmlContent, pdf, {
-            margin,
-            pageWidth,
-            pageHeight,
-            scale: 1.5
-          });
-        } catch (renderError) {
-          console.error('Error rendering HTML to PDF:', renderError);
-          showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (renderError as Error).message);
-          throw renderError;
-        }
-      }
-    } else {
-      console.log('Using AutoTable with Thai font');
-      // ใช้ AutoTable พร้อม font ไทย
-      const fontName = 'THSarabunNew';
-      let isFirstPage = true;
-      
-      for (let i = 0; i < requisitions.length; i++) {
-        const requisition = requisitions[i];
-        
-        if (!isFirstPage) {
-          pdf.addPage();
-        }
-        isFirstPage = false;
-        
-        // วาด header (เฉพาะหน้าแรก)
-        if (i === 0) {
-          pdf.setFont(fontName, 'bold');
-          pdf.setFontSize(20);
-          pdf.text('SUPPLY REQUEST ORDER', pageWidth / 2, 20, { align: 'center' });
-          
-          pdf.setFont(fontName, 'normal');
-          pdf.setFontSize(9);
-          pdf.text(editFormData.companyName, margin, 30);
-          pdf.text(editFormData.companyAddress, margin, 35);
-          pdf.text(`TEL: ${editFormData.phone} FAX: ${editFormData.fax}`, margin, 40);
-          pdf.text(`เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}`, margin, 45);
-          
-          pdf.text(`Date: ${formatDate(requisition.SUBMITTED_AT)}`, contentWidth + margin - 50, 30);
-          pdf.text(`Requisition ID: #${requisition.REQUISITION_ID}`, contentWidth + margin - 50, 35);
-          
-          pdf.setFontSize(10);
-          pdf.setFont(fontName, 'bold');
-          pdf.text('Please Delivery on:', margin, 55);
-          pdf.setFont(fontName, 'normal');
-          pdf.text(editFormData.deliveryDate || '_________________', margin, 60);
-          pdf.text(`หมายเหตุ: ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}`, margin, 65);
-          pdf.text(`ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ: ${editFormData.contactPerson || 'N/A'}`, margin, 70);
-        }
-        
-        // วาด Cost Center info
-        pdf.setFontSize(10);
-        pdf.setFont(fontName, 'bold');
-        pdf.text(
-          `Cost Center: ${requisition.SITE_ID} | ผู้สั่ง: ${requisition.USER_ID} | แผนก: ${requisition.DEPARTMENT || 'N/A'}`,
-          margin,
-          i === 0 ? 80 : 20
-        );
-        
-        // เตรียมข้อมูลตาราง
-        const tableData: Array<Array<string | number>> = [];
-        const groupedItems = requisition.REQUISITION_ITEMS.reduce((acc: any, item: any) => {
-          const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
-          if (!acc[category]) {
-            acc[category] = [];
-          }
-          acc[category].push(item);
-          return acc;
-        }, {});
-        
-        Object.entries(groupedItems).forEach(([category, items]: [string, any]) => {
-          tableData.push([category, '', '', '', '', '']);
-          items.forEach((item: any) => {
-            tableData.push([
-              (item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A',
-              item.PRODUCT_NAME || 'Unknown Product',
-              item.QUANTITY,
-              item.ORDER_UNIT || 'ชิ้น',
-              `฿${formatNumberWithCommas(Number(item.UNIT_PRICE))}`,
-              `฿${calculateSafeTotalPrice(item)}`
-            ]);
-          });
-        });
-        
-        // สร้างตารางด้วย AutoTable (รองรับภาษาไทย)
-        try {
-          autoTable(pdf, {
-            head: [['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total']],
-            body: tableData,
-            ...getAutoTableConfigWithThai(pdf, {
-              startY: i === 0 ? 90 : 30,
-              margin: { left: margin, right: margin, top: 10, bottom: 20 },
-              pageWidth,
-              pageHeight,
-              fontName
-            }) as any
-          });
-        } catch (autoTableError) {
-          console.error('Error creating autoTable:', autoTableError);
-          showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างตารางได้: ' + (autoTableError as Error).message);
-          throw autoTableError;
-        }
-      }
-    }
-    
-    return pdf;
-  };
-
-  // Helper to render a canvas image into the PDF with consistent margins and page breaks
-  const renderImageWithMargins = (
-    pdfInstance: jsPDF,
-    imageData: string,
-    canvasWidth: number,
-    canvasHeight: number,
-  ) => {
-    const margin = 10;
-    const bottomMargin = 15;
-    const pageW = 210;
-    const pageH = 297;
-    const innerW = pageW - margin * 2;
-    const usableH = pageH - margin - bottomMargin;
-    const pageOverlap = 15; // increased overlap to prevent clipping at page breaks
-    const calculatedImageHeight = (canvasHeight * innerW) / canvasWidth;
-
-    const drawFrame = () => {
-      pdfInstance.setFillColor(255, 255, 255);
-      pdfInstance.rect(0, 0, pageW, margin, 'F');
-      pdfInstance.rect(0, pageH - bottomMargin, pageW, bottomMargin, 'F');
-      pdfInstance.rect(0, 0, margin, pageH, 'F');
-      pdfInstance.rect(pageW - margin, 0, margin, pageH, 'F');
-    };
-
-    if (calculatedImageHeight <= usableH) {
-      pdfInstance.addImage(imageData, 'PNG', margin, margin, innerW, calculatedImageHeight);
-      drawFrame();
-      pdfInstance.setFontSize(10);
-      pdfInstance.setTextColor(102, 102, 102);
-      pdfInstance.text(`Page 1 of 1`, 105, pageH - bottomMargin / 2, { align: 'center' });
-      return;
-    }
-
-    let currentPage = 1;
-    let offsetY = 0;
-    const step = Math.max(1, usableH - pageOverlap);
-    const totalPages = Math.ceil(Math.max(0, calculatedImageHeight - pageOverlap) / step);
-    while (offsetY < calculatedImageHeight - pageOverlap) {
-      if (currentPage > 1) {
-        pdfInstance.addPage();
-      }
-      pdfInstance.addImage(imageData, 'PNG', margin, margin - offsetY, innerW, calculatedImageHeight);
-      drawFrame();
-      pdfInstance.setFontSize(10);
-      pdfInstance.setTextColor(102, 102, 102);
-      pdfInstance.text(`Page ${currentPage} of ${totalPages}`, 105, pageH - bottomMargin / 2, { align: 'center' });
-      if (currentPage === totalPages) {
-        pdfInstance.setFontSize(8);
-        pdfInstance.setTextColor(102, 102, 102);
-        pdfInstance.text('Document created by StationaryHub System', 105, pageH - bottomMargin - 2, { align: 'center' });
-        pdfInstance.text(`Created: ${(() => {
-          const now = new Date();
-          const thaiMonthsShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-          const dateNum = now.getDate().toString().padStart(2, '0');
-          const month = thaiMonthsShort[now.getMonth()];
-          const year = (now.getFullYear() + 543).toString().slice(-4);
-          const hours = now.getHours().toString().padStart(2, '0');
-          const minutes = now.getMinutes().toString().padStart(2, '0');
-          return `${dateNum} ${month} ${year} ${hours}:${minutes}`;
-        })()}`, 105, pageH - bottomMargin - 7, { align: 'center' });
-      }
-      offsetY += step;
-      currentPage++;
-    }
-  };
   const { showSuccess, showError, showWarning, showInfo } = useModal();
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -918,7 +131,8 @@ export default function ApprovalsPage() {
     contactPerson: '',
     category: '',
     companyName: 'บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)',
-    companyAddress: '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
+    companyAddress:
+      '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
     fax: '(038) 623433',
     phone: '(038) 623126',
     taxId: '0215542000264',
@@ -930,7 +144,8 @@ export default function ApprovalsPage() {
     contactPerson: '',
     category: '',
     companyName: 'บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)',
-    companyAddress: '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
+    companyAddress:
+      '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
     fax: '(038) 623433',
     phone: '(038) 623126',
     taxId: '0215542000264',
@@ -941,11 +156,18 @@ export default function ApprovalsPage() {
   const [editingItems, setEditingItems] = useState<RequisitionItem[]>([]);
   const [savingItems, setSavingItems] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedYear, setSelectedYear] = useState<string>(
+    new Date().getFullYear().toString()
+  );
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
   const [notifyMessage, setNotifyMessage] = useState('');
   const [notifying, setNotifying] = useState(false);
-  
+  const [progressDialogOpen, setProgressDialogOpen] = useState(false);
+  const [progressMessage, setProgressMessage] = useState('');
+  const [currentProgress, setCurrentProgress] = useState(0);
+  const [totalProgress, setTotalProgress] = useState(0);
+  const [progressCompleted, setProgressCompleted] = useState(false);
+
   const router = useRouter();
   const { data: session } = useSession();
   const user = session?.user as unknown as {
@@ -999,7 +221,10 @@ export default function ApprovalsPage() {
         })
         .catch((error) => {
           console.error('Error fetching all requisitions for admin:', error);
-          showError('เกิดข้อผิดพลาด', 'โหลดข้อมูล requisitions ไม่สำเร็จ: ' + error.message);
+          showError(
+            'เกิดข้อผิดพลาด',
+            'โหลดข้อมูล requisitions ไม่สำเร็จ: ' + error.message
+          );
           setRequisitions([]);
           setLoading(false);
         });
@@ -1050,13 +275,16 @@ export default function ApprovalsPage() {
 
   const handleSubmitAction = async () => {
     if (!selectedRequisition) return;
-    
+
     // Check if rejection note is required for reject action
     if (actionType === 'reject' && (!note || note.trim() === '')) {
-      showWarning('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเหตุผลในการปฏิเสธ (Rejection Note)');
+      showWarning(
+        'ข้อมูลไม่ครบถ้วน',
+        'กรุณากรอกเหตุผลในการปฏิเสธ (Rejection Note)'
+      );
       return;
     }
-    
+
     setSubmitting(true);
     // console.log("selectedRequisition", selectedRequisition);
     try {
@@ -1109,14 +337,23 @@ export default function ApprovalsPage() {
           }
         }
         setDialogOpen(false);
-        
+
         // Show Success Modal
-        showSuccess('Success!', `Requisition ${actionType === 'approve' ? 'ได้รับการอนุมัติ' : 'ถูกปฏิเสธ'} เรียบร้อยแล้ว`);
+        showSuccess(
+          'Success!',
+          `Requisition ${actionType === 'approve' ? 'ได้รับการอนุมัติ' : 'ถูกปฏิเสธ'} เรียบร้อยแล้ว`
+        );
       } else {
-        showError('เกิดข้อผิดพลาด', 'ไม่สามารถอัปเดต requisition ได้ กรุณาลองใหม่อีกครั้ง');
+        showError(
+          'เกิดข้อผิดพลาด',
+          'ไม่สามารถอัปเดต requisition ได้ กรุณาลองใหม่อีกครั้ง'
+        );
       }
     } catch {
-      showError('เกิดข้อผิดพลาด', 'ไม่สามารถอัปเดต requisition ได้ กรุณาลองใหม่อีกครั้ง');
+      showError(
+        'เกิดข้อผิดพลาด',
+        'ไม่สามารถอัปเดต requisition ได้ กรุณาลองใหม่อีกครั้ง'
+      );
     } finally {
       setSubmitting(false);
     }
@@ -1316,8 +553,6 @@ export default function ApprovalsPage() {
     document.body.removeChild(link);
   };
 
-
-
   // เพิ่มฟังก์ชันสำหรับแจ้งเตือนว่าสินค้ามาแล้ว
   const handleNotifyArrival = (requisition: Requisition) => {
     setSelectedRequisition(requisition);
@@ -1346,15 +581,18 @@ export default function ApprovalsPage() {
 
       if (response.ok) {
         // อัปเดตสถานะเป็น CLOSED หลังจากส่งแจ้งเตือนสำเร็จ
-        setRequisitions(prevRequisitions => 
-          prevRequisitions.map(req => 
-            req.REQUISITION_ID === selectedRequisition.REQUISITION_ID 
+        setRequisitions((prevRequisitions) =>
+          prevRequisitions.map((req) =>
+            req.REQUISITION_ID === selectedRequisition.REQUISITION_ID
               ? { ...req, STATUS: 'CLOSED' }
               : req
           )
         );
-        
-        showSuccess('ส่งการแจ้งเตือนสำเร็จ!', 'สินค้ามาแล้วและสถานะถูกเปลี่ยนเป็น Closed');
+
+        showSuccess(
+          'ส่งการแจ้งเตือนสำเร็จ!',
+          'สินค้ามาแล้วและสถานะถูกเปลี่ยนเป็น Closed'
+        );
         setNotifyDialogOpen(false);
         setNotifyMessage('');
         setSelectedRequisition(null);
@@ -1385,7 +623,8 @@ export default function ApprovalsPage() {
       contactPerson: '',
       category: '',
       companyName: 'บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)',
-      companyAddress: '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
+      companyAddress:
+        '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
       fax: '(038) 623433',
       phone: '(038) 623126',
       taxId: '0215542000264',
@@ -1407,13 +646,15 @@ export default function ApprovalsPage() {
       const response = await fetch(
         getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`)
       );
-      
+
       if (response.ok) {
         const items = await response.json();
         // คำนวณ TOTAL_PRICE สำหรับรายการที่ไม่มี
         const itemsWithCalculatedTotal = items.map((item: any) => ({
           ...item,
-          TOTAL_PRICE: item.TOTAL_PRICE || (Number(item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0))
+          TOTAL_PRICE:
+            item.TOTAL_PRICE ||
+            Number(item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0)
         }));
         setEditingItems(itemsWithCalculatedTotal);
         setEditItemsDialogOpen(true);
@@ -1429,12 +670,17 @@ export default function ApprovalsPage() {
   };
 
   // helper: บันทึกรายการด้วยชุด items ที่กำหนด (ใช้สำหรับ autosave ตอนลบ)
-  const saveEditedItems = async (itemsToSave: RequisitionItem[], silent = false) => {
+  const saveEditedItems = async (
+    itemsToSave: RequisitionItem[],
+    silent = false
+  ) => {
     if (!editingRequisition) return;
     try {
       if (!silent) setSavingItems(true);
       const response = await fetch(
-        getApiUrl(`/api/requisitions/${editingRequisition.REQUISITION_ID}/items`),
+        getApiUrl(
+          `/api/requisitions/${editingRequisition.REQUISITION_ID}/items`
+        ),
         {
           method: 'PUT',
           headers: {
@@ -1444,12 +690,17 @@ export default function ApprovalsPage() {
         }
       );
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to update items' }));
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: 'Failed to update items' }));
         throw new Error(errorData.error || 'Failed to update items');
       }
       const result = await response.json();
       if (!silent) {
-        showSuccess('บันทึกสำเร็จ!', `ยอดรวมใหม่: ฿${result.totalAmount.toFixed(2)}`);
+        showSuccess(
+          'บันทึกสำเร็จ!',
+          `ยอดรวมใหม่: ฿${result.totalAmount.toFixed(2)}`
+        );
         setEditItemsDialogOpen(false);
         await handleRefresh();
       }
@@ -1480,12 +731,12 @@ export default function ApprovalsPage() {
   // เพิ่มฟังก์ชันสำหรับอัปเดตจำนวนสินค้า
   const handleUpdateItemQuantity = (itemId: number, quantity: number) => {
     if (quantity < 0) return;
-    
-    setEditingItems(prev => 
-      prev.map(item => 
-        item.ITEM_ID === itemId 
-          ? { 
-              ...item, 
+
+    setEditingItems((prev) =>
+      prev.map((item) =>
+        item.ITEM_ID === itemId
+          ? {
+              ...item,
               QUANTITY: quantity,
               TOTAL_PRICE: quantity * (item.UNIT_PRICE || 0)
             }
@@ -1497,12 +748,12 @@ export default function ApprovalsPage() {
   // เพิ่มฟังก์ชันสำหรับอัปเดตราคาต่อหน่วย
   const handleUpdateItemPrice = (itemId: number, unitPrice: number) => {
     if (unitPrice < 0) return;
-    
-    setEditingItems(prev => 
-      prev.map(item => 
-        item.ITEM_ID === itemId 
-          ? { 
-              ...item, 
+
+    setEditingItems((prev) =>
+      prev.map((item) =>
+        item.ITEM_ID === itemId
+          ? {
+              ...item,
               UNIT_PRICE: unitPrice,
               TOTAL_PRICE: item.QUANTITY * unitPrice
             }
@@ -1513,8 +764,8 @@ export default function ApprovalsPage() {
 
   // เพิ่มฟังก์ชันสำหรับอัปเดตหน่วยสินค้า
   const handleUpdateItemUnit = (itemId: number, unit: string) => {
-    setEditingItems(prev =>
-      prev.map(item =>
+    setEditingItems((prev) =>
+      prev.map((item) =>
         item.ITEM_ID === itemId
           ? {
               ...item,
@@ -1527,338 +778,537 @@ export default function ApprovalsPage() {
 
   // เพิ่มฟังก์ชันสำหรับลบรายการสินค้า (ลบแล้ว autosave ไปที่เซิร์ฟเวอร์ทันที)
   const handleRemoveItem = (itemId: number) => {
-    const itemToRemove = editingItems.find(item => item.ITEM_ID === itemId);
+    const itemToRemove = editingItems.find((item) => item.ITEM_ID === itemId);
     if (!itemToRemove) return;
-    if (!window.confirm(`คุณต้องการลบรายการ "${itemToRemove.PRODUCT_NAME || 'Unknown Product'}" หรือไม่?`)) return;
+    if (
+      !window.confirm(
+        `คุณต้องการลบรายการ "${itemToRemove.PRODUCT_NAME || 'Unknown Product'}" หรือไม่?`
+      )
+    )
+      return;
 
-    setEditingItems(prev => {
-      const updated = prev.filter(item => item.ITEM_ID !== itemId);
+    setEditingItems((prev) => {
+      const updated = prev.filter((item) => item.ITEM_ID !== itemId);
       void saveEditedItems(updated, true);
       return updated;
     });
   };
 
   // ฟังก์ชันคำนวณยอดรวมที่ปลอดภัย
-  const calculateTotalAmount = (items: RequisitionItem[] | undefined | null): number => {
+  const calculateTotalAmount = (
+    items: RequisitionItem[] | undefined | null
+  ): number => {
     if (!items || !Array.isArray(items)) return 0;
     return items.reduce((sum, item) => {
       // ใช้ TOTAL_PRICE ถ้ามี หรือคำนวณจาก QUANTITY * UNIT_PRICE
-      const totalPrice = Number(item.TOTAL_PRICE) || (Number(item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0));
+      const totalPrice =
+        Number(item.TOTAL_PRICE) ||
+        Number(item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0);
       return sum + totalPrice;
     }, 0);
   };
 
-
-  // ฟังก์ชันสร้าง PDF ทั้งหมดทุกรายการ (เก่า - ไม่ใช้แล้ว)
-  const _generateAllPDFs = async () => {
-    console.log('Starting bulk PDF generation...', {
-      filteredRequisitionsCount: filteredRequisitions.length,
-      selectedYear,
-      selectedMonth,
-      activeFilter,
-      requisitionsCount: requisitions.length,
-      filteredRequisitions: filteredRequisitions.map(r => ({
-        id: r.REQUISITION_ID,
-        status: r.STATUS,
-        submittedAt: r.SUBMITTED_AT,
-        itemsCount: r.REQUISITION_ITEMS?.length || 0,
-        hasItems: !!(r.REQUISITION_ITEMS && r.REQUISITION_ITEMS.length > 0),
-        totalAmount: r.TOTAL_AMOUNT
-      }))
-    });
-
-    if (filteredRequisitions.length === 0) {
-      showInfo('ไม่มีข้อมูล', `ไม่มีข้อมูลให้สร้าง PDF\n- จำนวน requisitions ทั้งหมด: ${requisitions.length}\n- จำนวนที่ผ่าน filter: ${filteredRequisitions.length}\n- ปีที่เลือก: ${selectedYear}\n- เดือนที่เลือก: ${selectedMonth || 'ไม่เลือก'}\n- Filter: ${activeFilter}`);
-      return;
-    }
-
-    try {
-      // สร้าง PDF หลักด้วย autoTable
-      const pdf = await createPDFWithAutoTable(filteredRequisitions, editFormData);
-      // PDF created with autoTable - no need for html2canvas processing
-
-      // Save the PDF
-      const fileName = `Supply_Request_Order_${new Date().toISOString().split('T')[0]}.pdf`;
-      pdf.save(fileName);
-      
-      showSuccess('สร้าง PDF สำเร็จ', `สร้าง PDF เรียบร้อยแล้ว\nไฟล์: ${fileName}\nจำนวน requisitions: ${filteredRequisitions.length}`);
-          } catch (error) {
-      console.error('Error generating PDF:', error);
-      showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
-    }
-  };
-
-  // เพิ่มฟังก์ชันสร้าง PDF แบบแยกตามหมวดหมู่
+  // ฟังก์ชันสร้าง PDF ทั้งหมดในหน้าต่างเดียว
   const generateAllPDFsByCategory = async () => {
-    console.log('Starting bulk PDF generation by category...', {
-      filteredRequisitionsCount: filteredRequisitions.length,
-      selectedYear,
-      selectedMonth,
-      activeFilter,
-      requisitionsCount: requisitions.length,
-      filteredRequisitions: filteredRequisitions.map(r => ({
-        id: r.REQUISITION_ID,
-        status: r.STATUS,
-        submittedAt: r.SUBMITTED_AT,
-        itemsCount: r.REQUISITION_ITEMS?.length || 0,
-        hasItems: !!(r.REQUISITION_ITEMS && r.REQUISITION_ITEMS.length > 0),
-        totalAmount: r.TOTAL_AMOUNT
-      }))
-    });
-
     if (filteredRequisitions.length === 0) {
-      showInfo('ไม่มีข้อมูล', `ไม่มีข้อมูลให้สร้าง PDF\n- จำนวน requisitions ทั้งหมด: ${requisitions.length}\n- จำนวนที่ผ่าน filter: ${filteredRequisitions.length}\n- ปีที่เลือก: ${selectedYear}\n- เดือนที่เลือก: ${selectedMonth || 'ไม่เลือก'}\n- Filter: ${activeFilter}`);
+      showInfo(
+        'ไม่มีข้อมูล',
+        `ไม่มีข้อมูลให้พิมพ์\n- จำนวน requisitions ทั้งหมด: ${requisitions.length}\n- จำนวนที่ผ่าน filter: ${filteredRequisitions.length}\n- ปีที่เลือก: ${selectedYear}\n- เดือนที่เลือก: ${selectedMonth || 'ไม่เลือก'}\n- Filter: ${activeFilter}`
+      );
       return;
     }
 
-    try {
-      // รวบรวมข้อมูลทั้งหมดและจัดกลุ่มตามหมวดหมู่เท่านั้น
-      const allItemsByCategory: Record<string, Array<{requisition: Requisition, item: RequisitionItem}>> = {};
-      const categoryTotals: Record<string, number> = {};
+    // เปิด progress dialog
+    setProgressDialogOpen(true);
+    setProgressCompleted(false);
+    setProgressMessage('กำลังรวบรวมข้อมูล...');
+    setCurrentProgress(0);
+    setTotalProgress(0);
 
-      // วนลูปผ่านทุก requisition และจัดกลุ่มตามหมวดหมู่
+    try {
+      // จัดกลุ่มข้อมูลตามประเภทสินค้า (CATEGORY_NAME)
+      const categoryGroups: Record<string, any[]> = {};
+
+      // วนลูปรวบรวมข้อมูลและจัดกลุ่มตามประเภท
       for (const requisition of filteredRequisitions) {
-        if (!requisition.REQUISITION_ITEMS || requisition.REQUISITION_ITEMS.length === 0) {
-          // ลองดึงข้อมูล items ใหม่
+        // โหลดข้อมูล items
+        let itemsToUse = requisition.REQUISITION_ITEMS;
+
+        if (!itemsToUse || itemsToUse.length === 0) {
           try {
-            const response = await fetch(getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`));
+            const response = await fetch(
+              getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`)
+            );
             if (response.ok) {
-              const items = await response.json();
-              if (items && items.length > 0) {
-                requisition.REQUISITION_ITEMS = items;
-                console.log(`Fetched ${items.length} items for requisition ${requisition.REQUISITION_ID}`);
-              } else {
-                console.log(`Still no items for requisition ${requisition.REQUISITION_ID} after fetch`);
-                continue;
-              }
+              itemsToUse = await response.json();
             } else {
-              console.log(`Failed to fetch items for requisition ${requisition.REQUISITION_ID}`);
               continue;
             }
           } catch (error) {
-            console.error(`Error fetching items for requisition ${requisition.REQUISITION_ID}:`, error);
+            console.error('Error loading items:', error);
             continue;
           }
         }
 
-        // จัดกลุ่ม items ตามหมวดหมู่
-        for (const item of requisition.REQUISITION_ITEMS) {
-          const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
-          
-          if (!allItemsByCategory[category]) {
-            allItemsByCategory[category] = [];
-            categoryTotals[category] = 0;
-          }
-          
-          allItemsByCategory[category].push({ requisition, item });
-          categoryTotals[category] += Number(calculateSafeTotalPrice(item)) || 0;
-        }
-      }
-
-      console.log('Items grouped by category:', {
-        categories: Object.keys(allItemsByCategory),
-        categoryTotals
-      });
-
-      // สร้าง PDF สำหรับแต่ละหมวดหมู่
-      const categoryKeys = Object.keys(allItemsByCategory).sort();
-      let totalPDFs = 0;
-      
-      for (const category of categoryKeys) {
-        const items = allItemsByCategory[category];
-        totalPDFs++;
-        
-        console.log(`Processing category ${category}`, {
-          itemCount: items.length,
-          totalAmount: categoryTotals[category]
-        });
-        
-        // เพิ่ม delay ระหว่างการดาวน์โหลดแต่ละไฟล์
-        if (totalPDFs > 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // รอ 1 วินาที
-        }
-        
-        // ตรวจสอบว่ามีข้อมูลเพียงพอหรือไม่
-        if (items.length === 0) {
-          console.log(`No items found for category ${category}, skipping...`);
-          continue;
-        }
-        
-        // สร้าง PDF ใหม่สำหรับหมวดหมู่นี้
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pageWidth = 210;
-        const pageHeight = 297;
-        
-        // ตรวจสอบว่า PDF object ถูกสร้างขึ้นอย่างถูกต้อง
-        if (!pdf) {
-          console.error(`Failed to create PDF for category ${category}`);
+        if (!itemsToUse || itemsToUse.length === 0) {
           continue;
         }
 
-        // ตรวจสอบว่า PDF object มี methods ที่จำเป็น
-        if (typeof pdf.setFont !== 'function' || typeof pdf.setFontSize !== 'function') {
-          console.error(`PDF object is missing required methods for category ${category}`);
-          continue;
-        }
-        
-        // ตั้งค่า font สำหรับภาษาไทย
-        setupThaiFont(pdf);
+        // ดึงข้อมูล user
+        let userOrgCode4 = requisition.SITE_ID;
+        let userFullName = requisition.USER_ID;
+        let userDepartment = requisition.DEPARTMENT || 'N/A';
+        let userCostCenterCode = requisition.SITE_ID || '';
 
-        // เรียงลำดับ items ตาม requisition ID และ item order
-        items.sort((a, b) => {
-          const aId = String(a.requisition.REQUISITION_ID);
-          const bId = String(b.requisition.REQUISITION_ID);
-          if (aId !== bId) {
-            return aId.localeCompare(bId);
+        try {
+          const response = await fetch(
+            getApiUrl(
+              `/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`
+            )
+          );
+          if (response.ok) {
+            const data = await response.json();
+            userOrgCode4 = data.orgCode4 || requisition.SITE_ID;
+            userFullName =
+              data.fullNameThai || data.fullNameEng || requisition.USER_ID;
+            userDepartment =
+              data.costCenterEng || requisition.DEPARTMENT || 'N/A';
+            userCostCenterCode =
+              data.costcentercode || requisition.SITE_ID || '';
           }
-          return 0; // ถ้าเป็น requisition เดียวกัน ให้เรียงตามลำดับเดิม
-        });
-
-        // จัดกลุ่ม items ตามคนก่อน แล้วสร้างรายการ items
-        const itemsByUser = items.reduce((acc, { requisition, item }) => {
-          const userId = requisition.USER_ID;
-          if (!acc[userId]) {
-            acc[userId] = {
-              user: requisition,
-              items: []
-            };
-          }
-          acc[userId].items.push({ requisition, item });
-          return acc;
-        }, {} as Record<string, { user: Requisition, items: Array<{requisition: Requisition, item: RequisitionItem}> }>);
-
-        // ดึงข้อมูลผู้ใช้จาก userWithRoles สำหรับทุกคน
-        const userDataMap: Record<string, { fullName: string, department: string, costCenterCode: string }> = {};
-        for (const userId of Object.keys(itemsByUser)) {
-          try {
-            // เพิ่ม timeout สำหรับการ fetch
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 วินาที timeout
-            
-            const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${userId}`), {
-              signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (response.ok) {
-              const data = await response.json();
-              userDataMap[userId] = {
-                fullName: data.fullNameThai || data.fullNameEng || userId,
-                department: data.costCenterEng || 'N/A',
-                costCenterCode: data.costcentercode || 'N/A'
-              };
-            } else {
-              userDataMap[userId] = {
-                fullName: userId,
-                department: 'N/A',
-                costCenterCode: 'N/A'
-              };
-            }
-          } catch (error) {
-            console.error(`Error fetching user data for ${userId}:`, error);
-            userDataMap[userId] = {
-              fullName: userId,
-              department: 'N/A',
-              costCenterCode: 'N/A'
-            };
-          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
         }
 
-        console.log(`Creating PDF for category ${category}`, {
-          itemsCount: items.length,
-          usersCount: Object.keys(itemsByUser).length
-        });
+        // จัดกลุ่มตามประเภทสินค้า
+        itemsToUse.forEach((item) => {
+          const category = item.CATEGORY_NAME || 'อื่นๆ';
 
-        // Header ข้อมูลทั่วไป
-        const nowDate = new Date();
-        const thaiMonthsShortList = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-        const dateNum = nowDate.getDate().toString().padStart(2, '0');
-        const month = thaiMonthsShortList[nowDate.getMonth()];
-        const year = (nowDate.getFullYear() + 543).toString().slice(-4);
-        const hours = nowDate.getHours().toString().padStart(2, '0');
-        const minutes = nowDate.getMinutes().toString().padStart(2, '0');
-        const currentDate = `${dateNum} ${month} ${year} ${hours}:${minutes}`;
+          if (!categoryGroups[category]) {
+            categoryGroups[category] = [];
+          }
 
-        // เตรียมแถวตาราง (รองรับภาษาไทย)
-        const tableBody: Array<Array<string | number>> = [];
-        Object.entries(itemsByUser).forEach(([userId, { user: _user, items: userItems }]) => {
-          const userData = userDataMap[userId] || { fullName: userId, department: 'N/A', costCenterCode: 'N/A' };
-          // แถวหัวผู้สั่ง (category-like header)
-          tableBody.push([
-            `ผู้สั่ง: ${userData.fullName} - ${userData.department} - ${userData.costCenterCode} - (${userItems.length} รายการ)`,
-            '', '', '', '', ''
-          ]);
-          // แถวรายการสินค้า
-          userItems.forEach(({ item }) => {
-            tableBody.push([
-              (item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A',
-              item.PRODUCT_NAME || 'Unknown Product',
-              item.QUANTITY,
-              item.ORDER_UNIT || 'ชิ้น',
-              `฿${formatNumberWithCommas(Number(item.UNIT_PRICE || 0))}`,
-              `฿${calculateSafeTotalPrice(item)}`
-            ]);
+          categoryGroups[category].push({
+            requisition,
+            item,
+            userOrgCode4,
+            userFullName,
+            userDepartment,
+            userCostCenterCode
           });
         });
+      }
 
-        // สร้าง HTML content (รองรับภาษาไทยแน่นอน)
-        const htmlContent = createHTMLTableForPDF(
-          tableBody,
-          ['ITEM_ID', 'Description', 'Qty', 'Unit', 'Unit Price', 'Total'],
-          {
-            companyName: editAllFormData.companyName,
-            companyAddress: editAllFormData.companyAddress,
-            phone: editAllFormData.phone,
-            fax: editAllFormData.fax,
-            taxId: editAllFormData.taxId,
-            deliveryDate: editAllFormData.deliveryDate,
-            contactPerson: editAllFormData.contactPerson,
-            category: category,
-            date: currentDate,
-            totalAmount: categoryTotals[category],
-            itemCount: items.length
-          }
+      if (Object.keys(categoryGroups).length === 0) {
+        setProgressDialogOpen(false);
+        showError('ไม่มีข้อมูล', 'ไม่มีรายการที่สามารถพิมพ์ได้');
+        return;
+      }
+
+      // สร้างเอกสารแยกตามประเภท
+      const sortedCategories = Object.keys(categoryGroups).sort();
+      setTotalProgress(sortedCategories.length);
+      let documentCount = 0;
+
+      for (const category of sortedCategories) {
+        setCurrentProgress(documentCount + 1);
+        setProgressMessage(
+          `กำลังสร้างเอกสาร: ${category} (${documentCount + 1}/${sortedCategories.length})`
         );
 
-        // แปลง HTML เป็น PDF (รองรับภาษาไทยแน่นอน)
-        try {
-          await renderHTMLToPDF(htmlContent, pdf, {
-            margin: 10,
-            pageWidth,
-            pageHeight,
-            scale: 1.5
+        const items = categoryGroups[category];
+
+        // จัดกลุ่มตาม requisition
+        const requisitionMap: Record<number, any[]> = {};
+        items.forEach((data) => {
+          const reqId = data.requisition.REQUISITION_ID;
+          if (!requisitionMap[reqId]) {
+            requisitionMap[reqId] = [];
+          }
+          requisitionMap[reqId].push(data);
+        });
+
+        // สร้างแถวตาราง
+        const tableRows: string[] = [];
+        let categoryTotal = 0;
+        let categoryItemCount = 0;
+
+        Object.keys(requisitionMap).forEach((reqId) => {
+          const reqItems = requisitionMap[Number(reqId)];
+          const firstItem = reqItems[0];
+          const requisition = firstItem.requisition;
+
+          // Header ของแต่ละ requisition
+          tableRows.push(`
+            <tr class="requisition-header">
+              <td colspan="6">
+                ผู้สั่ง: ${firstItem.userFullName} - ${requisition.USER_ID} (${firstItem.userCostCenterCode}) - 
+                ${firstItem.userDepartment} - 
+                ${firstItem.userOrgCode4} -  
+                (${reqItems.length} รายการ)
+              </td>
+            </tr>
+          `);
+
+          // รายการสินค้า
+          reqItems.forEach((data) => {
+            const item = data.item;
+            categoryItemCount++;
+            const itemTotal =
+              Number(item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0);
+            categoryTotal += itemTotal;
+
+            tableRows.push(`
+              <tr class="item-row">
+                <td class="text-center">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
+                <td>${item.PRODUCT_NAME || 'Unknown Product'}</td>
+                <td class="text-center">${item.QUANTITY}</td>
+                <td class="text-center">${item.ORDER_UNIT || 'ชิ้น'}</td>
+                <td class="text-right">฿${formatNumberWithCommas(Number(item.UNIT_PRICE || 0))}</td>
+                <td class="text-right bold">฿${calculateSafeTotalPrice(item)}</td>
+              </tr>
+            `);
           });
-        } catch (renderError) {
-          console.error(`Error rendering PDF for category ${category}:`, renderError);
-          showError('เกิดข้อผิดพลาด', `ไม่สามารถสร้าง PDF สำหรับหมวดหมู่ ${category} ได้: ${(renderError as Error).message}`);
-          continue;
+        });
+
+        // สร้าง HTML สำหรับประเภทนี้
+        const categoryHTML = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>${category} - ${selectedYear}${selectedMonth || ''}</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+            <style>
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              
+              body {
+                font-family: 'Sarabun', 'Arial Unicode MS', Arial, sans-serif;
+                font-size: 11pt;
+                line-height: 1.4;
+                color: #000;
+                background: white;
+                max-width: 210mm;
+                margin: 0 auto;
+                padding: 15mm;
+              }
+              
+              .header {
+                text-align: center;
+                border-bottom: 2px solid #000;
+                padding-bottom: 10px;
+                margin-bottom: 15px;
+              }
+              
+              .header h1 {
+                font-size: 20pt;
+                font-weight: bold;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              }
+              
+              .category-title {
+                background: #fff3cd;
+                border: 2px solid #ffc107;
+                padding: 12px;
+                margin-bottom: 15px;
+                text-align: center;
+                font-size: 14pt;
+                font-weight: bold;
+                color: #856404;
+                border-radius: 5px;
+              }
+              
+              .info-section {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 15px;
+                font-size: 9pt;
+              }
+              
+              .info-left {
+                text-align: left;
+              }
+              
+              .info-right {
+                text-align: right;
+              }
+              
+              .info-left p, .info-right p {
+                margin: 2px 0;
+              }
+              
+              .delivery-section {
+                margin-bottom: 15px;
+                padding: 8px;
+                border: 1px solid #ccc;
+                background: #f9f9f9;
+                font-size: 10pt;
+              }
+              
+              .delivery-section h3 {
+                margin: 0 0 5px 0;
+                font-size: 11pt;
+                font-weight: bold;
+              }
+              
+              .delivery-section p {
+                margin: 3px 0;
+              }
+              
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                border: 1px solid #ddd;
+                margin-bottom: 15px;
+              }
+              
+              thead {
+                background: #e9ecef;
+              }
+              
+              th {
+                padding: 8px;
+                border: 1px solid #ddd;
+                font-size: 9pt;
+                font-weight: bold;
+                text-align: center;
+              }
+              
+              td {
+                padding: 8px;
+                border: 1px solid #ddd;
+                font-size: 9pt;
+              }
+              
+              .text-center {
+                text-align: center;
+              }
+              
+              .text-right {
+                text-align: right;
+              }
+              
+              .bold {
+                font-weight: bold;
+              }
+              
+              .requisition-header {
+                background: #e3f2fd;
+                font-weight: bold;
+                font-size: 10pt;
+              }
+              
+              .requisition-header td {
+                padding: 10px 8px;
+                color: #1565c0;
+              }
+              
+              .item-row {
+                border-bottom: 1px solid #eee;
+              }
+              
+              .summary {
+                margin-top: 15px;
+                padding: 12px;
+                background: #f0f8ff;
+                border: 1px solid #2196f3;
+                border-radius: 5px;
+              }
+              
+              .summary h3 {
+                margin: 0 0 5px 0;
+                color: #1976d2;
+                font-size: 11pt;
+              }
+              
+              .summary .total-amount {
+                font-size: 14pt;
+                font-weight: bold;
+                color: #1976d2;
+                text-align: right;
+              }
+              
+              .summary p {
+                margin: 5px 0 0 0;
+                color: #1976d2;
+                font-size: 9pt;
+              }
+              
+              .page-number {
+                position: fixed;
+                bottom: 10mm;
+                right: 15mm;
+                font-size: 9pt;
+                color: #666;
+              }
+              
+              /* CSS สำหรับ Print */
+              @media print {
+                body {
+                  margin: 0;
+                  padding: 10mm;
+                }
+                
+                /* ป้องกันการแบ่งหน้าในแถวตาราง */
+                tr {
+                  page-break-inside: avoid;
+                  break-inside: avoid;
+                }
+                
+                /* ป้องกันการแบ่งหน้าในส่วน requisition header */
+                .requisition-header {
+                  page-break-inside: avoid;
+                  break-inside: avoid;
+                  page-break-after: avoid;
+                  break-after: avoid;
+                }
+                
+                /* ให้แถวที่ตามหลัง header อยู่ด้วยกันถ้าเป็นไปได้ */
+                .requisition-header + .item-row {
+                  page-break-before: avoid;
+                  break-before: avoid;
+                }
+                
+                /* ป้องกันการแบ่งหน้าระหว่าง header และ body ของตาราง */
+                thead {
+                  display: table-header-group;
+                }
+                
+                tbody {
+                  display: table-row-group;
+                }
+                
+                /* ป้องกันการแบ่งหน้าในส่วนต่างๆ */
+                .header, .info-section, .delivery-section, .summary, .category-title {
+                  page-break-inside: avoid;
+                  break-inside: avoid;
+                }
+                
+                /* แสดง header ของตารางทุกหน้า */
+                table {
+                  page-break-inside: auto;
+                }
+                
+                @page {
+                  margin: 10mm;
+                  size: A4;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>SUPPLY REQUEST ORDER</h1>
+            </div>
+            
+            <div class="info-section">
+              <div class="info-left">
+                <p><strong>${editAllFormData.companyName}</strong></p>
+                <p>${editAllFormData.companyAddress}</p>
+                <p>TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}</p>
+                <p>เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}</p>
+              </div>
+              <div class="info-right">
+                <p><strong>Date:</strong> ${new Date().toLocaleDateString('th-TH')}</p>
+                <p><strong>Period:</strong> ${selectedYear}${selectedMonth || ''}</p>
+                <p><strong>Category:</strong> ${category}</p>
+              </div>
+            </div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>ITEM_ID</th>
+                  <th>Description</th>
+                  <th>Qty</th>
+                  <th>Unit</th>
+                  <th>Unit Price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRows.join('\n')}
+              </tbody>
+            </table>
+            
+            <div class="summary">
+              <h3>สรุปยอดรวม - ${category}</h3>
+              <div class="total-amount">ยอดรวม: ฿${formatNumberWithCommas(categoryTotal)}</div>
+              <p>จำนวนรายการทั้งหมด: ${categoryItemCount} รายการ</p>
+              <p>จำนวน Requisitions: ${Object.keys(requisitionMap).length} รายการ</p>
+            </div>
+            
+          </body>
+          </html>
+        `;
+
+        // เปิดหน้าต่างสำหรับแต่ละประเภท
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+          showError(
+            'เกิดข้อผิดพลาด',
+            'ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาต popup'
+          );
+          return;
         }
 
-        // บันทึก PDF
-        try {
-          const fileName = editAllFormData.fileName || `SUPPLY_REQUEST_ORDER_${category.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYear}${selectedMonth || ''}_${new Date().toISOString().split('T')[0]}`;
-          pdf.save(`${fileName}.pdf`);
-        console.log(`PDF for category ${category} saved: ${fileName}.pdf`);
-        } catch (saveError) {
-          console.error(`Error saving PDF for category ${category}:`, saveError);
-          showError('เกิดข้อผิดพลาด', `ไม่สามารถบันทึก PDF สำหรับหมวดหมู่ ${category} ได้: ${(saveError as Error).message}`);
-          continue;
+        printWindow.document.write(categoryHTML);
+        printWindow.document.close();
+
+        // รอให้ font และเนื้อหาโหลดเสร็จก่อนพิมพ์
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+          }, 500);
+        };
+
+        documentCount++;
+
+        // รอเล็กน้อยก่อนเปิดหน้าต่างถัดไป
+        if (documentCount < sortedCategories.length) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
 
-      showSuccess('สร้าง PDF สำเร็จ!', `ไฟล์ PDF ทั้งหมด ${totalPDFs} ไฟล์ถูกสร้างและดาวน์โหลดแล้ว (แยกตามหมวดหมู่)`);
-    } catch (error) {
-      console.error('Error generating PDFs by user and category:', error);
-      showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
-    }
-  };
+      // แสดงสถานะเสร็จสิ้น
+      setProgressCompleted(true);
+      setProgressMessage('สร้างเอกสารเสร็จสิ้น');
 
-  // เพิ่มฟังก์ชันสร้าง PDF สำหรับใบเบิกสินค้า
-  const generatePDF = async (requisition: Requisition) => {
+      // ปิด progress dialog หลังจาก 1 วินาที
+      setTimeout(() => {
+        setProgressDialogOpen(false);
+        showSuccess(
+          'เปิดหน้าพิมพ์สำเร็จ!',
+          `เปิดหน้าต่างพิมพ์แยกตามประเภทสินค้า ${documentCount} ประเภท: ${sortedCategories.join(', ')}`
+        );
+      }, 1000);
+    } catch (error) {
+      console.error('Error generating combined print:', error);
+      setProgressDialogOpen(false);
+      showError(
+        'เกิดข้อผิดพลาด',
+        'ไม่สามารถสร้างเอกสารพิมพ์ได้: ' + (error as Error).message
+      );
+    }
+  }; // ฟังก์ชันสำหรับ print SUPPLY REQUEST ORDER ผ่าน HTML และ window.print()
+  const printSupplyRequestOrder = async (requisition: Requisition) => {
+    // เปิด progress dialog
+    setProgressDialogOpen(true);
+    setProgressCompleted(false);
+    setProgressMessage(`กำลังโหลดเอกสาร #${requisition.REQUISITION_ID}...`);
+    setCurrentProgress(0);
+    setTotalProgress(1);
+
     // ตรวจสอบและโหลดข้อมูล items หากจำเป็น
     let itemsToUse = requisition.REQUISITION_ITEMS;
-    
+
     // ตรวจสอบและลบข้อมูลที่ซ้ำซ้อน
     if (itemsToUse && itemsToUse.length > 0) {
       const seen = new Set();
@@ -1870,319 +1320,415 @@ export default function ApprovalsPage() {
         seen.add(id);
         return true;
       });
-      console.log('After removing duplicates:', { originalCount: requisition.REQUISITION_ITEMS?.length, uniqueCount: itemsToUse.length });
+      console.log('After removing duplicates:', {
+        originalCount: requisition.REQUISITION_ITEMS?.length,
+        uniqueCount: itemsToUse.length
+      });
     }
-    
+
     if (!itemsToUse || itemsToUse.length === 0) {
       try {
         const response = await fetch(
           getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`)
         );
-        
+
         if (response.ok) {
           itemsToUse = await response.json();
         } else {
           showError('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายการสินค้าได้');
+          setProgressDialogOpen(false);
           return;
         }
       } catch (error) {
-        console.error('Error loading items for PDF:', error);
+        console.error('Error loading items for print:', error);
         showError('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายการสินค้าได้');
+        setProgressDialogOpen(false);
         return;
       }
     }
-    
+
     if (!itemsToUse || itemsToUse.length === 0) {
-      showInfo('ไม่มีข้อมูล', 'ไม่มีรายการสินค้าให้สร้าง PDF');
+      setProgressDialogOpen(false);
+      showInfo('ไม่มีข้อมูล', 'ไม่มีรายการสินค้าให้พิมพ์');
       return;
     }
 
-    // ดึง OrgCode4 และข้อมูลชื่อพนักงานของ user สำหรับแสดงใน Cost Center
-    let userOrgCode4 = requisition.SITE_ID; // fallback to SITE_ID
-    let userOrgTDesc3 = 'N/A'; // fallback to N/A
-    let userFullName = requisition.USER_ID; // fallback to USER_ID
-    let userDepartment = requisition.DEPARTMENT || 'N/A'; // fallback to requisition.DEPARTMENT
+    setProgressMessage(`กำลังสร้างเอกสาร #${requisition.REQUISITION_ID}...`);
+    setCurrentProgress(1);
+
+    // ดึงข้อมูล user
+    let userOrgCode4 = requisition.SITE_ID;
+    let userFullName = requisition.USER_ID;
+    let userDepartment = requisition.DEPARTMENT || 'N/A';
     let userCostCenterCode = requisition.SITE_ID || '';
+
     try {
-      const response = await fetch(getApiUrl(`/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`));
+      const response = await fetch(
+        getApiUrl(
+          `/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`
+        )
+      );
       if (response.ok) {
         const data = await response.json();
         userOrgCode4 = data.orgCode4 || requisition.SITE_ID;
-        userOrgTDesc3 = data.orgTDesc3 || 'N/A';
-        // ใช้ชื่อไทยก่อน หากไม่มีให้ใช้ชื่ออังกฤษ หากไม่มีให้ใช้ USER_ID
-        userFullName = data.fullNameThai || data.fullNameEng || requisition.USER_ID;
-        // ใช้ CostCenterEng จาก userWithRoles แทน requisition.DEPARTMENT
+        userFullName =
+          data.fullNameThai || data.fullNameEng || requisition.USER_ID;
         userDepartment = data.costCenterEng || requisition.DEPARTMENT || 'N/A';
         userCostCenterCode = data.costcentercode || requisition.SITE_ID || '';
-        console.log('PDF Data:', { userOrgCode4, userOrgTDesc3, userFullName, userDepartment, requisition: requisition.REQUISITION_ID });
       }
     } catch (error) {
-      console.error('Error fetching user OrgCode4:', error);
+      console.error('Error fetching user data:', error);
     }
 
-    // ตรวจสอบข้อมูลที่จำเป็น
-    if (!userOrgCode4) {
-      userOrgCode4 = requisition.SITE_ID || 'N/A';
-    }
-    if (!userOrgTDesc3) {
-      userOrgTDesc3 = 'N/A';
-    }
-    if (!userCostCenterCode) {
-      userCostCenterCode = 'N/A';
-    }
-    
-    // สร้าง requisition object ที่มี items ที่ถูกต้อง
-    const _requisitionWithItems = {
-      ...requisition,
-      REQUISITION_ITEMS: itemsToUse
-    };
+    // สร้างแถวตารางสำหรับรายการสินค้า
+    const tableRows: string[] = [];
 
-    // ตรวจสอบว่าเราอยู่ใน browser environment
-    if (typeof document === 'undefined' || typeof window === 'undefined') {
-      console.error('Cannot create PDF: not in browser environment');
-      showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ไม่ได้อยู่ใน browser environment');
+    itemsToUse.forEach((item) => {
+      tableRows.push(`
+        <tr class="item-row">
+          <td class="text-center">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
+          <td>${item.PRODUCT_NAME || 'Unknown Product'}</td>
+          <td class="text-center">${item.QUANTITY}</td>
+          <td class="text-center">${item.ORDER_UNIT || 'ชิ้น'}</td>
+          <td class="text-right">฿${formatNumberWithCommas(Number(item.UNIT_PRICE || 0))}</td>
+          <td class="text-right bold">฿${calculateSafeTotalPrice(item)}</td>
+        </tr>
+      `);
+    });
+
+    // สร้าง HTML เต็มรูปแบบพร้อม CSS สำหรับ print
+    const printHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>SUPPLY REQUEST ORDER #${requisition.REQUISITION_ID}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: 'Sarabun', 'Arial Unicode MS', Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #000;
+            background: white;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 15mm;
+          }
+          
+          .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+          }
+          
+          .header h1 {
+            font-size: 20pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          
+          .info-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 9pt;
+          }
+          
+          .info-left {
+            text-align: left;
+          }
+          
+          .info-right {
+            text-align: right;
+          }
+          
+          .info-left p, .info-right p {
+            margin: 2px 0;
+          }
+          
+          .delivery-section {
+            margin-bottom: 15px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            background: #f9f9f9;
+            font-size: 10pt;
+          }
+          
+          .delivery-section h3 {
+            margin: 0 0 5px 0;
+            font-size: 11pt;
+            font-weight: bold;
+          }
+          
+          .delivery-section p {
+            margin: 3px 0;
+          }
+          
+          .cost-center {
+            background: #f5f5f5;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 11pt;
+            margin-bottom: 0;
+          }
+          
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+          }
+          
+          thead {
+            background: #e9ecef;
+          }
+          
+          th {
+            padding: 8px;
+            border: 1px solid #ddd;
+            font-size: 9pt;
+            font-weight: bold;
+            text-align: center;
+          }
+          
+          td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            font-size: 9pt;
+          }
+          
+          .text-center {
+            text-align: center;
+          }
+          
+          .text-right {
+            text-align: right;
+          }
+          
+          .bold {
+            font-weight: bold;
+          }
+          
+          .category-row {
+            background: #f8f9fa;
+          }
+          
+          .category-header {
+            padding: 8px;
+            font-weight: bold;
+            font-size: 10pt;
+            color: #333;
+          }
+          
+          .item-row {
+            border-bottom: 1px solid #eee;
+          }
+          
+          .summary {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f0f8ff;
+            border: 1px solid #2196f3;
+            border-radius: 5px;
+          }
+          
+          .summary h3 {
+            margin: 0 0 5px 0;
+            color: #1976d2;
+            font-size: 11pt;
+          }
+          
+          .summary .total-amount {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #1976d2;
+            text-align: right;
+          }
+          
+          .summary p {
+            margin: 5px 0 0 0;
+            color: #1976d2;
+            font-size: 9pt;
+          }
+          
+          /* CSS สำหรับ Print */
+          @media print {
+            body {
+              margin: 0;
+              padding: 10mm;
+            }
+            
+            /* ป้องกันการแบ่งหน้าในแถวตาราง */
+            tr {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            
+            /* ป้องกันการแบ่งหน้าในส่วน category header */
+            .category-row {
+              page-break-inside: avoid;
+              break-inside: avoid;
+              page-break-after: avoid;
+              break-after: avoid;
+            }
+            
+            /* ให้แถวที่ตามหลัง category header อยู่ด้วยกันถ้าเป็นไปได้ */
+            .category-row + .item-row {
+              page-break-before: avoid;
+              break-before: avoid;
+            }
+            
+            /* ป้องกันการแบ่งหน้าระหว่าง header และ body ของตาราง */
+            thead {
+              display: table-header-group;
+            }
+            
+            tbody {
+              display: table-row-group;
+            }
+            
+            /* ป้องกันการแบ่งหน้าในส่วนต่างๆ */
+            .header, .info-section, .delivery-section, .summary {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            
+            /* แสดง header ของตารางทุกหน้า */
+            table {
+              page-break-inside: auto;
+            }
+            
+            /* ซ่อนปุ่มและ UI elements ที่ไม่จำเป็น */
+            @page {
+              margin: 10mm;
+              size: A4;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>SUPPLY REQUEST ORDER</h1>
+        </div>
+        
+        <div class="info-section">
+          <div class="info-left">
+            <p><strong>${editFormData.companyName}</strong></p>
+            <p>${editFormData.companyAddress}</p>
+            <p>TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
+            <p>เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
+          </div>
+          <div class="info-right">
+            <p><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
+            <p><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
+          </div>
+        </div>
+        
+        <div class="delivery-section">
+          <h3>Please Delivery on:</h3>
+          <p>${editFormData.deliveryDate || '_________________________________'}</p>
+          <p><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
+          <p><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson || 'N/A'}</p>
+        </div>
+        
+          
+          <table>
+            <thead>
+              <tr>
+                <th>ITEM_ID</th>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Unit</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="requisition-header">
+                <td colspan="6">
+                  ผู้สั่ง: ${userFullName} - ${requisition.USER_ID} (${userCostCenterCode}) - 
+                  ${userDepartment} - 
+                  ${userOrgCode4} -  
+                  (${itemsToUse.length} รายการ)
+                </td>
+              </tr>
+              ${tableRows.join('\n')}
+            </tbody>
+          </table>
+          
+          <div class="summary">
+            <h3>สรุปยอดรวม</h3>
+            <div class="total-amount">ยอดรวม: ฿${formatNumberWithCommas(Number(requisition.TOTAL_AMOUNT))}</div>
+            <p>จำนวนรายการทั้งหมด: ${itemsToUse.length} รายการ</p>
+            <p>สถานะ: ${requisition.STATUS}</p>
+          </div>
+          
+        </div>
+      </body>
+      </html>
+    `;
+
+    // เปิดหน้าต่างใหม่และพิมพ์
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      setProgressDialogOpen(false);
+      showError(
+        'เกิดข้อผิดพลาด',
+        'ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาต popup'
+      );
       return;
     }
 
-    let tempDiv: HTMLDivElement | null = null;
-    try {
-      // สร้าง HTML element ชั่วคราว
-      tempDiv = document.createElement('div');
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      tempDiv.style.top = '-9999px';
-      tempDiv.style.width = '210mm'; // A4 width
-      tempDiv.style.padding = '20mm';
-      tempDiv.style.backgroundColor = 'white';
-      tempDiv.style.fontFamily = 'Arial, sans-serif';
-      tempDiv.style.fontSize = '11px';
-      tempDiv.style.lineHeight = '1.2';
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
 
-      // สร้าง HTML content สำหรับ SUPPLY REQUEST ORDER
-      // ประมาณการความสูงของเนื้อหา
-      const estimatedContentHeight = 200 + (itemsToUse.length * 25);
-      const _needsMultiplePages = estimatedContentHeight > 250;
-      
-      // สร้าง HTML content โดยใช้ฟังก์ชัน
-        const generateHTMLContent = () => {
-        console.log('Generating HTML with data:', { 
-          userOrgCode4, 
-          userOrgTDesc3, 
-          requisition: requisition.REQUISITION_ID,
-          itemsCount: itemsToUse.length,
-          items: itemsToUse.map(i => ({
-            id: i.ITEM_ID,
-            name: i.PRODUCT_NAME,
-            category: i.CATEGORY_NAME
-          }))
-        });
-        
-        // ตรวจสอบว่ามี items ซ้ำซ้อนหรือไม่
-        const itemIds = itemsToUse.map(i => i.ITEM_ID);
-        const uniqueItemIds = new Set(itemIds);
-        if (itemIds.length !== uniqueItemIds.size) {
-          console.warn('Found duplicate items:', {
-            total: itemIds.length,
-            unique: uniqueItemIds.size,
-            duplicates: itemIds.filter(id => itemIds.indexOf(id) !== itemIds.lastIndexOf(id))
-          });
-        }
-        
-        const groupedItems = itemsToUse.reduce((acc, item) => {
-          const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
-          if (!acc[category]) {
-            acc[category] = [];
-          }
-          acc[category].push(item);
-          return acc;
-        }, {} as Record<string, typeof itemsToUse>);
+    // รอให้ font และเนื้อหาโหลดเสร็จก่อนพิมพ์
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
 
-        const sortedCategories = Object.keys(groupedItems).sort();
-        
-        console.log('Grouped items by category:', {
-          categories: sortedCategories,
-          itemsByCategory: sortedCategories.map(cat => ({ category: cat, count: groupedItems[cat].length }))
-        });
+        // แสดงสถานะเสร็จสิ้น
+        setProgressCompleted(true);
+        setProgressMessage('สร้างเอกสารเสร็จสิ้น');
 
-
-        const categoryHTML = sortedCategories.map(category => {
-          const items = groupedItems[category];
-          const categoryItemsHTML = items.map(item => {
-            const itemHTML = `
-              <tr style="border-bottom: 1px solid #eee; page-break-inside: avoid; break-inside: avoid;">
-                <td style="padding: 8px; text-align: center; font-size: 10px;">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
-                <td style="padding: 8px; font-size: 10px;">${item.PRODUCT_NAME || 'Unknown Product'}</td>
-                <td style="padding: 8px; text-align: center; font-size: 10px;">${item.QUANTITY}</td>
-                <td style="padding: 8px; text-align: center; font-size: 10px;">${item.ORDER_UNIT || 'ชิ้น'}</td>
-                <td style="padding: 8px; text-align: right; font-size: 10px;">฿${formatNumberWithCommas(Number(item.UNIT_PRICE || 0))}</td>
-                <td style="padding: 8px; text-align: right; font-size: 10px; font-weight: bold;">฿${calculateSafeTotalPrice(item)}</td>
-              </tr>
-            `;
-            return itemHTML;
-          }).join('');
-
-          return `
-            <tr style="background: #f8f9fa; page-break-inside: avoid; break-inside: avoid;">
-              <td colspan="6" style="padding: 8px; font-weight: bold; font-size: 11px; color: #333;">${category}</td>
-            </tr>
-            ${categoryItemsHTML}
-          `;
-        }).join('');
-
-        return `
-          <div style="padding: 20px;">
-            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
-              <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">SUPPLY REQUEST ORDER</h1>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-              <div style="text-align: left;">
-                <p style="margin: 0 0 2px 0; font-size: 10px; font-weight: bold;">${editFormData.companyName}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;">${editFormData.companyAddress}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;">TEL: ${editFormData.phone} FAX: ${editFormData.fax}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;">เลขประจำตัวผู้เสียภาษี ${editFormData.taxId}</p>
-              </div>
-              <div style="text-align: right;">
-                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
-                <p style="margin: 0 0 2px 0; font-size: 10px;"><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
-              </div>
-            </div>
-            
-            <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-              <h3 style="margin: 0 0 5px 0; font-size: 12px; font-weight: bold;">Please Delivery on:</h3>
-              <p style="margin: 0 0 3px 0; font-size: 11px;">${editFormData.deliveryDate || '_________________________________'}</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
-              <p style="margin: 0 0 3px 0; font-size: 11px;"><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editFormData.contactPerson || 'N/A'}</p>
-            </div>
-            
-            <div style="margin-bottom: 25px;">
-              <div style="background: #f5f5f5; padding: 8px 12px; border: 1px solid #ddd; border-bottom: none; font-weight: bold; font-size: 12px;">
-                <div style="font-size: 12px; color: #333; line-height: 1.4;">
-                  <strong>Cost Center:</strong> ${userOrgCode4} | 
-                  <strong>ผู้สั่ง:</strong> ${userFullName} - ${requisition.USER_ID} (${userCostCenterCode}) | 
-                  <strong>แผนก:</strong> ${userDepartment}
-                </div>
-              </div>
-              
-              <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
-                <thead>
-                  <tr style="background: #e9ecef;">
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">ITEM_ID</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Description</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Qty</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Unit Price</th>
-                    <th style="padding: 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${categoryHTML}
-                </tbody>
-              </table>
-            </div>
-            
-            <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border: 1px solid #2196f3; border-radius: 5px;">
-              <h3 style="margin: 0 0 5px 0; color: #1976d2; font-size: 12px;">สรุปยอดรวม</h3>
-              <div style="font-size: 16px; font-weight: bold; color: #1976d2; text-align: right;">ยอดรวมทั้งหมด: ฿${formatNumberWithCommas(Number(requisition.TOTAL_AMOUNT))}</div>
-              <p style="margin: 5px 0 0 0; color: #1976d2; font-size: 10px;">จำนวนรายการ: ${itemsToUse.length} รายการ</p>
-              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">สถานะ: ${requisition.STATUS}</p>
-              <p style="margin: 2px 0 0 0; color: #1976d2; font-size: 10px;">แผนก: ${userDepartment}</p>
-            </div>
-          </div>
-        `;
-      };
-      
-      tempDiv.innerHTML = generateHTMLContent();
-
-      // เพิ่ม element ลงใน DOM
-      if (document.body) {
-        document.body.appendChild(tempDiv);
-      } else {
-        throw new Error('document.body is not available');
-      }
-
-      // รอให้ content render เสร็จ
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // แปลง HTML เป็น canvas
-      const canvas = await html2canvas(tempDiv, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
-      });
-
-      console.log('Canvas generated:', { 
-        width: canvas.width, 
-        height: canvas.height,
-        hasContent: canvas.width > 0 && canvas.height > 0
-      });
-
-      // ลบ element ชั่วคราว
-      if (tempDiv && tempDiv.parentNode) {
-      document.body.removeChild(tempDiv);
-      }
-
-      // ตรวจสอบ canvas ก่อนสร้าง PDF
-      if (canvas.width === 0 || canvas.height === 0) {
-        showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างภาพได้');
-        return;
-      }
-
-      // สร้าง PDF
-      const imgData = canvas.toDataURL('image/png');
-      console.log('Image data generated:', { 
-        dataLength: imgData.length,
-        hasData: imgData.length > 100
-      });
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      // ใช้ renderImageWithMargins เพื่อจัดการ pagination ทั้งหมด
-      // มันจะแบ่งหน้าอัตโนมัติและเพิ่มหมายเลขหน้าให้
-      renderImageWithMargins(pdf, imgData, canvas.width, canvas.height);
-
-      // ตรวจสอบ PDF ก่อนดาวน์โหลด
-      const pdfOutput = pdf.output('datauristring');
-      console.log('PDF generated:', { 
-        pdfLength: pdfOutput.length,
-        hasContent: pdfOutput.length > 1000
-      });
-
-      if (pdfOutput.length < 1000) {
-        showError('เกิดข้อผิดพลาด', 'ไฟล์ PDF ไม่มีเนื้อหา');
-        return;
-      }
-
-      // ดาวน์โหลด PDF
-      const fileName = editFormData.fileName || `SUPPLY_REQUEST_ORDER_${requisition.REQUISITION_ID}_${new Date().toISOString().split('T')[0]}`;
-      pdf.save(`${fileName}.pdf`);
-
-      showSuccess('สร้าง PDF สำเร็จ!', 'ไฟล์ SUPPLY REQUEST ORDER PDF ถูกสร้างและดาวน์โหลดแล้ว');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      showError('เกิดข้อผิดพลาด', 'ไม่สามารถสร้าง PDF ได้: ' + (error as Error).message);
-    } finally {
-      // ตรวจสอบและลบ tempDiv หากยังค้างอยู่
-      if (tempDiv && tempDiv.parentNode) {
-        try {
-          document.body.removeChild(tempDiv);
-        } catch (cleanupError) {
-          console.warn('Error cleaning up tempDiv:', cleanupError);
-        }
-      }
-    }
+        // ปิด progress dialog หลังจาก 1 วินาที
+        setTimeout(() => {
+          setProgressDialogOpen(false);
+          showSuccess(
+            'เปิดหน้าพิมพ์สำเร็จ!',
+            `เอกสาร #${requisition.REQUISITION_ID}`
+          );
+        }, 1000);
+      }, 500);
+    };
   };
+
+  // เก็บฟังก์ชัน generatePDF เดิมไว้เป็น alias เพื่อความ backward compatible
+  const generatePDF = printSupplyRequestOrder;
 
   // เพิ่มฟังก์ชันสำหรับเปิดหน้าแก้ไข
   const handleEdit = async (requisition: Requisition) => {
     try {
       setEditingRequisition(requisition);
-      
+
       // โหลดข้อมูล requisition items ใหม่
       const response = await fetch(
         getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`)
       );
-      
+
       if (response.ok) {
         const items = await response.json();
         // อัปเดต requisition ด้วย items ที่โหลดมาใหม่
@@ -2192,13 +1738,14 @@ export default function ApprovalsPage() {
         };
         setEditingRequisition(updatedRequisition);
       }
-      
+
       setEditFormData({
         deliveryDate: requisition.deliveryDate || '',
         contactPerson: requisition.contactPerson || '',
         category: requisition.category || '',
         companyName: 'บริษัท ยูไนเต็ด1999 พลัซ จำกัด (สำนักงานใหญ่)',
-        companyAddress: '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
+        companyAddress:
+          '1 ซ.ข้างอำเภอ ถ.ตากสินมหาราช ต.เชิงเนิน อ.เมือง จ.ระยอง 21000',
         fax: '(038) 623433',
         phone: '(038) 623126',
         taxId: '0215542000264',
@@ -2303,13 +1850,13 @@ export default function ApprovalsPage() {
       filtered = filtered.filter((r) => {
         const date = new Date(r.SUBMITTED_AT);
         const year = date.getFullYear().toString();
-        
+
         // ถ้าเลือกทั้งเดือนและปี
         if (selectedMonth) {
           const month = (date.getMonth() + 1).toString().padStart(2, '0');
           return month === selectedMonth && year === selectedYear;
         }
-        
+
         // ถ้าเลือกแค่ปี
         return year === selectedYear;
       });
@@ -2329,9 +1876,7 @@ export default function ApprovalsPage() {
   const rejectedCount = requisitions.filter(
     (r) => r.STATUS === 'REJECTED'
   ).length;
-  const closedCount = requisitions.filter(
-    (r) => r.STATUS === 'CLOSED'
-  ).length;
+  const closedCount = requisitions.filter((r) => r.STATUS === 'CLOSED').length;
 
   if (
     !isAuthenticated ||
@@ -2362,18 +1907,21 @@ export default function ApprovalsPage() {
 
   // ฟังก์ชันจัดกลุ่มสินค้าตามหมวดหมู่
   const groupItemsByCategory = (items: RequisitionItem[]) => {
-    const grouped = items.reduce((acc, item) => {
-      const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
-      if (!acc[category]) {
-        acc[category] = [];
-      }
-      acc[category].push(item);
-      return acc;
-    }, {} as Record<string, RequisitionItem[]>);
+    const grouped = items.reduce(
+      (acc, item) => {
+        const category = item.CATEGORY_NAME || 'ไม่ระบุหมวดหมู่';
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+        acc[category].push(item);
+        return acc;
+      },
+      {} as Record<string, RequisitionItem[]>
+    );
 
     // เรียงลำดับหมวดหมู่
     const sortedCategories = Object.keys(grouped).sort();
-    return sortedCategories.map(category => ({
+    return sortedCategories.map((category) => ({
       category,
       items: grouped[category]
     }));
@@ -2418,16 +1966,16 @@ export default function ApprovalsPage() {
             >
               {/* Download All PDFs Button - แสดงเฉพาะเมื่อมีข้อมูลและเป็น ADMIN เท่านั้น */}
               {filteredRequisitions.length > 0 && user?.ROLE === 'ADMIN' && (
-        <Button
-          onClick={handleEditAllData}
-          disabled={loading}
-          className="px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:shadow-lg bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-md hover:shadow-xl"
-        >
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            ดาวน์โหลด PDF ทั้งหมด ({filteredRequisitions.length})
-          </div>
-        </Button>
+                <Button
+                  onClick={handleEditAllData}
+                  disabled={loading}
+                  className="px-6 py-3 rounded-xl font-medium transition-all duration-200 hover:shadow-lg bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-md hover:shadow-xl"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    ดาวน์โหลด PDF ทั้งหมด ({filteredRequisitions.length})
+                  </div>
+                </Button>
               )}
 
               <Button
@@ -2594,13 +2142,17 @@ export default function ApprovalsPage() {
                 <div className="flex flex-col sm:flex-row gap-4 items-center">
                   <div className="flex items-center gap-2">
                     <CalendarToday className="h-5 w-5 text-blue-600" />
-                    <span className="text-lg font-semibold text-gray-800">กรองตามเดือน:</span>
+                    <span className="text-lg font-semibold text-gray-800">
+                      กรองตามเดือน:
+                    </span>
                   </div>
-                  
+
                   <div className="flex gap-4">
                     {/* Year Input */}
                     <div className="flex flex-col">
-                      <label className="text-sm font-medium text-gray-600 mb-1">ปี</label>
+                      <label className="text-sm font-medium text-gray-600 mb-1">
+                        ปี
+                      </label>
                       <input
                         type="number"
                         value={selectedYear}
@@ -2614,7 +2166,9 @@ export default function ApprovalsPage() {
 
                     {/* Month Dropdown */}
                     <div className="flex flex-col">
-                      <label className="text-sm font-medium text-gray-600 mb-1">เดือน</label>
+                      <label className="text-sm font-medium text-gray-600 mb-1">
+                        เดือน
+                      </label>
                       <select
                         value={selectedMonth}
                         onChange={(e) => setSelectedMonth(e.target.value)}
@@ -2643,7 +2197,8 @@ export default function ApprovalsPage() {
                     </div>
 
                     {/* Clear Filter Button */}
-                    {(selectedMonth || selectedYear !== new Date().getFullYear().toString()) && (
+                    {(selectedMonth ||
+                      selectedYear !== new Date().getFullYear().toString()) && (
                       <button
                         onClick={() => {
                           setSelectedMonth('');
@@ -2658,14 +2213,29 @@ export default function ApprovalsPage() {
                 </div>
 
                 {/* Filter Summary */}
-                {(selectedMonth || selectedYear !== new Date().getFullYear().toString()) && (
+                {(selectedMonth ||
+                  selectedYear !== new Date().getFullYear().toString()) && (
                   <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-800">
-                      <span className="font-medium">แสดงข้อมูล:</span> 
-                      {selectedMonth ? ` เดือน${[
-                        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-                        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-                      ][parseInt(selectedMonth) - 1]}` : ' ทุกเดือน'} 
+                      <span className="font-medium">แสดงข้อมูล:</span>
+                      {selectedMonth
+                        ? ` เดือน${
+                            [
+                              'มกราคม',
+                              'กุมภาพันธ์',
+                              'มีนาคม',
+                              'เมษายน',
+                              'พฤษภาคม',
+                              'มิถุนายน',
+                              'กรกฎาคม',
+                              'สิงหาคม',
+                              'กันยายน',
+                              'ตุลาคม',
+                              'พฤศจิกายน',
+                              'ธันวาคม'
+                            ][parseInt(selectedMonth) - 1]
+                          }`
+                        : ' ทุกเดือน'}
                       {selectedYear} ({filteredRequisitions.length} รายการ)
                     </p>
                   </div>
@@ -2675,7 +2245,7 @@ export default function ApprovalsPage() {
                 {user?.ROLE === 'ADMIN' && (
                   <div className="mt-4 p-3 bg-green-50 rounded-lg">
                     <p className="text-sm text-green-800">
-                      <span className="font-medium">Admin View:</span> 
+                      <span className="font-medium">Admin View:</span>
                       แสดงข้อมูลทั้งหมด {requisitions.length} รายการ
                       {filteredRequisitions.length !== requisitions.length && (
                         <span className="ml-2 text-green-600">
@@ -2690,7 +2260,7 @@ export default function ApprovalsPage() {
                 {user?.ROLE === 'MANAGER' && (
                   <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-800">
-                      <span className="font-medium">Manager View:</span> 
+                      <span className="font-medium">Manager View:</span>
                       แสดงข้อมูลใน SITE_ID เดียวกัน {requisitions.length} รายการ
                       {filteredRequisitions.length !== requisitions.length && (
                         <span className="ml-2 text-blue-600">
@@ -2771,7 +2341,8 @@ export default function ApprovalsPage() {
                 {activeFilter === 'all' && (
                   <ClipboardList className="h-6 w-6 text-gray-600" />
                 )}
-                {activeFilter === 'all' && `All Requisitions (${requisitions.length})`}
+                {activeFilter === 'all' &&
+                  `All Requisitions (${requisitions.length})`}
                 {activeFilter === 'pending' &&
                   `Pending Requisitions (${pendingCount})`}
                 {activeFilter === 'approved' &&
@@ -2872,8 +2443,7 @@ export default function ApprovalsPage() {
                           'No approved requisitions'}
                         {activeFilter === 'rejected' &&
                           'No rejected requisitions'}
-                        {activeFilter === 'closed' &&
-                          'No closed requisitions'}
+                        {activeFilter === 'closed' && 'No closed requisitions'}
                         {activeFilter === 'all' && 'No requisitions found'}
                       </h3>
                       <p
@@ -3058,7 +2628,8 @@ export default function ApprovalsPage() {
                                               : requisition.STATUS ===
                                                   'REJECTED'
                                                 ? 'bg-gradient-to-r from-red-500 to-pink-600'
-                                                : requisition.STATUS === 'CLOSED'
+                                                : requisition.STATUS ===
+                                                    'CLOSED'
                                                   ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
                                                   : 'bg-gradient-to-r from-gray-500 to-gray-600'
                                     }`}
@@ -3103,7 +2674,9 @@ export default function ApprovalsPage() {
                                 <div className="flex items-center gap-2">
                                   <span className="font-bold text-lg text-green-600">
                                     ฿
-                                    {formatNumberWithCommas(Number(requisition.TOTAL_AMOUNT))}
+                                    {formatNumberWithCommas(
+                                      Number(requisition.TOTAL_AMOUNT)
+                                    )}
                                   </span>
                                 </div>
                               </TableCell>
@@ -3152,54 +2725,57 @@ export default function ApprovalsPage() {
                                         </Button>
                                       </>
                                     )}
-                                  {user?.ROLE === 'ADMIN' && requisition.STATUS === 'APPROVED' && (
-                                    <>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleEdit(requisition)}
-                                        disabled={false}
-                                        className="hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-600"
-                                      >
-                                        <FileText className="h-4 w-4 mr-2" />
-                                        แก้ไข & PDF
-                                      </Button>
+                                  {user?.ROLE === 'ADMIN' &&
+                                    requisition.STATUS === 'APPROVED' && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() =>
+                                            handleEdit(requisition)
+                                          }
+                                          disabled={false}
+                                          className="hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-600"
+                                        >
+                                          <FileText className="h-4 w-4 mr-2" />
+                                          แก้ไข & PDF
+                                        </Button>
 
-                                      {/* ปุ่มแก้ไขรายการสินค้า */}
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          setEditingRequisition(requisition);
-                                          handleEditItems(requisition);
-                                        }}
-                                        disabled={savingItems}
-                                        className="hover:bg-blue-50 hover:border-blue-300 transition-colors border-blue-200 text-blue-600"
-                                      >
-                                        {savingItems ? (
-                                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2" />
-                                        ) : (
-                                          <Inventory className="h-4 w-4 mr-2" />
-                                        )}
-                                        แก้ไขรายการ
-                                      </Button>
+                                        {/* ปุ่มแก้ไขรายการสินค้า */}
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setEditingRequisition(requisition);
+                                            handleEditItems(requisition);
+                                          }}
+                                          disabled={savingItems}
+                                          className="hover:bg-blue-50 hover:border-blue-300 transition-colors border-blue-200 text-blue-600"
+                                        >
+                                          {savingItems ? (
+                                            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2" />
+                                          ) : (
+                                            <Inventory className="h-4 w-4 mr-2" />
+                                          )}
+                                          แก้ไขรายการ
+                                        </Button>
 
-                                      {/* ปุ่มแจ้งเตือนว่าสินค้ามาแล้ว */}
-                                      <Button
-                                        size="sm"
-                                        onClick={() =>
-                                          handleNotifyArrival(requisition)
-                                        }
-                                        disabled={
-                                          requisition.STATUS !== 'APPROVED'
-                                        }
-                                        className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
-                                      >
-                                        <span className="mr-2">📦</span>
-                                        แจ้งเตือน
-                                      </Button>
-                                    </>
-                                  )}
+                                        {/* ปุ่มแจ้งเตือนว่าสินค้ามาแล้ว */}
+                                        <Button
+                                          size="sm"
+                                          onClick={() =>
+                                            handleNotifyArrival(requisition)
+                                          }
+                                          disabled={
+                                            requisition.STATUS !== 'APPROVED'
+                                          }
+                                          className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
+                                        >
+                                          <span className="mr-2">📦</span>
+                                          แจ้งเตือน
+                                        </Button>
+                                      </>
+                                    )}
                                 </div>
                               </TableCell>
                             </motion.tr>
@@ -3250,7 +2826,9 @@ export default function ApprovalsPage() {
                   </p>
                   <p>
                     <span className="font-medium">Amount:</span> ฿
-                    {formatNumberWithCommas(Number(selectedRequisition?.TOTAL_AMOUNT || 0))}
+                    {formatNumberWithCommas(
+                      Number(selectedRequisition?.TOTAL_AMOUNT || 0)
+                    )}
                   </p>
                   <p>
                     <span className="font-medium">Submitted:</span>{' '}
@@ -3270,16 +2848,16 @@ export default function ApprovalsPage() {
                 </label>
                 <Textarea
                   placeholder={
-                    actionType === 'reject' 
-                      ? 'กรุณากรอกเหตุผลในการปฏิเสธ...' 
+                    actionType === 'reject'
+                      ? 'กรุณากรอกเหตุผลในการปฏิเสธ...'
                       : `Add a note about this ${actionType}...`
                   }
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
                   className={`resize-none ${
-                    actionType === 'reject' && (!note || note.trim() === '') 
-                      ? 'border-red-300 focus:border-red-500' 
+                    actionType === 'reject' && (!note || note.trim() === '')
+                      ? 'border-red-300 focus:border-red-500'
                       : ''
                   }`}
                 />
@@ -3296,7 +2874,10 @@ export default function ApprovalsPage() {
               </Button>
               <Button
                 onClick={handleSubmitAction}
-                disabled={submitting || (actionType === 'reject' && (!note || note.trim() === ''))}
+                disabled={
+                  submitting ||
+                  (actionType === 'reject' && (!note || note.trim() === ''))
+                }
                 className={`flex-1 ${
                   actionType === 'approve'
                     ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700'
@@ -3454,115 +3035,115 @@ export default function ApprovalsPage() {
                   {selectedRequisition?.REQUISITION_ITEMS &&
                   selectedRequisition.REQUISITION_ITEMS.length > 0 ? (
                     <div className="space-y-6">
-                      {groupItemsByCategory(selectedRequisition.REQUISITION_ITEMS).map(
-                        (categoryGroup) => (
-                          <div key={categoryGroup.category} className="space-y-3">
-                            {/* หัวข้อหมวดหมู่ */}
-                            <div className="flex items-center gap-3 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
-                              <Typography
-                                variant="h6"
-                                className="font-bold text-blue-800"
-                              >
-                                {categoryGroup.category}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                className="text-blue-600 bg-blue-100 px-2 py-1 rounded-full"
-                              >
-                                {categoryGroup.items.length} รายการ
-                              </Typography>
-                            </div>
+                      {groupItemsByCategory(
+                        selectedRequisition.REQUISITION_ITEMS
+                      ).map((categoryGroup) => (
+                        <div key={categoryGroup.category} className="space-y-3">
+                          {/* หัวข้อหมวดหมู่ */}
+                          <div className="flex items-center gap-3 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
+                            <Typography
+                              variant="h6"
+                              className="font-bold text-blue-800"
+                            >
+                              {categoryGroup.category}
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              className="text-blue-600 bg-blue-100 px-2 py-1 rounded-full"
+                            >
+                              {categoryGroup.items.length} รายการ
+                            </Typography>
+                          </div>
 
-                            {/* รายการสินค้าในหมวดหมู่ */}
-                            <div className="space-y-3 ml-4">
-                              {categoryGroup.items.map((item, idx) => (
-                                <div
-                                  key={item.ITEM_ID || idx}
-                                  className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
-                                >
-                                  <div className="flex-shrink-0">
-                                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                                      {item.PHOTO_URL ? (
-                                        <img
-                                          src={getImageUrl(item.PHOTO_URL)}
-                                          alt={item.PRODUCT_NAME}
-                                          className="w-full h-full object-cover rounded-lg"
-                                        />
-                                      ) : (
-                                        <Category className="h-8 w-8 text-gray-400" />
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="flex-1 min-w-0">
-                                    <Typography
-                                      variant="subtitle1"
-                                      className="font-semibold text-gray-800 truncate"
-                                    >
-                                      {item.PRODUCT_NAME || 'Unknown Product'}
-                                    </Typography>
-                                    {item.ORDER_UNIT && (
-                                      <Typography
-                                        variant="body2"
-                                        className="text-gray-500"
-                                      >
-                                        Unit: {item.ORDER_UNIT}
-                                      </Typography>
+                          {/* รายการสินค้าในหมวดหมู่ */}
+                          <div className="space-y-3 ml-4">
+                            {categoryGroup.items.map((item, idx) => (
+                              <div
+                                key={item.ITEM_ID || idx}
+                                className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
+                              >
+                                <div className="flex-shrink-0">
+                                  <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                                    {item.PHOTO_URL ? (
+                                      <img
+                                        src={getImageUrl(item.PHOTO_URL)}
+                                        alt={item.PRODUCT_NAME}
+                                        className="w-full h-full object-cover rounded-lg"
+                                      />
+                                    ) : (
+                                      <Category className="h-8 w-8 text-gray-400" />
                                     )}
                                   </div>
+                                </div>
 
-                                  <div className="flex items-center gap-4 text-right">
-                                    <div>
-                                      <Typography
-                                        variant="body2"
-                                        className="text-gray-500"
-                                      >
-                                        Quantity
-                                      </Typography>
-                                      <Typography
-                                        variant="h6"
-                                        className="font-bold text-blue-600"
-                                      >
-                                        {item.QUANTITY}
-                                      </Typography>
-                                    </div>
+                                <div className="flex-1 min-w-0">
+                                  <Typography
+                                    variant="subtitle1"
+                                    className="font-semibold text-gray-800 truncate"
+                                  >
+                                    {item.PRODUCT_NAME || 'Unknown Product'}
+                                  </Typography>
+                                  {item.ORDER_UNIT && (
+                                    <Typography
+                                      variant="body2"
+                                      className="text-gray-500"
+                                    >
+                                      Unit: {item.ORDER_UNIT}
+                                    </Typography>
+                                  )}
+                                </div>
 
-                                    <div>
-                                      <Typography
-                                        variant="body2"
-                                        className="text-gray-500"
-                                      >
-                                        Unit Price
-                                      </Typography>
-                                      <Typography
-                                        variant="h6"
-                                        className="font-bold text-green-600"
-                                      >
-                                        ฿{Number(item.UNIT_PRICE || 0).toFixed(2)}
-                                      </Typography>
-                                    </div>
+                                <div className="flex items-center gap-4 text-right">
+                                  <div>
+                                    <Typography
+                                      variant="body2"
+                                      className="text-gray-500"
+                                    >
+                                      Quantity
+                                    </Typography>
+                                    <Typography
+                                      variant="h6"
+                                      className="font-bold text-blue-600"
+                                    >
+                                      {item.QUANTITY}
+                                    </Typography>
+                                  </div>
 
-                                    <div>
-                                      <Typography
-                                        variant="body2"
-                                        className="text-gray-500"
-                                      >
-                                        Total
-                                      </Typography>
-                                      <Typography
-                                        variant="h6"
-                                        className="font-bold text-purple-600"
-                                      >
-                                        ฿{calculateSafeTotalPrice(item)}
-                                      </Typography>
-                                    </div>
+                                  <div>
+                                    <Typography
+                                      variant="body2"
+                                      className="text-gray-500"
+                                    >
+                                      Unit Price
+                                    </Typography>
+                                    <Typography
+                                      variant="h6"
+                                      className="font-bold text-green-600"
+                                    >
+                                      ฿{Number(item.UNIT_PRICE || 0).toFixed(2)}
+                                    </Typography>
+                                  </div>
+
+                                  <div>
+                                    <Typography
+                                      variant="body2"
+                                      className="text-gray-500"
+                                    >
+                                      Total
+                                    </Typography>
+                                    <Typography
+                                      variant="h6"
+                                      className="font-bold text-purple-600"
+                                    >
+                                      ฿{calculateSafeTotalPrice(item)}
+                                    </Typography>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
+                              </div>
+                            ))}
                           </div>
-                        )
-                      )}
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
@@ -3849,7 +3430,6 @@ export default function ApprovalsPage() {
                 </div>
               </div>
 
-
               {/* ชื่อไฟล์ */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
@@ -3872,7 +3452,8 @@ export default function ApprovalsPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    ไฟล์จะถูกบันทึกเป็น: {editFormData.fileName || 'SUPPLY_REQUEST_ORDER'}.pdf
+                    ไฟล์จะถูกบันทึกเป็น:{' '}
+                    {editFormData.fileName || 'SUPPLY_REQUEST_ORDER'}.pdf
                   </p>
                 </div>
               </div>
@@ -4070,7 +3651,8 @@ export default function ApprovalsPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    ไฟล์จะถูกบันทึกเป็น: {editAllFormData.fileName || 'SUPPLY_REQUEST_ORDER'}.pdf
+                    ไฟล์จะถูกบันทึกเป็น:{' '}
+                    {editAllFormData.fileName || 'SUPPLY_REQUEST_ORDER'}.pdf
                   </p>
                 </div>
               </div>
@@ -4096,7 +3678,10 @@ export default function ApprovalsPage() {
         </Dialog>
 
         {/* Dialog สำหรับแก้ไขรายการสินค้า */}
-        <Dialog open={editItemsDialogOpen} onOpenChange={setEditItemsDialogOpen}>
+        <Dialog
+          open={editItemsDialogOpen}
+          onOpenChange={setEditItemsDialogOpen}
+        >
           <DialogContent className="max-w-6xl max-h-[95vh] w-[95vw] bg-white overflow-y-auto">
             <DialogHeader>
               <div className="flex items-center gap-3">
@@ -4119,7 +3704,9 @@ export default function ApprovalsPage() {
               <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-4 border border-gray-200">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="text-center sm:text-left">
-                    <h3 className="text-lg font-semibold text-gray-800">ยอดรวมปัจจุบัน</h3>
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      ยอดรวมปัจจุบัน
+                    </h3>
                     <p className="text-2xl sm:text-3xl font-bold text-green-600">
                       ฿{calculateTotalAmount(editingItems).toFixed(2)}
                     </p>
@@ -4138,7 +3725,7 @@ export default function ApprovalsPage() {
                 <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
                   รายการสินค้า
                 </h3>
-                
+
                 {(editingItems || []).length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <Inventory className="h-12 w-12 mx-auto mb-2 text-gray-300" />
@@ -4188,7 +3775,12 @@ export default function ApprovalsPage() {
                               <input
                                 type="number"
                                 value={item.UNIT_PRICE}
-                                onChange={(e) => handleUpdateItemPrice(item.ITEM_ID, Math.max(0, parseFloat(e.target.value) || 0))}
+                                onChange={(e) =>
+                                  handleUpdateItemPrice(
+                                    item.ITEM_ID,
+                                    Math.max(0, parseFloat(e.target.value) || 0)
+                                  )
+                                }
                                 className="w-24 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 min="0"
                                 step="0.01"
@@ -4204,7 +3796,12 @@ export default function ApprovalsPage() {
                             <input
                               type="text"
                               value={item.ORDER_UNIT || ''}
-                              onChange={(e) => handleUpdateItemUnit(item.ITEM_ID, e.target.value)}
+                              onChange={(e) =>
+                                handleUpdateItemUnit(
+                                  item.ITEM_ID,
+                                  e.target.value
+                                )
+                              }
                               className="w-24 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               placeholder="เช่น กล่อง"
                             />
@@ -4217,7 +3814,12 @@ export default function ApprovalsPage() {
                             </label>
                             <div className="flex items-center gap-1">
                               <button
-                                onClick={() => handleUpdateItemQuantity(item.ITEM_ID, Math.max(0, item.QUANTITY - 1))}
+                                onClick={() =>
+                                  handleUpdateItemQuantity(
+                                    item.ITEM_ID,
+                                    Math.max(0, item.QUANTITY - 1)
+                                  )
+                                }
                                 className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
                               >
                                 -
@@ -4225,12 +3827,22 @@ export default function ApprovalsPage() {
                               <input
                                 type="number"
                                 value={item.QUANTITY}
-                                onChange={(e) => handleUpdateItemQuantity(item.ITEM_ID, Math.max(0, parseFloat(e.target.value) || 0))}
+                                onChange={(e) =>
+                                  handleUpdateItemQuantity(
+                                    item.ITEM_ID,
+                                    Math.max(0, parseFloat(e.target.value) || 0)
+                                  )
+                                }
                                 className="w-16 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 min="0"
                               />
                               <button
-                                onClick={() => handleUpdateItemQuantity(item.ITEM_ID, item.QUANTITY + 1)}
+                                onClick={() =>
+                                  handleUpdateItemQuantity(
+                                    item.ITEM_ID,
+                                    item.QUANTITY + 1
+                                  )
+                                }
                                 className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
                               >
                                 +
@@ -4314,7 +3926,15 @@ export default function ApprovalsPage() {
                                 <input
                                   type="number"
                                   value={item.UNIT_PRICE}
-                                  onChange={(e) => handleUpdateItemPrice(item.ITEM_ID, Math.max(0, parseFloat(e.target.value) || 0))}
+                                  onChange={(e) =>
+                                    handleUpdateItemPrice(
+                                      item.ITEM_ID,
+                                      Math.max(
+                                        0,
+                                        parseFloat(e.target.value) || 0
+                                      )
+                                    )
+                                  }
                                   className="w-full px-2 py-1 text-sm text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                   min="0"
                                   step="0.01"
@@ -4329,7 +3949,12 @@ export default function ApprovalsPage() {
                               </label>
                               <div className="flex items-center gap-1">
                                 <button
-                                  onClick={() => handleUpdateItemQuantity(item.ITEM_ID, Math.max(0, item.QUANTITY - 1))}
+                                  onClick={() =>
+                                    handleUpdateItemQuantity(
+                                      item.ITEM_ID,
+                                      Math.max(0, item.QUANTITY - 1)
+                                    )
+                                  }
                                   className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors text-sm"
                                 >
                                   -
@@ -4337,12 +3962,25 @@ export default function ApprovalsPage() {
                                 <input
                                   type="number"
                                   value={item.QUANTITY}
-                                  onChange={(e) => handleUpdateItemQuantity(item.ITEM_ID, Math.max(0, parseFloat(e.target.value) || 0))}
+                                  onChange={(e) =>
+                                    handleUpdateItemQuantity(
+                                      item.ITEM_ID,
+                                      Math.max(
+                                        0,
+                                        parseFloat(e.target.value) || 0
+                                      )
+                                    )
+                                  }
                                   className="flex-1 px-2 py-1 text-sm text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                   min="0"
                                 />
                                 <button
-                                  onClick={() => handleUpdateItemQuantity(item.ITEM_ID, item.QUANTITY + 1)}
+                                  onClick={() =>
+                                    handleUpdateItemQuantity(
+                                      item.ITEM_ID,
+                                      item.QUANTITY + 1
+                                    )
+                                  }
                                   className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors text-sm"
                                 >
                                   +
@@ -4358,7 +3996,12 @@ export default function ApprovalsPage() {
                               <input
                                 type="text"
                                 value={item.ORDER_UNIT || ''}
-                                onChange={(e) => handleUpdateItemUnit(item.ITEM_ID, e.target.value)}
+                                onChange={(e) =>
+                                  handleUpdateItemUnit(
+                                    item.ITEM_ID,
+                                    e.target.value
+                                  )
+                                }
                                 className="w-full px-2 py-1 text-sm text-center border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 placeholder="เช่น กล่อง"
                               />
@@ -4412,7 +4055,66 @@ export default function ApprovalsPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Progress Dialog */}
+        <Dialog open={progressDialogOpen} onOpenChange={() => {}}>
+          <DialogContent className="sm:max-w-md bg-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-center gap-3 text-lg font-semibold text-gray-900">
+                {progressCompleted ? (
+                  <CheckCircle className="w-6 h-6 text-green-500" />
+                ) : (
+                  <svg
+                    className="w-6 h-6 text-blue-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                )}
+                {progressCompleted ? 'เสร็จสิ้น' : 'กำลังประมวลผล'}
+              </DialogTitle>
+            </DialogHeader>
 
+            <div className="space-y-4 py-4">
+              {/* Message */}
+              <p className="text-gray-700 text-center text-sm">
+                {progressMessage}
+              </p>
+
+              {/* Progress Bar */}
+              {totalProgress > 0 && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">ความคืบหน้า</span>
+                    <span className="font-semibold text-blue-600">
+                      {currentProgress}/{totalProgress}
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 transition-all duration-300 ease-out rounded-full"
+                      style={{
+                        width: `${(currentProgress / totalProgress) * 100}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Warning */}
+              <p className="text-xs text-gray-500 text-center">
+                กรุณารอสักครู่... อย่าปิดหน้าต่างนี้
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </div>
   );
