@@ -616,6 +616,425 @@ export default function ApprovalsPage() {
     }
   };
 
+  // ฟังก์ชันสร้าง PDF ทั้งหมดแยกตาม requisition แต่ละใบ
+  const generateAllPDFsByRequisition = async () => {
+    if (filteredRequisitions.length === 0) {
+      showInfo(
+        'ไม่มีข้อมูล',
+        `ไม่มีข้อมูลให้พิมพ์\n- จำนวน requisitions ทั้งหมด: ${requisitions.length}\n- จำนวนที่ผ่าน filter: ${filteredRequisitions.length}\n- ปีที่เลือก: ${selectedYear}\n- เดือนที่เลือก: ${selectedMonth || 'ไม่เลือก'}\n- Filter: ${activeFilter}`
+      );
+      return;
+    }
+
+    // เปิด progress dialog
+    setProgressDialogOpen(true);
+    setProgressCompleted(false);
+    setProgressMessage('กำลังรวบรวมข้อมูล...');
+    setCurrentProgress(0);
+    setTotalProgress(filteredRequisitions.length);
+
+    try {
+      let documentCount = 0;
+
+      // วนลูปสร้าง PDF สำหรับแต่ละ requisition
+      for (const requisition of filteredRequisitions) {
+        documentCount++;
+        setCurrentProgress(documentCount);
+        setProgressMessage(
+          `กำลังสร้างเอกสาร #${requisition.REQUISITION_ID} (${documentCount}/${filteredRequisitions.length})`
+        );
+
+        // โหลดข้อมูล items
+        let itemsToUse = requisition.REQUISITION_ITEMS;
+
+        if (!itemsToUse || itemsToUse.length === 0) {
+          try {
+            const response = await fetch(
+              getApiUrl(`/api/requisitions/${requisition.REQUISITION_ID}/items`)
+            );
+            if (response.ok) {
+              itemsToUse = await response.json();
+            } else {
+              continue;
+            }
+          } catch (error) {
+            console.error('Error loading items:', error);
+            continue;
+          }
+        }
+
+        if (!itemsToUse || itemsToUse.length === 0) {
+          continue;
+        }
+
+        // ตรวจสอบและลบข้อมูลที่ซ้ำซ้อน
+        if (itemsToUse && itemsToUse.length > 0) {
+          const seen = new Set();
+          itemsToUse = itemsToUse.filter((item: any) => {
+            const id = item.ITEM_ID || item.PRODUCT_ITEM_ID;
+            if (!id || seen.has(id)) {
+              return false;
+            }
+            seen.add(id);
+            return true;
+          });
+        }
+
+        // ดึงข้อมูล user
+        let userOrgCode4 = requisition.SITE_ID;
+        let userFullName = requisition.USER_ID;
+        let userDepartment = requisition.DEPARTMENT || 'N/A';
+        let userCostCenterCode = requisition.SITE_ID || '';
+
+        try {
+          const response = await fetch(
+            getApiUrl(
+              `/api/orgcode3?action=getUserOrgCode4&userId=${requisition.USER_ID}`
+            )
+          );
+          if (response.ok) {
+            const data = await response.json();
+            userOrgCode4 = data.orgCode4 || requisition.SITE_ID;
+            userFullName =
+              data.fullNameThai || data.fullNameEng || requisition.USER_ID;
+            userDepartment =
+              data.costCenterEng || requisition.DEPARTMENT || 'N/A';
+            userCostCenterCode =
+              data.costcentercode || requisition.SITE_ID || '';
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+
+        // สร้างแถวตารางสำหรับรายการสินค้า
+        const tableRows: string[] = [];
+
+        itemsToUse.forEach((item) => {
+          tableRows.push(`
+            <tr class="item-row">
+              <td class="text-center">${(item as any).PRODUCT_ITEM_ID || item.ITEM_ID || 'N/A'}</td>
+              <td>${item.PRODUCT_NAME || 'Unknown Product'}</td>
+              <td class="text-center">${item.QUANTITY}</td>
+              <td class="text-center">${item.ORDER_UNIT || 'ชิ้น'}</td>
+              <td class="text-right">฿${formatNumberWithCommas(Number(item.UNIT_PRICE || 0))}</td>
+              <td class="text-right bold">฿${calculateSafeTotalPrice(item)}</td>
+            </tr>
+          `);
+        });
+
+        // สร้าง HTML เต็มรูปแบบพร้อม CSS สำหรับ print
+        const printHTML = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>SUPPLY REQUEST ORDER #${requisition.REQUISITION_ID}</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+            <style>
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              
+              body {
+                font-family: 'Sarabun', 'Arial Unicode MS', Arial, sans-serif;
+                font-size: 11pt;
+                line-height: 1.4;
+                color: #000;
+                background: white;
+                max-width: 210mm;
+                margin: 0 auto;
+                padding: 15mm;
+              }
+              
+              .header {
+                text-align: center;
+                border-bottom: 2px solid #000;
+                padding-bottom: 10px;
+                margin-bottom: 15px;
+              }
+              
+              .header h1 {
+                font-size: 20pt;
+                font-weight: bold;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+              }
+              
+              .info-section {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 15px;
+                font-size: 9pt;
+              }
+              
+              .info-left {
+                text-align: left;
+              }
+              
+              .info-right {
+                text-align: right;
+              }
+              
+              .info-left p, .info-right p {
+                margin: 2px 0;
+              }
+              
+              .delivery-section {
+                margin-bottom: 15px;
+                padding: 8px;
+                border: 1px solid #ccc;
+                background: #f9f9f9;
+                font-size: 10pt;
+              }
+              
+              .delivery-section h3 {
+                margin: 0 0 5px 0;
+                font-size: 11pt;
+                font-weight: bold;
+              }
+              
+              .delivery-section p {
+                margin: 3px 0;
+              }
+              
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                border: 1px solid #ddd;
+                margin-bottom: 15px;
+              }
+              
+              thead {
+                background: #e9ecef;
+              }
+              
+              th {
+                padding: 8px;
+                border: 1px solid #ddd;
+                font-size: 9pt;
+                font-weight: bold;
+                text-align: center;
+              }
+              
+              td {
+                padding: 8px;
+                border: 1px solid #ddd;
+                font-size: 9pt;
+              }
+              
+              .text-center {
+                text-align: center;
+              }
+              
+              .text-right {
+                text-align: right;
+              }
+              
+              .bold {
+                font-weight: bold;
+              }
+              
+              .requisition-header {
+                background: #e3f2fd;
+                font-weight: bold;
+                font-size: 10pt;
+              }
+              
+              .requisition-header td {
+                padding: 10px 8px;
+                color: #1565c0;
+              }
+              
+              .item-row {
+                border-bottom: 1px solid #eee;
+              }
+              
+              .summary {
+                margin-top: 15px;
+                padding: 12px;
+                background: #f0f8ff;
+                border: 1px solid #2196f3;
+                border-radius: 5px;
+              }
+              
+              .summary h3 {
+                margin: 0 0 5px 0;
+                color: #1976d2;
+                font-size: 11pt;
+              }
+              
+              .summary .total-amount {
+                font-size: 14pt;
+                font-weight: bold;
+                color: #1976d2;
+                text-align: right;
+              }
+              
+              .summary p {
+                margin: 5px 0 0 0;
+                color: #1976d2;
+                font-size: 9pt;
+              }
+              
+              /* CSS สำหรับ Print */
+              @media print {
+                body {
+                  margin: 0;
+                  padding: 10mm;
+                }
+                
+                tr {
+                  page-break-inside: avoid;
+                  break-inside: avoid;
+                }
+                
+                .requisition-header {
+                  page-break-inside: avoid;
+                  break-inside: avoid;
+                  page-break-after: avoid;
+                  break-after: avoid;
+                }
+                
+                .requisition-header + .item-row {
+                  page-break-before: avoid;
+                  break-before: avoid;
+                }
+                
+                thead {
+                  display: table-header-group;
+                }
+                
+                tbody {
+                  display: table-row-group;
+                }
+                
+                .header, .info-section, .delivery-section, .summary {
+                  page-break-inside: avoid;
+                  break-inside: avoid;
+                }
+                
+                table {
+                  page-break-inside: auto;
+                }
+                
+                @page {
+                  margin: 10mm;
+                  size: A4;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>SUPPLY REQUEST ORDER</h1>
+            </div>
+            
+            <div class="info-section">
+              <div class="info-left">
+                <p><strong>${editAllFormData.companyName}</strong></p>
+                <p>${editAllFormData.companyAddress}</p>
+                <p>TEL: ${editAllFormData.phone} FAX: ${editAllFormData.fax}</p>
+                <p>เลขประจำตัวผู้เสียภาษี ${editAllFormData.taxId}</p>
+              </div>
+              <div class="info-right">
+                <p><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
+                <p><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
+              </div>
+            </div>
+            
+            <div class="delivery-section">
+              <h3>Please Delivery on:</h3>
+              <p>${editAllFormData.deliveryDate || '_________________________________'}</p>
+              <p><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
+              <p><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editAllFormData.contactPerson || 'N/A'}</p>
+            </div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>ITEM_ID</th>
+                  <th>Description</th>
+                  <th>Qty</th>
+                  <th>Unit</th>
+                  <th>Unit Price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="requisition-header">
+                  <td colspan="6">
+                    ผู้สั่ง: ${userFullName} - ${requisition.USER_ID} (${userCostCenterCode}) - 
+                    ${userDepartment} - 
+                    ${userOrgCode4} -  
+                    (${itemsToUse.length} รายการ)
+                  </td>
+                </tr>
+                ${tableRows.join('\n')}
+              </tbody>
+            </table>
+            
+            <div class="summary">
+              <h3>สรุปยอดรวม</h3>
+              <div class="total-amount">ยอดรวม: ฿${formatNumberWithCommas(Number(requisition.TOTAL_AMOUNT))}</div>
+              <p>จำนวนรายการทั้งหมด: ${itemsToUse.length} รายการ</p>
+              <p>สถานะ: ${requisition.STATUS}</p>
+            </div>
+          </body>
+          </html>
+        `;
+
+        // เปิดหน้าต่างสำหรับแต่ละ requisition
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+          showError(
+            'เกิดข้อผิดพลาด',
+            'ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาต popup'
+          );
+          continue;
+        }
+
+        printWindow.document.write(printHTML);
+        printWindow.document.close();
+
+        // รอให้ font และเนื้อหาโหลดเสร็จก่อนพิมพ์
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+          }, 500);
+        };
+
+        // รอเล็กน้อยก่อนเปิดหน้าต่างถัดไป
+        if (documentCount < filteredRequisitions.length) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+
+      // แสดงสถานะเสร็จสิ้น
+      setProgressCompleted(true);
+      setProgressMessage('สร้างเอกสารเสร็จสิ้น');
+
+      // ปิด progress dialog หลังจาก 1 วินาที
+      setTimeout(() => {
+        setProgressDialogOpen(false);
+        showSuccess(
+          'เปิดหน้าพิมพ์สำเร็จ!',
+          `เปิดหน้าต่างพิมพ์แยกตาม requisition ${documentCount} ใบ`
+        );
+      }, 1000);
+    } catch (error) {
+      console.error('Error generating PDFs by requisition:', error);
+      setProgressDialogOpen(false);
+      showError(
+        'เกิดข้อผิดพลาด',
+        'ไม่สามารถสร้างเอกสารพิมพ์ได้: ' + (error as Error).message
+      );
+    }
+  };
+
   // เพิ่มฟังก์ชันสำหรับแก้ไขข้อมูลการโหลดรวม
   const handleEditAllData = () => {
     setEditAllFormData({
@@ -636,7 +1055,7 @@ export default function ApprovalsPage() {
   // เพิ่มฟังก์ชันสำหรับบันทึกการแก้ไขข้อมูลการโหลดรวม
   const handleSaveAllEdit = () => {
     setEditAllDialogOpen(false);
-    generateAllPDFsByCategory();
+    generateAllPDFsByRequisition();
   };
 
   // เพิ่มฟังก์ชันสำหรับแก้ไขรายการสินค้า

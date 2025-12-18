@@ -84,13 +84,17 @@ export class NotificationService {
           
           const userEmailHtml = this.createSimpleEmailTemplate('requisition_created', emailData)
           
-          await this.sendEmail(
+          const emailResult = await this.sendEmail(
             userEmail,
             'คำขอเบิกได้รับการส่งเรียบร้อยแล้ว',
             userEmailHtml
           )
           
-          console.log(`✅ Email sent to user ${userId}`)
+          if (emailResult) {
+            console.log(`✅ Email sent to user ${userId}`)
+          } else {
+            console.error(`❌ Failed to send email to user ${userId}`)
+          }
         } catch (emailError) {
           console.error(`❌ Error sending email to user ${userId}:`, emailError)
         }
@@ -1404,6 +1408,8 @@ export class NotificationService {
    * ส่งอีเมลพร้อมการบันทึกข้อมูลในฐานข้อมูล
    */
   private static async sendEmailWithLogging(to: string, subject: string, html: string, emailLogId: number) {
+    let transporter: any = null
+    let gmailTransporter: any = null
     try {
       // ==========================================
       // 📧 EMAIL SENDING ENABLED - SEND REAL EMAILS
@@ -1431,8 +1437,8 @@ export class NotificationService {
 
       // ตรวจสอบว่ามีการตั้งค่า SMTP หรือไม่
       if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-        console.error('❌ SMTP credentials not configured! Email will not be sent.')
-        console.error('❌ Please check your .env.local file for SMTP_USER and SMTP_PASS')
+        const errorMsg = 'SMTP credentials not configured! Email will not be sent. Please check your .env.local file for SMTP_USER and SMTP_PASS'
+        console.error('❌', errorMsg)
         return {
           success: false,
           error: 'SMTP credentials not configured',
@@ -1448,7 +1454,7 @@ export class NotificationService {
       console.log(`📧 Using SMTP: ${smtpHost}:${smtpPort}`)
 
       console.log('📧 Creating SMTP transporter...')
-      const transporter = nodemailer.createTransport({
+      transporter = nodemailer.createTransport({
         host: smtpHost,
         port: smtpPort,
         secure: false,
@@ -1474,7 +1480,7 @@ export class NotificationService {
         if (process.env.NODE_ENV !== 'production') {
           console.log('✅ SMTP connection verified successfully')
         }
-      } catch (verifyError) {
+      } catch (verifyError: any) {
         console.error('❌ SMTP connection verification failed:', verifyError)
         console.error('❌ Please check your SMTP settings and network connection')
         
@@ -1482,7 +1488,7 @@ export class NotificationService {
         if (smtpHost !== 'smtp.gmail.com') {
           console.log('🔄 Trying Gmail SMTP as fallback...')
           try {
-            const gmailTransporter = nodemailer.createTransport({
+            gmailTransporter = nodemailer.createTransport({
               host: 'smtp.gmail.com',
               port: 587,
               secure: false,
@@ -1516,7 +1522,7 @@ export class NotificationService {
               messageId: result.messageId,
               emailSize: html.length
             }
-          } catch (gmailError) {
+          } catch (gmailError: any) {
             console.error('❌ Gmail SMTP also failed:', gmailError)
           }
         }
@@ -1546,17 +1552,16 @@ export class NotificationService {
 
       const result = await transporter.sendMail(mailOptions)
       
-      // แสดง Log เฉพาะใน development
+      // แสดง Log ในทุก environment สำหรับการส่งสำเร็จ
+      console.log('✅ Email sent successfully!', {
+        messageId: result.messageId,
+        to,
+        subject
+      })
+      
       if (process.env.NODE_ENV !== 'production') {
-        console.log('✅ Email sent successfully!')
-        console.log('  - Message ID:', result.messageId)
         console.log('  - Response:', result.response)
-        console.log('  - To:', to)
-        console.log('  - Subject:', subject)
       }
-
-      // ปิดการเชื่อมต่อ SMTP
-      transporter.close()
       
       // ทำความสะอาด memory
       this.memoryCleanup()
@@ -1570,16 +1575,17 @@ export class NotificationService {
       }
       
     } catch (error: any) {
-      // แสดง Log เฉพาะใน development
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('❌ Error in email sending:', error)
-        console.error('❌ Error details:')
-        console.error('  - Message:', error.message)
-        console.error('  - Code:', error.code)
-        console.error('  - Command:', error.command)
-        console.error('  - Response:', error.response)
-        console.error('  - ResponseCode:', error.responseCode)
-      }
+      // Log error ในทุก environment เพื่อช่วยในการ debug
+      console.error('❌ Error sending email:', {
+        to,
+        subject,
+        error: error?.message || error,
+        code: error?.code,
+        command: error?.command,
+        response: error?.response,
+        responseCode: error?.responseCode,
+        stack: process.env.NODE_ENV !== 'production' ? error?.stack : undefined
+      })
       
       // ทำความสะอาด memory แม้เกิด error
       this.memoryCleanup()
@@ -1590,6 +1596,22 @@ export class NotificationService {
         messageId: null,
         emailSize: 0
       }
+    } finally {
+      // ปิดการเชื่อมต่อ SMTP เสมอ
+      if (transporter) {
+        try {
+          transporter.close()
+        } catch (closeError) {
+          console.error('❌ Error closing transporter:', closeError)
+        }
+      }
+      if (gmailTransporter) {
+        try {
+          gmailTransporter.close()
+        } catch (closeError) {
+          console.error('❌ Error closing Gmail transporter:', closeError)
+        }
+      }
     }
   }
 
@@ -1597,6 +1619,7 @@ export class NotificationService {
    * ส่งอีเมล (ฟังก์ชันเดิม - ใช้สำหรับ backward compatibility)
    */
   private static async sendEmail(to: string, subject: string, html: string) {
+    let transporter: any = null
     try {
       // ==========================================
       // 📧 EMAIL SENDING ENABLED - SEND REAL EMAILS
@@ -1623,13 +1646,13 @@ export class NotificationService {
 
       // ตรวจสอบว่ามีการตั้งค่า SMTP หรือไม่
       if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-        console.error('❌ SMTP credentials not configured! Email will not be sent.')
-        console.error('❌ Please check your .env.local file for SMTP_USER and SMTP_PASS')
-        return
+        const errorMsg = 'SMTP credentials not configured! Email will not be sent. Please check your .env.local file for SMTP_USER and SMTP_PASS'
+        console.error('❌', errorMsg)
+        throw new Error(errorMsg)
       }
 
       console.log('📧 Creating SMTP transporter...')
-      const transporter = nodemailer.createTransport({
+      transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: Number(process.env.SMTP_PORT) || 587,
         secure: false,
@@ -1637,10 +1660,13 @@ export class NotificationService {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
         },
-        // เพิ่ม timeout และ debug options
-        connectionTimeout: 10000, // 10 seconds
-        greetingTimeout: 10000,   // 10 seconds
-        socketTimeout: 10000,     // 10 seconds
+        // เพิ่ม timeout เพื่อให้มีเวลาเชื่อมต่อมากขึ้น
+        connectionTimeout: 30000, // 30 seconds
+        greetingTimeout: 30000,   // 30 seconds
+        socketTimeout: 30000,     // 30 seconds
+        tls: {
+          rejectUnauthorized: false
+        }
       })
 
       // ทดสอบการเชื่อมต่อ SMTP
@@ -1652,10 +1678,17 @@ export class NotificationService {
         if (process.env.NODE_ENV !== 'production') {
           console.log('✅ SMTP connection verified successfully')
         }
-      } catch (verifyError) {
-        console.error('❌ SMTP connection verification failed:', verifyError)
-        console.error('❌ Please check your SMTP settings and network connection')
-        return
+      } catch (verifyError: any) {
+        const errorMsg = `SMTP connection verification failed: ${verifyError?.message || verifyError}. Please check your SMTP settings and network connection`
+        console.error('❌', errorMsg)
+        // Log รายละเอียดเพิ่มเติมใน production เพื่อช่วยในการ debug
+        console.error('❌ SMTP verification error details:', {
+          code: verifyError?.code,
+          command: verifyError?.command,
+          response: verifyError?.response,
+          responseCode: verifyError?.responseCode
+        })
+        throw new Error(errorMsg)
       }
 
       if (process.env.NODE_ENV !== 'production') {
@@ -1675,17 +1708,17 @@ export class NotificationService {
 
       const result = await transporter.sendMail(mailOptions)
       
-      // แสดง Log เฉพาะใน development
+      // แสดง Log ในทุก environment สำหรับการส่งสำเร็จ
+      console.log('✅ Email sent successfully!', {
+        messageId: result.messageId,
+        to,
+        subject
+      })
+      
       if (process.env.NODE_ENV !== 'production') {
-        console.log('✅ Email sent successfully!')
         console.log('  - Message ID:', result.messageId)
         console.log('  - Response:', result.response)
-        console.log('  - To:', to)
-        console.log('  - Subject:', subject)
       }
-
-      // ปิดการเชื่อมต่อ SMTP
-      transporter.close()
       
       // ทำความสะอาด memory
       this.memoryCleanup()
@@ -1693,21 +1726,31 @@ export class NotificationService {
       return true // ส่งอีเมลสำเร็จ
       
     } catch (error: any) {
-      // แสดง Log เฉพาะใน development
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('❌ Error in email logging:', error)
-        console.error('❌ Error details:')
-        console.error('  - Message:', error.message)
-        console.error('  - Code:', error.code)
-        console.error('  - Command:', error.command)
-        console.error('  - Response:', error.response)
-        console.error('  - ResponseCode:', error.responseCode)
-      }
+      // Log error ในทุก environment เพื่อช่วยในการ debug
+      console.error('❌ Error sending email:', {
+        to,
+        subject,
+        error: error?.message || error,
+        code: error?.code,
+        command: error?.command,
+        response: error?.response,
+        responseCode: error?.responseCode,
+        stack: process.env.NODE_ENV !== 'production' ? error?.stack : undefined
+      })
       
       // ทำความสะอาด memory แม้เกิด error
       this.memoryCleanup()
       
       return false // ส่งอีเมลล้มเหลว
+    } finally {
+      // ปิดการเชื่อมต่อ SMTP เสมอ
+      if (transporter) {
+        try {
+          transporter.close()
+        } catch (closeError) {
+          console.error('❌ Error closing transporter:', closeError)
+        }
+      }
     }
   }
 
@@ -2705,10 +2748,20 @@ export class NotificationService {
       // ใช้ message ที่ส่งมาเป็น HTML template โดยตรง
       const htmlContent = message
 
-      await this.sendEmail(toEmail, subject, htmlContent)
       if (process.env.NODE_ENV === 'development') {
         console.log(`📧 Attempting to send test email to ${toEmail}`)
-        console.log(`✅ Test email sent to ${toEmail}`)
+      }
+
+      const emailResult = await this.sendEmail(toEmail, subject, htmlContent)
+      
+      if (emailResult) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`✅ Test email sent to ${toEmail}`)
+        }
+      } else {
+        const errorMsg = `Failed to send test email to ${toEmail}`
+        console.error(`❌ ${errorMsg}`)
+        throw new Error(errorMsg)
       }
       
       // ทำความสะอาด memory
