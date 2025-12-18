@@ -1055,7 +1055,7 @@ export default function ApprovalsPage() {
   // เพิ่มฟังก์ชันสำหรับบันทึกการแก้ไขข้อมูลการโหลดรวม
   const handleSaveAllEdit = () => {
     setEditAllDialogOpen(false);
-    generateAllPDFsByRequisition();
+    generateAllPDFsByCategory();
   };
 
   // เพิ่มฟังก์ชันสำหรับแก้ไขรายการสินค้า
@@ -1330,14 +1330,9 @@ export default function ApprovalsPage() {
       let documentCount = 0;
 
       for (const category of sortedCategories) {
-        setCurrentProgress(documentCount + 1);
-        setProgressMessage(
-          `กำลังสร้างเอกสาร: ${category} (${documentCount + 1}/${sortedCategories.length})`
-        );
-
         const items = categoryGroups[category];
 
-        // จัดกลุ่มตาม requisition
+        // จัดกลุ่มตาม requisition ภายในแต่ละหมวดหมู่
         const requisitionMap: Record<number, any[]> = {};
         items.forEach((data) => {
           const reqId = data.requisition.REQUISITION_ID;
@@ -1347,35 +1342,33 @@ export default function ApprovalsPage() {
           requisitionMap[reqId].push(data);
         });
 
-        // สร้างแถวตาราง
-        const tableRows: string[] = [];
-        let categoryTotal = 0;
-        let categoryItemCount = 0;
+        // สำหรับหมวดหมู่แต่ละอัน ให้แยกเป็นใบของใครของมัน (ต่อ requisition)
+        const requisitionIds = Object.keys(requisitionMap);
 
-        Object.keys(requisitionMap).forEach((reqId) => {
+        for (const reqId of requisitionIds) {
           const reqItems = requisitionMap[Number(reqId)];
+          if (!reqItems || reqItems.length === 0) continue;
+
           const firstItem = reqItems[0];
-          const requisition = firstItem.requisition;
+          const requisition = firstItem.requisition as Requisition;
 
-          // Header ของแต่ละ requisition
-          tableRows.push(`
-            <tr class="requisition-header">
-              <td colspan="6">
-                ผู้สั่ง: ${firstItem.userFullName} - ${requisition.USER_ID} (${firstItem.userCostCenterCode}) - 
-                ${firstItem.userDepartment} - 
-                ${firstItem.userOrgCode4} -  
-                (${reqItems.length} รายการ)
-              </td>
-            </tr>
-          `);
+          documentCount++;
+          setCurrentProgress(documentCount);
+          setProgressMessage(
+            `กำลังสร้างเอกสาร: ${category} - #${requisition.REQUISITION_ID} (${documentCount})`
+          );
 
-          // รายการสินค้า
+          // สร้างแถวตารางเฉพาะของ requisition นี้ในหมวดหมู่นี้
+          const tableRows: string[] = [];
+          let reqTotal = 0;
+          let reqItemCount = 0;
+
           reqItems.forEach((data) => {
             const item = data.item;
-            categoryItemCount++;
+            reqItemCount++;
             const itemTotal =
               Number(item.QUANTITY || 0) * Number(item.UNIT_PRICE || 0);
-            categoryTotal += itemTotal;
+            reqTotal += itemTotal;
 
             tableRows.push(`
               <tr class="item-row">
@@ -1388,15 +1381,14 @@ export default function ApprovalsPage() {
               </tr>
             `);
           });
-        });
 
-        // สร้าง HTML สำหรับประเภทนี้
-        const categoryHTML = `
+          // สร้าง HTML สำหรับ requisition นี้ในหมวดหมู่นี้
+          const categoryHTML = `
           <!DOCTYPE html>
           <html>
           <head>
             <meta charset="UTF-8">
-            <title>${category} - ${selectedYear}${selectedMonth || ''}</title>
+            <title>${category} - #${requisition.REQUISITION_ID} - ${selectedYear}${selectedMonth || ''}</title>
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
             <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
@@ -1430,18 +1422,6 @@ export default function ApprovalsPage() {
                 font-weight: bold;
                 text-transform: uppercase;
                 letter-spacing: 1px;
-              }
-              
-              .category-title {
-                background: #fff3cd;
-                border: 2px solid #ffc107;
-                padding: 12px;
-                margin-bottom: 15px;
-                text-align: center;
-                font-size: 14pt;
-                font-weight: bold;
-                color: #856404;
-                border-radius: 5px;
               }
               
               .info-section {
@@ -1638,6 +1618,7 @@ export default function ApprovalsPage() {
                 <p><strong>Date:</strong> ${new Date().toLocaleDateString('th-TH')}</p>
                 <p><strong>Period:</strong> ${selectedYear}${selectedMonth || ''}</p>
                 <p><strong>Category:</strong> ${category}</p>
+                <p><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
               </div>
             </div>
             
@@ -1653,45 +1634,50 @@ export default function ApprovalsPage() {
                 </tr>
               </thead>
               <tbody>
+                <tr class="requisition-header">
+                  <td colspan="6">
+                    ผู้สั่ง: ${firstItem.userFullName} - ${requisition.USER_ID} (${firstItem.userCostCenterCode}) - 
+                    ${firstItem.userDepartment} - 
+                    ${firstItem.userOrgCode4} -  
+                    (${reqItemCount} รายการ)
+                  </td>
+                </tr>
                 ${tableRows.join('\n')}
               </tbody>
             </table>
             
             <div class="summary">
               <h3>สรุปยอดรวม - ${category}</h3>
-              <div class="total-amount">ยอดรวม: ฿${formatNumberWithCommas(categoryTotal)}</div>
-              <p>จำนวนรายการทั้งหมด: ${categoryItemCount} รายการ</p>
-              <p>จำนวน Requisitions: ${Object.keys(requisitionMap).length} รายการ</p>
+              <div class="total-amount">ยอดรวม: ฿${formatNumberWithCommas(reqTotal)}</div>
+              <p>จำนวนรายการทั้งหมด: ${reqItemCount} รายการ</p>
+              <p>Requisition: #${requisition.REQUISITION_ID}</p>
             </div>
             
           </body>
           </html>
         `;
 
-        // เปิดหน้าต่างสำหรับแต่ละประเภท
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-          showError(
-            'เกิดข้อผิดพลาด',
-            'ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาต popup'
-          );
-          return;
-        }
+          // เปิดหน้าต่างสำหรับ requisition นี้ในหมวดหมู่นี้
+          const printWindow = window.open('', '_blank');
+          if (!printWindow) {
+            showError(
+              'เกิดข้อผิดพลาด',
+              'ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาต popup'
+            );
+            return;
+          }
 
-        printWindow.document.write(categoryHTML);
-        printWindow.document.close();
+          printWindow.document.write(categoryHTML);
+          printWindow.document.close();
 
-        // รอให้ font และเนื้อหาโหลดเสร็จก่อนพิมพ์
-        printWindow.onload = () => {
-          setTimeout(() => {
-            printWindow.print();
-          }, 500);
-        };
+          // รอให้ font และเนื้อหาโหลดเสร็จก่อนพิมพ์
+          printWindow.onload = () => {
+            setTimeout(() => {
+              printWindow.print();
+            }, 500);
+          };
 
-        documentCount++;
-
-        // รอเล็กน้อยก่อนเปิดหน้าต่างถัดไป
-        if (documentCount < sortedCategories.length) {
+          // รอเล็กน้อยก่อนเปิดหน้าต่างถัดไป
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
