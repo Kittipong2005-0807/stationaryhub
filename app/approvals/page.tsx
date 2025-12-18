@@ -1330,6 +1330,12 @@ export default function ApprovalsPage() {
       let documentCount = 0;
 
       for (const category of sortedCategories) {
+        documentCount++;
+        setCurrentProgress(documentCount);
+        setProgressMessage(
+          `กำลังสร้างเอกสาร: ${category} (${documentCount}/${sortedCategories.length})`
+        );
+
         const items = categoryGroups[category];
 
         // จัดกลุ่มตาม requisition ภายในแต่ละหมวดหมู่
@@ -1342,23 +1348,19 @@ export default function ApprovalsPage() {
           requisitionMap[reqId].push(data);
         });
 
-        // สำหรับหมวดหมู่แต่ละอัน ให้แยกเป็นใบของใครของมัน (ต่อ requisition)
-        const requisitionIds = Object.keys(requisitionMap);
+        // เตรียม section ของแต่ละพนักงานในหมวดหมู่นี้
+        const requisitionIds = Object.keys(requisitionMap).sort(
+          (a, b) => Number(a) - Number(b)
+        );
+        const requisitionSections: string[] = [];
 
-        for (const reqId of requisitionIds) {
+        requisitionIds.forEach((reqId) => {
           const reqItems = requisitionMap[Number(reqId)];
-          if (!reqItems || reqItems.length === 0) continue;
+          if (!reqItems || reqItems.length === 0) return;
 
           const firstItem = reqItems[0];
           const requisition = firstItem.requisition as Requisition;
 
-          documentCount++;
-          setCurrentProgress(documentCount);
-          setProgressMessage(
-            `กำลังสร้างเอกสาร: ${category} - #${requisition.REQUISITION_ID} (${documentCount})`
-          );
-
-          // สร้างแถวตารางเฉพาะของ requisition นี้ในหมวดหมู่นี้
           const tableRows: string[] = [];
           let reqTotal = 0;
           let reqItemCount = 0;
@@ -1382,13 +1384,73 @@ export default function ApprovalsPage() {
             `);
           });
 
-          // สร้าง HTML สำหรับ requisition นี้ในหมวดหมู่นี้
-          const categoryHTML = `
+          requisitionSections.push(`
+            <div class="requisition-section">
+              <div class="info-section">
+                <div class="info-left">
+                  <p><strong>ผู้สั่ง:</strong> ${firstItem.userFullName} - ${requisition.USER_ID}</p>
+                  <p><strong>Cost Center:</strong> ${firstItem.userCostCenterCode}</p>
+                  <p><strong>แผนก:</strong> ${firstItem.userDepartment}</p>
+                  <p><strong>OrgCode4:</strong> ${firstItem.userOrgCode4}</p>
+                </div>
+                <div class="info-right">
+                  <p><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
+                  <p><strong>Date:</strong> ${formatDate(requisition.SUBMITTED_AT)}</p>
+                </div>
+              </div>
+
+              <div class="delivery-section">
+                <h3>Please Delivery on:</h3>
+                <p>${editAllFormData.deliveryDate || '_________________________________'}</p>
+                <p><strong>หมายเหตุ:</strong> ${requisition.ISSUE_NOTE || 'ไม่มีหมายเหตุ'}</p>
+                <p><strong>ต้องการข้อมูลเพิ่มเติมโปรดติดต่อ:</strong> ${editAllFormData.contactPerson || 'N/A'}</p>
+              </div>
+
+              <table>
+                <thead>
+                  <tr>
+                    <th>ITEM_ID</th>
+                    <th>Description</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="requisition-header">
+                    <td colspan="6">
+                      ผู้สั่ง: ${firstItem.userFullName} - ${requisition.USER_ID} (${firstItem.userCostCenterCode}) - 
+                      ${firstItem.userDepartment} - 
+                      ${firstItem.userOrgCode4} -  
+                      (${reqItemCount} รายการ)
+                    </td>
+                  </tr>
+                  ${tableRows.join('\n')}
+                </tbody>
+              </table>
+
+              <div class="summary">
+                <h3>สรุปยอดรวม - ${category}</h3>
+                <div class="total-amount">ยอดรวม: ฿${formatNumberWithCommas(reqTotal)}</div>
+                <p>จำนวนรายการทั้งหมด: ${reqItemCount} รายการ</p>
+                <p>Requisition: #${requisition.REQUISITION_ID}</p>
+              </div>
+            </div>
+          `);
+        });
+
+        if (requisitionSections.length === 0) {
+          continue;
+        }
+
+        // สร้าง HTML สำหรับหมวดหมู่นี้ (รวมทุกพนักงานในเอกสารเดียว แยกหน้าด้วย page-break)
+        const categoryHTML = `
           <!DOCTYPE html>
           <html>
           <head>
             <meta charset="UTF-8">
-            <title>${category} - #${requisition.REQUISITION_ID} - ${selectedYear}${selectedMonth || ''}</title>
+            <title>${category} - ${selectedYear}${selectedMonth || ''}</title>
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
             <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
@@ -1539,6 +1601,12 @@ export default function ApprovalsPage() {
                 color: #1976d2;
                 font-size: 9pt;
               }
+
+              .requisition-section {
+                page-break-after: always;
+                break-after: page;
+                margin-bottom: 20px;
+              }
               
               .page-number {
                 position: fixed;
@@ -1594,6 +1662,11 @@ export default function ApprovalsPage() {
                 table {
                   page-break-inside: auto;
                 }
+
+                .requisition-section {
+                  page-break-after: always;
+                  break-after: page;
+                }
                 
                 @page {
                   margin: 10mm;
@@ -1618,68 +1691,34 @@ export default function ApprovalsPage() {
                 <p><strong>Date:</strong> ${new Date().toLocaleDateString('th-TH')}</p>
                 <p><strong>Period:</strong> ${selectedYear}${selectedMonth || ''}</p>
                 <p><strong>Category:</strong> ${category}</p>
-                <p><strong>Requisition ID:</strong> #${requisition.REQUISITION_ID}</p>
               </div>
             </div>
             
-            <table>
-              <thead>
-                <tr>
-                  <th>ITEM_ID</th>
-                  <th>Description</th>
-                  <th>Qty</th>
-                  <th>Unit</th>
-                  <th>Unit Price</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr class="requisition-header">
-                  <td colspan="6">
-                    ผู้สั่ง: ${firstItem.userFullName} - ${requisition.USER_ID} (${firstItem.userCostCenterCode}) - 
-                    ${firstItem.userDepartment} - 
-                    ${firstItem.userOrgCode4} -  
-                    (${reqItemCount} รายการ)
-                  </td>
-                </tr>
-                ${tableRows.join('\n')}
-              </tbody>
-            </table>
-            
-            <div class="summary">
-              <h3>สรุปยอดรวม - ${category}</h3>
-              <div class="total-amount">ยอดรวม: ฿${formatNumberWithCommas(reqTotal)}</div>
-              <p>จำนวนรายการทั้งหมด: ${reqItemCount} รายการ</p>
-              <p>Requisition: #${requisition.REQUISITION_ID}</p>
-            </div>
+            ${requisitionSections.join('\n')}
             
           </body>
           </html>
         `;
 
-          // เปิดหน้าต่างสำหรับ requisition นี้ในหมวดหมู่นี้
-          const printWindow = window.open('', '_blank');
-          if (!printWindow) {
-            showError(
-              'เกิดข้อผิดพลาด',
-              'ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาต popup'
-            );
-            return;
-          }
-
-          printWindow.document.write(categoryHTML);
-          printWindow.document.close();
-
-          // รอให้ font และเนื้อหาโหลดเสร็จก่อนพิมพ์
-          printWindow.onload = () => {
-            setTimeout(() => {
-              printWindow.print();
-            }, 500);
-          };
-
-          // รอเล็กน้อยก่อนเปิดหน้าต่างถัดไป
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+        // เปิดหน้าต่างสำหรับหมวดหมู่แต่ละอัน (ภายในมีหลายหน้า แยกตามพนักงาน)
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+          showError(
+            'เกิดข้อผิดพลาด',
+            'ไม่สามารถเปิดหน้าต่างพิมพ์ได้ กรุณาอนุญาต popup'
+          );
+          return;
         }
+
+        printWindow.document.write(categoryHTML);
+        printWindow.document.close();
+
+        // รอให้ font และเนื้อหาโหลดเสร็จก่อนพิมพ์
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+          }, 500);
+        };
       }
 
       // แสดงสถานะเสร็จสิ้น
